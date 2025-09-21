@@ -1,103 +1,138 @@
+"use client";
 import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+const products = [
+  { name: "Indoor Hybrid King", image: "/Product/indoor hybrid king.png" },
+  { name: "Indoor Indica King", image: "/Product/indoor indica king.png" },
+  { name: "Indoor Sativa King", image: "/Product/indoor sativa king.png" },
+  { name: "Outdoor Hybrid King", image: "/Product/outdoor hybrid king.png" },
+  { name: "Outdoor Indica King", image: "/Product/outdoor indica king.png" },
+  { name: "Outdoor Sativa King", image: "/Product/outdoor sativa king.png" },
+  { name: "Top Hybrid King", image: "/Product/top HYBRID king.png" },
+  { name: "Top Indica King", image: "/Product/top indica king.png" },
+  { name: "Top Sativa King", image: "/Product/top sativa king.png" },
+];
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState("English");
+  const [lastInteraction, setLastInteraction] = useState(Date.now());
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % products.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto redirect to idle screen after 30 seconds of inactivity
+  useEffect(() => {
+    const checkInactivity = () => {
+      if (Date.now() - lastInteraction > 30000) {
+        // 30 seconds
+        router.push("/idle");
+      }
+    };
+
+    const interval = setInterval(checkInactivity, 1000);
+
+    const handleInteraction = () => {
+      setLastInteraction(Date.now());
+    };
+
+    // Track user interactions
+    document.addEventListener("click", handleInteraction);
+    document.addEventListener("touchstart", handleInteraction);
+    document.addEventListener("mousemove", handleInteraction);
+    document.addEventListener("keydown", handleInteraction);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+      document.removeEventListener("mousemove", handleInteraction);
+      document.removeEventListener("keydown", handleInteraction);
+    };
+  }, [lastInteraction, router]);
+
+  const handleOrderNow = () => {
+    router.push("/scanner");
+  };
+
+  const languages = ["English", "Spanish", "French"];
+
+  return (
+    <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        {/* Image Carousel - 80% of screen */}
+        <div
+          className="flex-1 relative bg-white rounded-lg m-4 shadow-lg overflow-hidden"
+          style={{ height: "80vh" }}
+        >
+          <div className="relative w-full h-full">
+            {products.map((product, index) => (
+              <div
+                key={index}
+                className={`absolute inset-0 transition-opacity duration-1000 ${
+                  index === currentSlide ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  className="object-contain p-8"
+                  priority={index === 0}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Carousel indicators */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {products.map((_, index) => (
+              <button
+                key={index}
+                className={`w-3 h-3 rounded-full transition-colors ${
+                  index === currentSlide ? "bg-green-500" : "bg-gray-300"
+                }`}
+                onClick={() => setCurrentSlide(index)}
+              />
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Bottom Actions - 20% of screen */}
+        <div className="bg-white mx-4 mb-4 rounded-lg shadow-lg p-6">
+          <div className="flex flex-col space-y-4">
+            {/* Language Selector */}
+            <div className="flex justify-center">
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="bg-gray-100 border border-gray-300 rounded-lg px-4 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                {languages.map((lang) => (
+                  <option key={lang} value={lang}>
+                    {lang}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Order Now Button */}
+            <button
+              onClick={handleOrderNow}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-colors duration-200 shadow-lg"
+            >
+              Order Now
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

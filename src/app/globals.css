@@ -3,24 +3,100 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #4ade80;
+  --primary-dark: #22c55e;
+  --secondary: #6b7280;
+  --accent: #f59e0b;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  color-scheme: light;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
+  color-scheme: light;
+}
+
+/* Force light theme for all elements */
+*,
+*::before,
+*::after {
+  color-scheme: light;
+}
+
+/* Kiosk specific styles */
+.kiosk-container {
+  max-width: 768px;
+  background: white;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+  color: #171717;
+}
+
+/* Button styles */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  background: white;
+  color: var(--secondary);
+  padding: 16px 32px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 18px;
+  border: 2px solid var(--secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--secondary);
+  color: white;
+}
+
+/* Ensure text readability */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+span,
+div,
+input,
+select,
+button {
+  color: inherit;
+}
+
+/* Input field styling */
+input,
+select,
+textarea {
+  background: white;
+  color: #171717;
+  border-color: #d1d5db;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  background: white;
+  color: #171717;
 }
