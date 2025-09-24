@@ -48,10 +48,11 @@ export default function AdminDashboard() {
 
   // Cashback Management states
   const [cashbackRules, setCashbackRules] = useState([]);
-  
+
   // Points History Management states
   const [showPointsHistory, setShowPointsHistory] = useState(false);
-  const [selectedCustomerForPoints, setSelectedCustomerForPoints] = useState(null);
+  const [selectedCustomerForPoints, setSelectedCustomerForPoints] =
+    useState(null);
   const [customerPointsHistory, setCustomerPointsHistory] = useState([]);
   const [loadingPointsHistory, setLoadingPointsHistory] = useState(false);
   const [showAddCashbackRule, setShowAddCashbackRule] = useState(false);
@@ -258,8 +259,10 @@ export default function AdminDashboard() {
       setSelectedCustomerForPoints(customer);
       setLoadingPointsHistory(true);
       setShowPointsHistory(true);
-      
-      const pointsHistory = await CustomerService.getCustomerPointsHistory(customer.id);
+
+      const pointsHistory = await CustomerService.getCustomerPointsHistory(
+        customer.id
+      );
       setCustomerPointsHistory(pointsHistory);
     } catch (error) {
       console.error("Failed to load points history:", error);
@@ -270,12 +273,17 @@ export default function AdminDashboard() {
   };
 
   const handleDeletePointTransaction = async (transactionIndex) => {
-    if (!selectedCustomerForPoints || !confirm("Are you sure you want to delete this point transaction?")) {
+    if (
+      !selectedCustomerForPoints ||
+      !confirm("Are you sure you want to delete this point transaction?")
+    ) {
       return;
     }
 
     try {
-      const customer = await CustomerService.getCustomerById(selectedCustomerForPoints.id);
+      const customer = await CustomerService.getCustomerById(
+        selectedCustomerForPoints.id
+      );
       if (!customer) {
         alert("Customer not found");
         return;
@@ -287,16 +295,18 @@ export default function AdminDashboard() {
 
       // Update customer with new points array
       await CustomerService.updateCustomer(selectedCustomerForPoints.id, {
-        points: updatedPoints
+        points: updatedPoints,
       });
 
       // Reload points history
-      const pointsHistory = await CustomerService.getCustomerPointsHistory(selectedCustomerForPoints.id);
+      const pointsHistory = await CustomerService.getCustomerPointsHistory(
+        selectedCustomerForPoints.id
+      );
       setCustomerPointsHistory(pointsHistory);
-      
+
       // Reload dashboard data to update customer totals
       await loadDashboardData();
-      
+
       alert("Point transaction deleted successfully");
     } catch (error) {
       console.error("Failed to delete point transaction:", error);
@@ -1218,7 +1228,9 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                               <button
-                                onClick={() => handleViewPointsHistory(customer)}
+                                onClick={() =>
+                                  handleViewPointsHistory(customer)
+                                }
                                 className="text-blue-600 hover:text-blue-900 mr-3"
                               >
                                 View Points
@@ -6001,7 +6013,8 @@ export default function AdminDashboard() {
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Points History - {selectedCustomerForPoints.name} {selectedCustomerForPoints.lastName}
+                    Points History - {selectedCustomerForPoints.name}{" "}
+                    {selectedCustomerForPoints.lastName}
                   </h3>
                   <button
                     onClick={handleClosePointsHistory}
@@ -6026,11 +6039,21 @@ export default function AdminDashboard() {
                 <div className="mb-4 p-4 bg-blue-50 rounded-lg">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm text-gray-600">Customer ID: {selectedCustomerForPoints.customerId}</p>
-                      <p className="text-sm text-gray-600">Total Points: {CustomerService.calculateTotalPoints(selectedCustomerForPoints.points || []).toLocaleString()}</p>
+                      <p className="text-sm text-gray-600">
+                        Customer ID: {selectedCustomerForPoints.customerId}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Total Points:{" "}
+                        {CustomerService.calculateTotalPoints(
+                          selectedCustomerForPoints.points || []
+                        ).toLocaleString()}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-600">Total Transactions: {(selectedCustomerForPoints.points || []).length}</p>
+                      <p className="text-sm text-gray-600">
+                        Total Transactions:{" "}
+                        {(selectedCustomerForPoints.points || []).length}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -6038,7 +6061,9 @@ export default function AdminDashboard() {
                 {loadingPointsHistory ? (
                   <div className="text-center py-8">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-600 mt-4">Loading points history...</p>
+                    <p className="text-gray-600 mt-4">
+                      Loading points history...
+                    </p>
                   </div>
                 ) : customerPointsHistory.length === 0 ? (
                   <div className="text-center py-8">
@@ -6057,8 +6082,12 @@ export default function AdminDashboard() {
                         />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No Points History</h3>
-                    <p className="text-gray-600">This customer hasn't earned or used any points yet.</p>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                      No Points History
+                    </h3>
+                    <p className="text-gray-600">
+                      This customer hasn't earned or used any points yet.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -6069,12 +6098,18 @@ export default function AdminDashboard() {
                       >
                         <div className="flex-1">
                           <div className="flex items-center space-x-3">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                              transaction.type === "added" ? "bg-green-100" : "bg-red-100"
-                            }`}>
+                            <div
+                              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                transaction.type === "added"
+                                  ? "bg-green-100"
+                                  : "bg-red-100"
+                              }`}
+                            >
                               <svg
                                 className={`w-4 h-4 ${
-                                  transaction.type === "added" ? "text-green-600" : "text-red-600"
+                                  transaction.type === "added"
+                                    ? "text-green-600"
+                                    : "text-red-600"
                                 }`}
                                 fill="none"
                                 stroke="currentColor"
@@ -6084,46 +6119,72 @@ export default function AdminDashboard() {
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                   strokeWidth={2}
-                                  d={transaction.type === "added" ? "M12 6v6m0 0v6m0-6h6m-6 0H6" : "M20 12H4"}
+                                  d={
+                                    transaction.type === "added"
+                                      ? "M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                      : "M20 12H4"
+                                  }
                                 />
                               </svg>
                             </div>
                             <div>
-                              <h4 className="font-semibold text-gray-800">{transaction.reason}</h4>
-                              <p className="text-sm text-gray-600">{transaction.details}</p>
+                              <h4 className="font-semibold text-gray-800">
+                                {transaction.reason}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {transaction.details}
+                              </p>
                             </div>
                           </div>
-                          
-                          {transaction.items && transaction.items.length > 0 && (
-                            <div className="mt-3 ml-11 p-3 bg-gray-50 rounded-md">
-                              <p className="text-xs font-medium text-gray-700 mb-2">Items:</p>
-                              <div className="space-y-1">
-                                {transaction.items.map((item, itemIndex) => (
-                                  <div key={itemIndex} className="text-xs text-gray-600">
-                                    <div className="flex justify-between">
-                                      <span className="font-medium">
-                                        {item.name} x{item.quantity || 1}
-                                      </span>
-                                      <span>฿{((item.price || 0) / 100).toFixed(2)}</span>
-                                    </div>
-                                    {item.variants && Object.keys(item.variants).length > 0 && (
-                                      <div className="text-xs text-gray-500 ml-2">
-                                        {Object.entries(item.variants).map(([key, value]) => (
-                                          <span key={key} className="mr-2">
-                                            {key}: {value}
-                                          </span>
-                                        ))}
+
+                          {transaction.items &&
+                            transaction.items.length > 0 && (
+                              <div className="mt-3 ml-11 p-3 bg-gray-50 rounded-md">
+                                <p className="text-xs font-medium text-gray-700 mb-2">
+                                  Items:
+                                </p>
+                                <div className="space-y-1">
+                                  {transaction.items.map((item, itemIndex) => (
+                                    <div
+                                      key={itemIndex}
+                                      className="text-xs text-gray-600"
+                                    >
+                                      <div className="flex justify-between">
+                                        <span className="font-medium">
+                                          {item.name} x{item.quantity || 1}
+                                        </span>
+                                        <span>
+                                          ฿
+                                          {((item.price || 0) / 100).toFixed(2)}
+                                        </span>
                                       </div>
-                                    )}
-                                  </div>
-                                ))}
+                                      {item.variants &&
+                                        Object.keys(item.variants).length >
+                                          0 && (
+                                          <div className="text-xs text-gray-500 ml-2">
+                                            {Object.entries(item.variants).map(
+                                              ([key, value]) => (
+                                                <span
+                                                  key={key}
+                                                  className="mr-2"
+                                                >
+                                                  {key}: {value}
+                                                </span>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
-                          
+                            )}
+
                           <div className="flex items-center justify-between mt-3 ml-11">
                             <span className="text-xs text-gray-500">
-                              {new Date(transaction.timestamp).toLocaleDateString("en-US", {
+                              {new Date(
+                                transaction.timestamp
+                              ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "short",
                                 day: "numeric",
@@ -6133,17 +6194,25 @@ export default function AdminDashboard() {
                             </span>
                             {transaction.transactionId && (
                               <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                ID: {transaction.transactionId.slice(-6).toUpperCase()}
+                                ID:{" "}
+                                {transaction.transactionId
+                                  .slice(-6)
+                                  .toUpperCase()}
                               </span>
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
-                          <span className={`font-bold ${
-                            transaction.type === "added" ? "text-green-600" : "text-red-600"
-                          }`}>
-                            {transaction.type === "added" ? "+" : "-"}{transaction.amount} pts
+                          <span
+                            className={`font-bold ${
+                              transaction.type === "added"
+                                ? "text-green-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {transaction.type === "added" ? "+" : "-"}
+                            {transaction.amount} pts
                           </span>
                           <button
                             onClick={() => handleDeletePointTransaction(index)}
