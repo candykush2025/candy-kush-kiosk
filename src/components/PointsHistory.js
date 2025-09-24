@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { CustomerService } from "../lib/customerService";
 
 export default function PointsHistory({ customerId, isOpen, onClose }) {
@@ -10,9 +10,9 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
     if (isOpen && customerId) {
       loadPointsHistory();
     }
-  }, [isOpen, customerId]);
+  }, [isOpen, customerId, loadPointsHistory]);
 
-  const loadPointsHistory = async () => {
+  const loadPointsHistory = useCallback(async () => {
     setLoading(true);
     try {
       const pointsHistory = await CustomerService.getCustomerPointsHistory(
@@ -25,7 +25,7 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [customerId]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -140,7 +140,7 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
                 No Points History
               </h3>
               <p className="text-gray-600">
-                You haven't earned or used any points yet.
+                You haven&apos;t earned or used any points yet.
               </p>
             </div>
           ) : (

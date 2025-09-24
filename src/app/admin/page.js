@@ -3541,7 +3541,7 @@ export default function AdminDashboard() {
                         </div>
                         <div className="ml-4">
                           <p className="text-sm font-medium text-gray-600">
-                            Today's Sales
+                            Today&apos;s Sales
                           </p>
                           <p className="text-2xl font-semibold text-gray-900">
                             $
@@ -6086,7 +6086,7 @@ export default function AdminDashboard() {
                       No Points History
                     </h3>
                     <p className="text-gray-600">
-                      This customer hasn't earned or used any points yet.
+                      This customer hasn&apos;t earned or used any points yet.
                     </p>
                   </div>
                 ) : (

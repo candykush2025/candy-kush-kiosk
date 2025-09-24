@@ -126,11 +126,11 @@ export default function CompletePage() {
             {/* Next Steps */}
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-4">
-                What's Next?
+                What&apos;s Next?
               </h3>
               <div className="text-lg text-gray-600 space-y-2">
                 <p>✅ Your order is being prepared</p>
-                <p>✅ You'll receive an email confirmation</p>
+                <p>✅ You&apos;ll receive an email confirmation</p>
                 <p>✅ Pickup instructions will be sent shortly</p>
               </div>
             </div>

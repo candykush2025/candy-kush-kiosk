@@ -167,7 +167,7 @@ export default function PaymentPage() {
               Choose Payment Method
             </h2>
             <p className="text-xl text-center text-gray-600 mb-12">
-              Select how you'd like to pay for your order
+              Select how you&apos;d like to pay for your order
             </p>
 
             {/* Single Payment Method with Navigation */}

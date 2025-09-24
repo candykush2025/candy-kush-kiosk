@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CustomerLookup from "../../components/CustomerLookup";
@@ -60,7 +60,7 @@ export default function CheckoutPage() {
     }
   };
 
-  const calculateCashbackPoints = async () => {
+  const calculateCashbackPoints = useCallback(async () => {
     if (!customer || cart.length === 0) {
       setCashbackPoints(0);
       return;
@@ -87,12 +87,12 @@ export default function CheckoutPage() {
       console.error("Error calculating cashback:", error);
       setCashbackPoints(0);
     }
-  };
+  }, [customer, cart]);
 
   // Calculate cashback when cart or customer changes
   useEffect(() => {
     calculateCashbackPoints();
-  }, [cart, customer]);
+  }, [cart, customer, calculateCashbackPoints]);
 
   const processPayment = async () => {
     if (cart.length === 0) {
