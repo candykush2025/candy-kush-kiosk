@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { CustomerService } from "../../lib/customerService";
 
 export default function QRScanner() {
   const [scannedCode, setScannedCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState("");
   const inputRef = useRef(null);
   const router = useRouter();
 
@@ -34,20 +36,38 @@ export default function QRScanner() {
   }, []);
 
   // Handle barcode scan input
-  const handleInputChange = (e) => {
+  const handleInputChange = async (e) => {
     const value = e.target.value;
     setScannedCode(value);
+    setError("");
 
     // Process when we have a valid customer code (CK-XXXX format)
     if (value.length >= 7 && value.startsWith("CK-")) {
       setIsProcessing(true);
 
-      // Simulate processing delay
-      setTimeout(() => {
-        // Store customer info and redirect to categories
-        sessionStorage.setItem("customerCode", value);
-        router.push("/categories");
-      }, 1000);
+      try {
+        // Validate customer exists in Firebase
+        const customer = await CustomerService.getCustomerByMemberId(value);
+
+        if (customer) {
+          // Store customer info and redirect to categories
+          sessionStorage.setItem("customerCode", value);
+
+          // Small delay for UX
+          setTimeout(() => {
+            router.push("/categories");
+          }, 1000);
+        } else {
+          setError("Customer not found. Please check your member ID.");
+          setIsProcessing(false);
+          setScannedCode("");
+        }
+      } catch (error) {
+        console.error("Error validating customer:", error);
+        setError("Error validating customer. Please try again.");
+        setIsProcessing(false);
+        setScannedCode("");
+      }
     }
   };
 
@@ -119,6 +139,15 @@ export default function QRScanner() {
               <p className="text-xl text-green-600 font-semibold">
                 Processing Member Card...
               </p>
+            </div>
+          )}
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-8 w-full max-w-md">
+              <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
+                <p className="text-red-700 text-center font-medium">{error}</p>
+              </div>
             </div>
           )}
 

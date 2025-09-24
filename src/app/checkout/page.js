@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CustomerLookup from "../../components/CustomerLookup";
 import { CustomerService } from "../../lib/customerService";
+import { CashbackService } from "../../lib/productService";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState([]);
@@ -12,6 +13,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [cashbackPoints, setCashbackPoints] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -20,10 +22,32 @@ export default function CheckoutPage() {
     if (savedCart) {
       setCart(JSON.parse(savedCart));
     }
+
+    // Load customer from session storage
+    const loadCustomer = async () => {
+      const customerCode = sessionStorage.getItem("customerCode");
+      if (customerCode) {
+        try {
+          const customerData = await CustomerService.getCustomerByMemberId(
+            customerCode
+          );
+          if (customerData) {
+            setCustomer(customerData);
+          }
+        } catch (error) {
+          console.error("Error loading customer:", error);
+        }
+      }
+    };
+
+    loadCustomer();
   }, []);
 
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price, 0);
+    return cart.reduce(
+      (total, item) => total + item.price * (item.quantity || 1),
+      0
+    );
   };
 
   const handleCustomerSelect = (selectedCustomer) => {
@@ -36,10 +60,39 @@ export default function CheckoutPage() {
     }
   };
 
-  const calculatePointsEarned = (totalAmount) => {
-    // 1 point per dollar spent
-    return Math.floor(totalAmount / 100);
+  const calculateCashbackPoints = async () => {
+    if (!customer || cart.length === 0) {
+      setCashbackPoints(0);
+      return;
+    }
+
+    try {
+      let totalCashback = 0;
+
+      // Get cashback points for each item based on its category
+      for (const item of cart) {
+        if (item.categoryId) {
+          const cashbackPercentage =
+            await CashbackService.getCashbackPercentage(item.categoryId);
+          const itemTotal = item.price * (item.quantity || 1);
+          const itemCashback = Math.floor(
+            (itemTotal * cashbackPercentage) / 100
+          );
+          totalCashback += itemCashback;
+        }
+      }
+
+      setCashbackPoints(totalCashback);
+    } catch (error) {
+      console.error("Error calculating cashback:", error);
+      setCashbackPoints(0);
+    }
   };
+
+  // Calculate cashback when cart or customer changes
+  useEffect(() => {
+    calculateCashbackPoints();
+  }, [cart, customer]);
 
   const processPayment = async () => {
     if (cart.length === 0) {
@@ -55,7 +108,6 @@ export default function CheckoutPage() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       const totalAmount = getTotalPrice() * 100; // Convert to cents
-      const pointsEarned = calculatePointsEarned(totalAmount);
 
       // Record transaction if customer is selected
       let transactionData = null;
@@ -63,12 +115,15 @@ export default function CheckoutPage() {
         transactionData = await CustomerService.recordTransaction(customer.id, {
           amount: totalAmount,
           items: cart.map((item) => ({
-            name: `${item.strain} ${item.quality} ${item.size}`,
-            price: item.price * 100,
-            quantity: 1,
+            name: item.name, // Use the actual product name
+            price: item.price * 100, // Convert to cents for database storage
+            quantity: item.quantity || 1,
+            categoryId: item.categoryId, // Include categoryId for cashback tracking
+            productId: item.productId, // Include productId for reference
+            variants: item.variants, // Include variant information
           })),
           paymentMethod,
-          pointsEarned,
+          cashbackPoints: cashbackPoints,
         });
       }
 
@@ -80,8 +135,9 @@ export default function CheckoutPage() {
           items: cart,
           total: getTotalPrice(),
           customer: customer,
-          pointsEarned: customer ? pointsEarned : 0,
+          cashbackPoints: customer ? cashbackPoints : 0,
           transactionId: transactionData?.id,
+          paymentMethod: paymentMethod,
           timestamp: new Date().toISOString(),
         })
       );
@@ -98,8 +154,8 @@ export default function CheckoutPage() {
     router.push("/categories");
   };
 
-  const removeFromCart = (indexToRemove) => {
-    const updatedCart = cart.filter((_, index) => index !== indexToRemove);
+  const removeFromCart = (itemIdToRemove) => {
+    const updatedCart = cart.filter((item) => item.id !== itemIdToRemove);
     setCart(updatedCart);
     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
   };
@@ -187,19 +243,30 @@ export default function CheckoutPage() {
                       {item.image && (
                         <Image
                           src={item.image}
-                          alt={`${item.strain} ${item.quality} ${item.size}`}
+                          alt={`${item.name} ${Object.values(
+                            item.variants || {}
+                          ).join(" ")}`}
                           width={80}
                           height={80}
                           className="rounded-lg mr-4"
                         />
                       )}
                       <div>
-                        <div className="font-semibold text-lg">
-                          {item.strain} {item.quality}
-                        </div>
-                        <div className="text-gray-600">Size: {item.size}</div>
+                        <div className="font-semibold text-lg">{item.name}</div>
+                        {item.variants &&
+                          Object.keys(item.variants).length > 0 && (
+                            <div className="text-gray-600">
+                              {Object.entries(item.variants).map(
+                                ([variantName, variantValue]) => (
+                                  <div key={variantName}>
+                                    {variantName}: {variantValue}
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          )}
                         <div className="text-green-600 font-bold">
-                          ${item.price} each
+                          ฿{item.price} each
                         </div>
                       </div>
                     </div>
@@ -251,7 +318,7 @@ export default function CheckoutPage() {
                       {/* Item Total */}
                       <div className="text-right min-w-[100px]">
                         <div className="text-xl font-bold text-green-600">
-                          ${item.price * (item.quantity || 1)}
+                          ฿{item.price * (item.quantity || 1)}
                         </div>
                       </div>
 
@@ -283,7 +350,7 @@ export default function CheckoutPage() {
               <div className="text-center">
                 <div className="text-lg text-gray-600 mb-2">Grand Total</div>
                 <div className="text-6xl font-bold text-green-600 mb-4">
-                  ${getTotalPrice()}
+                  ฿{getTotalPrice()}
                 </div>
                 <div className="text-gray-600">
                   {cart.length} item{cart.length !== 1 ? "s" : ""} •{" "}
@@ -293,13 +360,30 @@ export default function CheckoutPage() {
                   )}{" "}
                   total quantity
                 </div>
+
+                {/* Cashback Points Display */}
+                {customer && (
+                  <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 rounded-lg">
+                    <div className="text-yellow-800 font-semibold">
+                      🎉 Cashback Reward
+                    </div>
+                    <div className="text-lg font-bold text-yellow-900">
+                      {cashbackPoints} points will be added to your account!
+                    </div>
+                    {cashbackPoints === 0 && (
+                      <div className="text-xs text-yellow-600 mt-1">
+                        (Add items from categories with cashback to earn points)
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Payment Method */}
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
               <h3 className="text-2xl font-bold mb-4">Payment Method</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
                   <input
                     type="radio"
@@ -315,12 +399,23 @@ export default function CheckoutPage() {
                   <input
                     type="radio"
                     name="payment"
-                    value="card"
-                    checked={paymentMethod === "card"}
+                    value="crypto"
+                    checked={paymentMethod === "crypto"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="text-green-500"
                   />
-                  <span className="font-medium">Card</span>
+                  <span className="font-medium">Crypto</span>
+                </label>
+                <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="bank_transfer"
+                    checked={paymentMethod === "bank_transfer"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="text-green-500"
+                  />
+                  <span className="font-medium">Bank Transfer</span>
                 </label>
               </div>
             </div>

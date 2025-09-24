@@ -270,25 +270,61 @@ export class SubcategoryService {
   // Get subcategories by category
   static async getSubcategoriesByCategory(categoryId) {
     try {
+      console.log(
+        "🔎 SubcategoryService: Searching for categoryId:",
+        categoryId
+      );
+
+      // First, let's try to get all subcategories to debug
+      const allSubcategoriesQuery = query(
+        collection(db, SUBCATEGORIES_COLLECTION)
+      );
+      const allSubcategoriesSnapshot = await getDocs(allSubcategoriesQuery);
+      console.log(
+        "📊 Total subcategories in database:",
+        allSubcategoriesSnapshot.size
+      );
+
+      allSubcategoriesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(
+          "🔍 All subcategory:",
+          doc.id,
+          "categoryId:",
+          data.categoryId,
+          "isActive:",
+          data.isActive,
+          "name:",
+          data.name
+        );
+      });
+
+      // Now try the filtered query
       const q = query(
         collection(db, SUBCATEGORIES_COLLECTION),
-        where("categoryId", "==", categoryId),
-        orderBy("name", "asc")
+        where("categoryId", "==", categoryId)
       );
 
       const querySnapshot = await getDocs(q);
+      console.log("📊 Filtered query snapshot size:", querySnapshot.size);
+
       const subcategories = [];
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        subcategories.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
-        });
+        console.log("📄 Filtered document data:", doc.id, data);
+        // Filter by isActive manually for now
+        if (data.isActive === true) {
+          subcategories.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            updatedAt: data.updatedAt?.toDate(),
+          });
+        }
       });
 
+      console.log("✅ Final subcategories array:", subcategories);
       return subcategories;
     } catch (error) {
       console.error("Error fetching subcategories by category:", error);
@@ -477,28 +513,87 @@ export class ProductService {
   // Get products by subcategory
   static async getProductsBySubcategory(subcategoryId) {
     try {
+      console.log(
+        "🔎 ProductService: Searching for subcategoryId:",
+        subcategoryId
+      );
+
+      // First, let's try to get all products to debug
+      const allProductsQuery = query(collection(db, PRODUCTS_COLLECTION));
+      const allProductsSnapshot = await getDocs(allProductsQuery);
+      console.log("📊 Total products in database:", allProductsSnapshot.size);
+
+      allProductsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        console.log(
+          "🔍 All product:",
+          doc.id,
+          "subcategoryId:",
+          data.subcategoryId,
+          "isActive:",
+          data.isActive,
+          "name:",
+          data.name
+        );
+      });
+
+      // Now try the filtered query
       const q = query(
         collection(db, PRODUCTS_COLLECTION),
-        where("subcategoryId", "==", subcategoryId),
-        orderBy("name", "asc")
+        where("subcategoryId", "==", subcategoryId)
       );
 
       const querySnapshot = await getDocs(q);
+      console.log("📊 Filtered query snapshot size:", querySnapshot.size);
+
       const products = [];
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        products.push({
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate(),
-          updatedAt: data.updatedAt?.toDate(),
-        });
+        console.log("📄 Filtered product data:", doc.id, data);
+        // Filter by isActive manually for now
+        if (data.isActive === true) {
+          products.push({
+            id: doc.id,
+            ...data,
+            createdAt: data.createdAt?.toDate(),
+            updatedAt: data.updatedAt?.toDate(),
+          });
+        }
       });
 
+      console.log("✅ Final products array:", products);
       return products;
     } catch (error) {
       console.error("Error fetching products by subcategory:", error);
+      throw error;
+    }
+  }
+
+  // Get product by ID
+  static async getProductById(productId) {
+    try {
+      console.log("🔎 ProductService: Getting product by ID:", productId);
+
+      const docRef = doc(db, PRODUCTS_COLLECTION, productId);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log("📦 Product data found:", data);
+
+        return {
+          id: docSnap.id,
+          ...data,
+          createdAt: data.createdAt?.toDate(),
+          updatedAt: data.updatedAt?.toDate(),
+        };
+      } else {
+        console.log("❌ Product not found with ID:", productId);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching product by ID:", error);
       throw error;
     }
   }
@@ -621,6 +716,142 @@ export class ProductService {
     } catch (error) {
       console.error("Error getting product stats:", error);
       throw error;
+    }
+  }
+}
+
+// Cashback Service
+export class CashbackService {
+  static COLLECTION_NAME = "cashbackRules";
+
+  // Get all cashback rules
+  static async getAllCashbackRules() {
+    try {
+      const q = query(
+        collection(db, this.COLLECTION_NAME),
+        orderBy("categoryName", "asc")
+      );
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+    } catch (error) {
+      console.error("Error getting cashback rules:", error);
+      throw error;
+    }
+  }
+
+  // Get cashback rule by category ID
+  static async getCashbackRuleByCategory(categoryId) {
+    try {
+      const q = query(
+        collection(db, this.COLLECTION_NAME),
+        where("categoryId", "==", categoryId),
+        where("isActive", "==", true)
+      );
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        return {
+          id: doc.id,
+          ...doc.data(),
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error getting cashback rule by category:", error);
+      throw error;
+    }
+  }
+
+  // Create new cashback rule
+  static async createCashbackRule(cashbackData) {
+    try {
+      // Check if rule already exists for this category
+      const existingRule = await this.getCashbackRuleByCategory(
+        cashbackData.categoryId
+      );
+      if (existingRule) {
+        throw new Error("Cashback rule already exists for this category");
+      }
+
+      const docRef = await addDoc(collection(db, this.COLLECTION_NAME), {
+        ...cashbackData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error("Error creating cashback rule:", error);
+      throw error;
+    }
+  }
+
+  // Update cashback rule
+  static async updateCashbackRule(ruleId, updates) {
+    try {
+      const docRef = doc(db, this.COLLECTION_NAME, ruleId);
+      await updateDoc(docRef, {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error updating cashback rule:", error);
+      throw error;
+    }
+  }
+
+  // Delete cashback rule
+  static async deleteCashbackRule(ruleId) {
+    try {
+      const docRef = doc(db, this.COLLECTION_NAME, ruleId);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error("Error deleting cashback rule:", error);
+      throw error;
+    }
+  }
+
+  // Toggle cashback rule status
+  static async toggleCashbackRuleStatus(ruleId, isActive) {
+    try {
+      const docRef = doc(db, this.COLLECTION_NAME, ruleId);
+      await updateDoc(docRef, {
+        isActive,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error toggling cashback rule status:", error);
+      throw error;
+    }
+  }
+
+  // Calculate cashback for a purchase
+  static async calculateCashback(categoryId, purchaseAmount) {
+    try {
+      const rule = await this.getCashbackRuleByCategory(categoryId);
+      if (rule && rule.isActive) {
+        return (purchaseAmount * rule.percentage) / 100;
+      }
+      return 0;
+    } catch (error) {
+      console.error("Error calculating cashback:", error);
+      return 0;
+    }
+  }
+
+  // Get cashback percentage for a category
+  static async getCashbackPercentage(categoryId) {
+    try {
+      const rule = await this.getCashbackRuleByCategory(categoryId);
+      if (rule && rule.isActive) {
+        return rule.percentage;
+      }
+      return 0;
+    } catch (error) {
+      console.error("Error getting cashback percentage:", error);
+      return 0;
     }
   }
 }

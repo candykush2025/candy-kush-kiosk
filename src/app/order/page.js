@@ -22,7 +22,24 @@ export default function OrderPage() {
     }
 
     if (savedCustomer) {
-      setCustomer(JSON.parse(savedCustomer));
+      const customerData = JSON.parse(savedCustomer);
+      // Calculate total points from transactions array
+      if (Array.isArray(customerData.points)) {
+        customerData.totalPoints = customerData.points.reduce(
+          (total, transaction) => {
+            if (transaction.type === "added") {
+              return total + (transaction.amount || 0);
+            } else if (transaction.type === "minus") {
+              return total - (transaction.amount || 0);
+            }
+            return total;
+          },
+          0
+        );
+      } else {
+        customerData.totalPoints = customerData.points || 0;
+      }
+      setCustomer(customerData);
     }
 
     if (savedPaymentMethod) {
@@ -178,7 +195,7 @@ export default function OrderPage() {
                         Points Balance
                       </div>
                       <div className="text-lg font-semibold text-green-600">
-                        {customer.points}
+                        {customer.totalPoints || 0}
                       </div>
                     </div>
                   </div>

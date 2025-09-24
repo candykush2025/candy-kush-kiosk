@@ -1,23 +1,23 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Image from "next/image";
 import {
   CustomerService,
   getTierColor,
   calculateTier,
-} from "../../lib/customerService";
-import { CategoryService } from "../../lib/productService";
-import PointsHistory from "../../components/PointsHistory";
+} from "../../../lib/customerService";
+import { SubcategoryService } from "../../../lib/productService";
 
-export default function Categories() {
+export default function Subcategories() {
   const [customer, setCustomer] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showPointsHistory, setShowPointsHistory] = useState(false);
   const [cart, setCart] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const router = useRouter();
+  const { categoryId } = useParams();
 
   useEffect(() => {
     const loadData = async () => {
@@ -31,12 +31,8 @@ export default function Categories() {
           if (customerData) {
             // Calculate tier if not present
             if (!customerData.tier) {
-              customerData.tier = calculateTier(customerData.points);
+              customerData.tier = calculateTier(customerData.points || 0);
             }
-            // Calculate total points from transactions array
-            customerData.totalPoints = CustomerService.calculateTotalPoints(
-              customerData.points
-            );
             setCustomer(customerData);
           }
         } else {
@@ -45,20 +41,27 @@ export default function Categories() {
           return;
         }
 
-        // Load categories from Firebase
-        const categoriesData = await CategoryService.getAllCategories();
+        // Load subcategories from Firebase
+        console.log("🔍 Loading subcategories for categoryId:", categoryId);
+        const subcategoriesData =
+          await SubcategoryService.getSubcategoriesByCategory(categoryId);
+        console.log("📦 Subcategories data received:", subcategoriesData);
 
-        // Transform categories data for display
-        const transformedCategories = categoriesData.map((category) => ({
-          id: category.id,
-          name: category.name,
-          image: category.image, // Use uploaded image
-          bgColor: getCategoryBgColor(category.name),
-          borderColor: getCategoryBorderColor(category.name),
-          hoverColor: getCategoryHoverColor(category.name),
-        }));
+        // Transform subcategories data for display
+        const transformedSubcategories = subcategoriesData.map(
+          (subcategory) => ({
+            id: subcategory.id,
+            name: subcategory.name,
+            image: subcategory.image, // Use uploaded image
+            categoryId: subcategory.categoryId,
+            bgColor: getSubcategoryBgColor(subcategory.name),
+            borderColor: getSubcategoryBorderColor(subcategory.name),
+            hoverColor: getSubcategoryHoverColor(subcategory.name),
+          })
+        );
 
-        setCategories(transformedCategories);
+        console.log("✨ Transformed subcategories:", transformedSubcategories);
+        setSubcategories(transformedSubcategories);
 
         // Load cart from session storage
         const savedCart = sessionStorage.getItem("cart");
@@ -72,40 +75,37 @@ export default function Categories() {
       }
     };
 
-    loadData();
-  }, [router]);
+    if (categoryId) {
+      loadData();
+    }
+  }, [router, categoryId]);
 
-  // Helper functions for category styling - all same color
-  const getCategoryIcon = (categoryName) => {
-    return "🌿"; // same icon for all
-  };
-
-  const getCategoryBgColor = (categoryName) => {
+  // Helper functions for subcategory styling - all same color
+  const getSubcategoryBgColor = (subcategoryName) => {
     return "bg-white"; // same background for all
   };
 
-  const getCategoryBorderColor = (categoryName) => {
+  const getSubcategoryBorderColor = (subcategoryName) => {
     return "border-gray-300"; // same border for all
   };
 
-  const getCategoryHoverColor = (categoryName) => {
+  const getSubcategoryHoverColor = (subcategoryName) => {
     return "hover:bg-gray-50"; // same hover for all
   };
 
-  const handleCategorySelect = (categoryId) => {
-    // Set selected category for visual feedback
-    setSelectedCategory(categoryId);
+  const handleSubcategorySelect = (subcategoryId) => {
+    // Set selected subcategory for visual feedback
+    setSelectedSubcategory(subcategoryId);
 
-    // Navigate to subcategories page after a brief delay to show selection
+    // Navigate to products page after a brief delay to show selection
     setTimeout(() => {
-      router.push(`/subcategories/${categoryId}`);
+      router.push(`/products/${categoryId}/${subcategoryId}`);
     }, 150);
   };
 
   const handleBack = () => {
-    // Clear customer session and go back to scanner
-    sessionStorage.removeItem("customerCode");
-    router.push("/scanner");
+    // Go back to categories
+    router.push("/categories");
   };
 
   const handleCheckout = () => {
@@ -127,7 +127,7 @@ export default function Categories() {
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
           <p className="text-xl text-gray-600">
             {loading
-              ? "Loading categories..."
+              ? "Loading subcategories..."
               : "Loading customer information..."}
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function Categories() {
             Back
           </button>
           <h1 className="text-2xl font-bold text-gray-800">
-            Product Categories
+            Select Subcategory
           </h1>
           <button
             onClick={handleCheckout}
@@ -192,88 +192,82 @@ export default function Categories() {
               <div className="bg-white bg-opacity-20 rounded-lg p-4">
                 <p className="text-green-100 text-sm">Points Balance</p>
                 <p className="text-3xl font-bold">
-                  {(customer.totalPoints || 0).toLocaleString()}
+                  {(customer.points || 0).toLocaleString()}
                 </p>
                 <p className="text-green-100 text-sm">pts</p>
-                <button
-                  onClick={() => setShowPointsHistory(true)}
-                  className="mt-2 text-xs bg-white bg-opacity-20 text-white px-3 py-1 rounded-full hover:bg-opacity-30 transition-colors"
-                >
-                  View History
-                </button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Categories Grid */}
+        {/* Subcategories Grid */}
         <div className="flex-1 p-6">
           <div className="grid gap-6 max-w-2xl mx-auto">
-            {categories.map((category) => {
-              const isSelected = selectedCategory === category.id;
-              return (
-                <button
-                  key={category.id}
-                  onClick={() => handleCategorySelect(category.id)}
-                  className={`${
-                    isSelected
-                      ? "bg-green-100 border-green-500 hover:bg-green-200"
-                      : `${category.bgColor} ${category.borderColor} ${category.hoverColor}`
-                  } 
-                  border-2 rounded-lg p-8 transition-all duration-200 transform hover:scale-105 
-                  shadow-lg hover:shadow-xl text-left`}
-                >
-                  <div className="flex items-center space-x-6">
-                    {category.image ? (
-                      // Use uploaded category image
-                      <div className="w-24 h-24 relative">
-                        <Image
-                          src={category.image}
-                          alt={category.name}
-                          fill
-                          className="object-contain rounded-lg"
-                        />
+            {subcategories.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-xl text-gray-600">No subcategories found</p>
+                <p className="text-gray-500 mt-2">
+                  This category may not have subcategories yet.
+                </p>
+              </div>
+            ) : (
+              subcategories.map((subcategory) => {
+                const isSelected = selectedSubcategory === subcategory.id;
+                return (
+                  <button
+                    key={subcategory.id}
+                    onClick={() => handleSubcategorySelect(subcategory.id)}
+                    className={`${
+                      isSelected
+                        ? "bg-green-100 border-green-500 hover:bg-green-200"
+                        : `${subcategory.bgColor} ${subcategory.borderColor} ${subcategory.hoverColor}`
+                    } 
+                    border-2 rounded-lg p-8 transition-all duration-200 transform hover:scale-105 
+                    shadow-lg hover:shadow-xl text-left`}
+                  >
+                    <div className="flex items-center space-x-6">
+                      {subcategory.image ? (
+                        // Use uploaded subcategory image
+                        <div className="w-24 h-24 relative">
+                          <Image
+                            src={subcategory.image}
+                            alt={subcategory.name}
+                            fill
+                            className="object-contain rounded-lg"
+                          />
+                        </div>
+                      ) : (
+                        // Empty space to maintain layout consistency
+                        <div className="w-24 h-24"></div>
+                      )}
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-gray-800">
+                          {subcategory.name}
+                        </h2>
                       </div>
-                    ) : (
-                      // Empty space to maintain layout consistency
-                      <div className="w-24 h-24"></div>
-                    )}
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-gray-800">
-                        {category.name}
-                      </h2>
+                      <div className="text-gray-400">
+                        <svg
+                          className="w-8 h-8"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M9 5l7 7-7 7"
+                          />
+                        </svg>
+                      </div>
                     </div>
-                    <div className="text-gray-400">
-                      <svg
-                        className="w-8 h-8"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
-
-      {/* Points History Modal */}
-      {customer && (
-        <PointsHistory
-          customerId={customer.id}
-          isOpen={showPointsHistory}
-          onClose={() => setShowPointsHistory(false)}
-        />
-      )}
     </div>
   );
 }

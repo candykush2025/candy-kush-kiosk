@@ -147,7 +147,7 @@ export default function PaymentPage() {
                   </h2>
                   <p className="text-gray-600">
                     Member ID: {customer.id} • Tier: {customer.tier} • Points:{" "}
-                    {customer.points}
+                    {customer.totalPoints || customer.points || 0}
                   </p>
                 </div>
                 <div className="text-right">

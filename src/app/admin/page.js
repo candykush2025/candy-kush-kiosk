@@ -8,6 +8,7 @@ import {
   ProductService,
   CategoryService,
   SubcategoryService,
+  CashbackService,
 } from "../../lib/productService";
 import { countries } from "../../lib/countries";
 
@@ -44,6 +45,24 @@ export default function AdminDashboard() {
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showAddSubcategory, setShowAddSubcategory] = useState(false);
+
+  // Cashback Management states
+  const [cashbackRules, setCashbackRules] = useState([]);
+  
+  // Points History Management states
+  const [showPointsHistory, setShowPointsHistory] = useState(false);
+  const [selectedCustomerForPoints, setSelectedCustomerForPoints] = useState(null);
+  const [customerPointsHistory, setCustomerPointsHistory] = useState([]);
+  const [loadingPointsHistory, setLoadingPointsHistory] = useState(false);
+  const [showAddCashbackRule, setShowAddCashbackRule] = useState(false);
+  const [editingCashbackRule, setEditingCashbackRule] = useState(null);
+  const [newCashbackRule, setNewCashbackRule] = useState({
+    categoryId: "",
+    categoryName: "",
+    percentage: 0,
+    isActive: true,
+  });
+
   const [newCategory, setNewCategory] = useState({
     name: "",
     isActive: true,
@@ -63,6 +82,7 @@ export default function AdminDashboard() {
   // Loading states
   const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   const [isLoadingSubcategory, setIsLoadingSubcategory] = useState(false);
+  const [isLoadingCashback, setIsLoadingCashback] = useState(false);
   const [isTogglingStatus, setIsTogglingStatus] = useState(null); // Track which product status is being toggled
 
   // Tree expansion states
@@ -144,6 +164,7 @@ export default function AdminDashboard() {
       const productStats = await ProductService.getProductStats();
       const categoriesData = await CategoryService.getAllCategories();
       const subcategoriesData = await SubcategoryService.getAllSubcategories();
+      const cashbackRulesData = await CashbackService.getAllCashbackRules();
 
       setCustomers(customersData);
       setOrders(ordersData);
@@ -151,6 +172,7 @@ export default function AdminDashboard() {
       setProducts(productsData);
       setCategories(categoriesData);
       setSubcategories(subcategoriesData);
+      setCashbackRules(cashbackRulesData);
 
       setStats({
         totalCustomers: customersData.length,
@@ -227,6 +249,157 @@ export default function AdminDashboard() {
       } catch (error) {
         console.error("Failed to delete customer:", error);
       }
+    }
+  };
+
+  // Points History Management Functions
+  const handleViewPointsHistory = async (customer) => {
+    try {
+      setSelectedCustomerForPoints(customer);
+      setLoadingPointsHistory(true);
+      setShowPointsHistory(true);
+      
+      const pointsHistory = await CustomerService.getCustomerPointsHistory(customer.id);
+      setCustomerPointsHistory(pointsHistory);
+    } catch (error) {
+      console.error("Failed to load points history:", error);
+      alert("Failed to load points history");
+    } finally {
+      setLoadingPointsHistory(false);
+    }
+  };
+
+  const handleDeletePointTransaction = async (transactionIndex) => {
+    if (!selectedCustomerForPoints || !confirm("Are you sure you want to delete this point transaction?")) {
+      return;
+    }
+
+    try {
+      const customer = await CustomerService.getCustomerById(selectedCustomerForPoints.id);
+      if (!customer) {
+        alert("Customer not found");
+        return;
+      }
+
+      // Remove the transaction from the points array
+      const updatedPoints = [...(customer.points || [])];
+      updatedPoints.splice(transactionIndex, 1);
+
+      // Update customer with new points array
+      await CustomerService.updateCustomer(selectedCustomerForPoints.id, {
+        points: updatedPoints
+      });
+
+      // Reload points history
+      const pointsHistory = await CustomerService.getCustomerPointsHistory(selectedCustomerForPoints.id);
+      setCustomerPointsHistory(pointsHistory);
+      
+      // Reload dashboard data to update customer totals
+      await loadDashboardData();
+      
+      alert("Point transaction deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete point transaction:", error);
+      alert("Failed to delete point transaction");
+    }
+  };
+
+  const handleClosePointsHistory = () => {
+    setShowPointsHistory(false);
+    setSelectedCustomerForPoints(null);
+    setCustomerPointsHistory([]);
+  };
+
+  // Cashback Management Functions
+  const handleAddCashbackRule = () => {
+    setShowAddCashbackRule(true);
+  };
+
+  const handleCancelAddCashbackRule = () => {
+    setShowAddCashbackRule(false);
+    setNewCashbackRule({
+      categoryId: "",
+      categoryName: "",
+      percentage: 0,
+      isActive: true,
+    });
+    setEditingCashbackRule(null);
+  };
+
+  const handleSaveCashbackRule = async () => {
+    if (isLoadingCashback) return; // Prevent double submission
+
+    try {
+      setIsLoadingCashback(true);
+
+      if (!newCashbackRule.categoryId) {
+        alert("Please select a category");
+        return;
+      }
+
+      if (newCashbackRule.percentage < 0 || newCashbackRule.percentage > 100) {
+        alert("Percentage must be between 0 and 100");
+        return;
+      }
+
+      if (editingCashbackRule) {
+        // Update existing rule
+        await CashbackService.updateCashbackRule(editingCashbackRule.id, {
+          categoryId: newCashbackRule.categoryId,
+          categoryName: newCashbackRule.categoryName,
+          percentage: parseFloat(newCashbackRule.percentage),
+          isActive: newCashbackRule.isActive,
+        });
+      } else {
+        // Create new rule
+        await CashbackService.createCashbackRule({
+          categoryId: newCashbackRule.categoryId,
+          categoryName: newCashbackRule.categoryName,
+          percentage: parseFloat(newCashbackRule.percentage),
+          isActive: newCashbackRule.isActive,
+        });
+      }
+
+      await loadDashboardData();
+      handleCancelAddCashbackRule();
+    } catch (error) {
+      console.error("Failed to save cashback rule:", error);
+      alert(error.message || "Failed to save cashback rule. Please try again.");
+    } finally {
+      setIsLoadingCashback(false);
+    }
+  };
+
+  const handleEditCashbackRule = (rule) => {
+    setEditingCashbackRule(rule);
+    setNewCashbackRule({
+      categoryId: rule.categoryId,
+      categoryName: rule.categoryName,
+      percentage: rule.percentage,
+      isActive: rule.isActive,
+    });
+    setShowAddCashbackRule(true);
+  };
+
+  const handleDeleteCashbackRule = async (ruleId) => {
+    if (confirm("Are you sure you want to delete this cashback rule?")) {
+      try {
+        await CashbackService.deleteCashbackRule(ruleId);
+        await loadDashboardData();
+      } catch (error) {
+        console.error("Failed to delete cashback rule:", error);
+        alert("Failed to delete cashback rule. Please try again.");
+      }
+    }
+  };
+
+  const handleToggleCashbackRuleStatus = async (ruleId, currentStatus) => {
+    try {
+      await CashbackService.toggleCashbackRuleStatus(ruleId, !currentStatus);
+      await loadDashboardData();
+    } catch (error) {
+      console.error("Failed to toggle cashback rule status:", error);
+      alert("Failed to update cashback rule status. Please try again.");
     }
   };
 
@@ -763,6 +936,30 @@ export default function AdminDashboard() {
               </button>
 
               <button
+                onClick={() => setActiveTab("cashback")}
+                className={`${
+                  activeTab === "cashback"
+                    ? "bg-green-100 text-green-700 border-r-2 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                } group flex items-center px-3 py-2 text-sm font-medium rounded-md w-full text-left transition-colors`}
+              >
+                <svg
+                  className="mr-3 h-5 w-5 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                Cashback
+              </button>
+
+              <button
                 onClick={() => setActiveTab("settings")}
                 className={`${
                   activeTab === "settings"
@@ -1020,6 +1217,12 @@ export default function AdminDashboard() {
                               {customer.customerId || "N/A"}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => handleViewPointsHistory(customer)}
+                                className="text-blue-600 hover:text-blue-900 mr-3"
+                              >
+                                View Points
+                              </button>
                               <button
                                 onClick={() => handleEditCustomer(customer)}
                                 className="text-green-600 hover:text-green-900 mr-3"
@@ -3483,6 +3686,152 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+              {/* Cashback Management Content */}
+              {activeTab === "cashback" && (
+                <div className="space-y-6">
+                  {/* Cashback Header */}
+                  <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Cashback Management
+                          </h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            Set cashback percentages by category
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleAddCashbackRule}
+                          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Add Category Cashback
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Cashback Rules Table */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Category
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Cashback %
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {cashbackRules.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan={4}
+                                className="px-6 py-12 text-center text-gray-500"
+                              >
+                                <div className="flex flex-col items-center">
+                                  <svg
+                                    className="w-12 h-12 text-gray-400 mb-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                  </svg>
+                                  <p className="text-lg font-medium">
+                                    No cashback rules configured
+                                  </p>
+                                  <p className="text-sm">
+                                    Add your first cashback rule to get started
+                                  </p>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            cashbackRules.map((rule) => (
+                              <tr key={rule.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {rule.categoryName}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {rule.percentage}%
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <button
+                                    onClick={() =>
+                                      handleToggleCashbackRuleStatus(
+                                        rule.id,
+                                        rule.isActive
+                                      )
+                                    }
+                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      rule.isActive
+                                        ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                        : "bg-red-100 text-red-800 hover:bg-red-200"
+                                    } transition-colors cursor-pointer`}
+                                  >
+                                    {rule.isActive ? "Active" : "Inactive"}
+                                  </button>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                  <div className="flex items-center justify-end space-x-2">
+                                    <button
+                                      onClick={() =>
+                                        handleEditCashbackRule(rule)
+                                      }
+                                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteCashbackRule(rule.id)
+                                      }
+                                      className="text-red-600 hover:text-red-900 transition-colors"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Settings Content */}
               {activeTab === "settings" && (
                 <div className="space-y-6">
@@ -4253,7 +4602,7 @@ export default function AdminDashboard() {
 
                   {/* Simple Product Fields */}
                   {!hasVariants && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Price (฿) *
@@ -4266,25 +4615,7 @@ export default function AdminDashboard() {
                           onChange={(e) =>
                             setNewProduct({
                               ...newProduct,
-                              price: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Stock Quantity *
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={newProduct.stock}
-                          onChange={(e) =>
-                            setNewProduct({
-                              ...newProduct,
-                              stock: parseInt(e.target.value) || 0,
+                              price: parseFloat(e.target.value) || "",
                             })
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -5417,44 +5748,24 @@ export default function AdminDashboard() {
                   </div>
 
                   {!editingProduct.hasVariants && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Price (฿)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editingProduct.price || ""}
-                          onChange={(e) =>
-                            setEditingProduct({
-                              ...editingProduct,
-                              price: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="0.00"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Stock Quantity
-                        </label>
-                        <input
-                          type="number"
-                          value={editingProduct.stock || ""}
-                          onChange={(e) =>
-                            setEditingProduct({
-                              ...editingProduct,
-                              stock: parseInt(e.target.value) || 0,
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="0"
-                        />
-                      </div>
-                    </>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Price (฿)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editingProduct.price || ""}
+                        onChange={(e) =>
+                          setEditingProduct({
+                            ...editingProduct,
+                            price: parseFloat(e.target.value) || "",
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="0.00"
+                      />
+                    </div>
                   )}
                 </div>
 
@@ -5495,6 +5806,378 @@ export default function AdminDashboard() {
                 >
                   Save Changes
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Cashback Rule Modal */}
+        {showAddCashbackRule && (
+          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-lg shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {editingCashbackRule
+                      ? "Edit Cashback Rule"
+                      : "Add Cashback Rule"}
+                  </h3>
+                  <button
+                    onClick={handleCancelAddCashbackRule}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <form className="space-y-4">
+                  {/* Category Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Category *
+                    </label>
+                    <select
+                      value={newCashbackRule.categoryId}
+                      onChange={(e) => {
+                        const selectedCategory = categories.find(
+                          (cat) => cat.id === e.target.value
+                        );
+                        setNewCashbackRule({
+                          ...newCashbackRule,
+                          categoryId: e.target.value,
+                          categoryName: selectedCategory
+                            ? selectedCategory.name
+                            : "",
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      required
+                    >
+                      <option value="">Select a category</option>
+                      {categories
+                        .filter((category) => {
+                          // Filter out categories that already have cashback rules (unless editing)
+                          if (
+                            editingCashbackRule &&
+                            category.id === editingCashbackRule.categoryId
+                          ) {
+                            return true;
+                          }
+                          return !cashbackRules.some(
+                            (rule) => rule.categoryId === category.id
+                          );
+                        })
+                        .map((category) => (
+                          <option key={category.id} value={category.id}>
+                            {category.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* Cashback Percentage */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Cashback Percentage *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        value={newCashbackRule.percentage}
+                        onChange={(e) =>
+                          setNewCashbackRule({
+                            ...newCashbackRule,
+                            percentage: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 pr-8"
+                        placeholder="0.0"
+                        required
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        <span className="text-gray-500 text-sm">%</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter percentage between 0 and 100
+                    </p>
+                  </div>
+
+                  {/* Active Status */}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="cashbackActive"
+                      checked={newCashbackRule.isActive}
+                      onChange={(e) =>
+                        setNewCashbackRule({
+                          ...newCashbackRule,
+                          isActive: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="cashbackActive"
+                      className="ml-2 block text-sm text-gray-900"
+                    >
+                      Active
+                    </label>
+                  </div>
+                </form>
+
+                <div className="flex justify-end space-x-3 mt-6">
+                  <button
+                    onClick={handleCancelAddCashbackRule}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveCashbackRule}
+                    disabled={isLoadingCashback}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                      isLoadingCashback
+                        ? "bg-green-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}
+                  >
+                    {isLoadingCashback && (
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    )}
+                    <span>
+                      {isLoadingCashback
+                        ? editingCashbackRule
+                          ? "Updating..."
+                          : "Creating..."
+                        : editingCashbackRule
+                        ? "Update Rule"
+                        : "Create Rule"}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Points History Modal */}
+        {showPointsHistory && selectedCustomerForPoints && (
+          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Points History - {selectedCustomerForPoints.name} {selectedCustomerForPoints.lastName}
+                  </h3>
+                  <button
+                    onClick={handleClosePointsHistory}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm text-gray-600">Customer ID: {selectedCustomerForPoints.customerId}</p>
+                      <p className="text-sm text-gray-600">Total Points: {CustomerService.calculateTotalPoints(selectedCustomerForPoints.points || []).toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Total Transactions: {(selectedCustomerForPoints.points || []).length}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {loadingPointsHistory ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-600 mt-4">Loading points history...</p>
+                  </div>
+                ) : customerPointsHistory.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg
+                        className="w-8 h-8 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No Points History</h3>
+                    <p className="text-gray-600">This customer hasn't earned or used any points yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {customerPointsHistory.map((transaction, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start justify-between p-4 border border-gray-200 rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                              transaction.type === "added" ? "bg-green-100" : "bg-red-100"
+                            }`}>
+                              <svg
+                                className={`w-4 h-4 ${
+                                  transaction.type === "added" ? "text-green-600" : "text-red-600"
+                                }`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d={transaction.type === "added" ? "M12 6v6m0 0v6m0-6h6m-6 0H6" : "M20 12H4"}
+                                />
+                              </svg>
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-gray-800">{transaction.reason}</h4>
+                              <p className="text-sm text-gray-600">{transaction.details}</p>
+                            </div>
+                          </div>
+                          
+                          {transaction.items && transaction.items.length > 0 && (
+                            <div className="mt-3 ml-11 p-3 bg-gray-50 rounded-md">
+                              <p className="text-xs font-medium text-gray-700 mb-2">Items:</p>
+                              <div className="space-y-1">
+                                {transaction.items.map((item, itemIndex) => (
+                                  <div key={itemIndex} className="text-xs text-gray-600">
+                                    <div className="flex justify-between">
+                                      <span className="font-medium">
+                                        {item.name} x{item.quantity || 1}
+                                      </span>
+                                      <span>฿{((item.price || 0) / 100).toFixed(2)}</span>
+                                    </div>
+                                    {item.variants && Object.keys(item.variants).length > 0 && (
+                                      <div className="text-xs text-gray-500 ml-2">
+                                        {Object.entries(item.variants).map(([key, value]) => (
+                                          <span key={key} className="mr-2">
+                                            {key}: {value}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center justify-between mt-3 ml-11">
+                            <span className="text-xs text-gray-500">
+                              {new Date(transaction.timestamp).toLocaleDateString("en-US", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            {transaction.transactionId && (
+                              <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                ID: {transaction.transactionId.slice(-6).toUpperCase()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <span className={`font-bold ${
+                            transaction.type === "added" ? "text-green-600" : "text-red-600"
+                          }`}>
+                            {transaction.type === "added" ? "+" : "-"}{transaction.amount} pts
+                          </span>
+                          <button
+                            onClick={() => handleDeletePointTransaction(index)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded"
+                            title="Delete Transaction"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={handleClosePointsHistory}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>

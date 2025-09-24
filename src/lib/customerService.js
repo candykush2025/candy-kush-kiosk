@@ -51,7 +51,7 @@ export class CustomerService {
         email: customerData.email || "",
         cell: customerData.cell || "",
         memberId: customerData.memberId || customerId, // Use customerId as fallback
-        points: customerData.points || 0,
+        points: customerData.points || [], // Array to store transaction history
         totalSpent: 0,
         visitCount: 0,
         createdAt: serverTimestamp(),
@@ -110,15 +110,26 @@ export class CustomerService {
     }
   }
 
-  // Get customer by member ID
+  // Get customer by member ID or customer ID
   static async getCustomerByMemberId(memberId) {
     try {
-      const q = query(
+      // First try to find by memberId field
+      let q = query(
         collection(db, CUSTOMERS_COLLECTION),
         where("memberId", "==", memberId),
         limit(1)
       );
-      const querySnapshot = await getDocs(q);
+      let querySnapshot = await getDocs(q);
+
+      // If not found, try by customerId field
+      if (querySnapshot.empty) {
+        q = query(
+          collection(db, CUSTOMERS_COLLECTION),
+          where("customerId", "==", memberId),
+          limit(1)
+        );
+        querySnapshot = await getDocs(q);
+      }
 
       if (!querySnapshot.empty) {
         const doc = querySnapshot.docs[0];
@@ -165,18 +176,122 @@ export class CustomerService {
     }
   }
 
-  // Add points to customer
-  static async addPoints(customerId, points) {
+  // Add points to customer with transaction history
+  static async addPoints(customerId, points, transactionDetails = {}) {
     try {
       const customer = await this.getCustomerById(customerId);
       if (!customer) throw new Error("Customer not found");
 
-      const newPoints = (customer.points || 0) + points;
-      await this.updateCustomer(customerId, { points: newPoints });
+      // Ensure points is an array
+      const currentPoints = Array.isArray(customer.points)
+        ? customer.points
+        : [];
 
-      return newPoints;
+      // Create new point transaction
+      const pointTransaction = {
+        amount: points,
+        type: "added",
+        reason: transactionDetails.reason || "Purchase",
+        transactionId: transactionDetails.transactionId || null,
+        orderId: transactionDetails.orderId || null,
+        timestamp: new Date().toISOString(),
+        details: transactionDetails.details || "",
+        items: transactionDetails.items || [], // Include item details if provided
+      };
+
+      // Add new transaction to points array
+      const updatedPoints = [...currentPoints, pointTransaction];
+
+      await this.updateCustomer(customerId, { points: updatedPoints });
+
+      return this.calculateTotalPoints(updatedPoints);
     } catch (error) {
       console.error("Error adding points:", error);
+      throw error;
+    }
+  }
+
+  // Subtract points from customer (when using points)
+  static async subtractPoints(customerId, points, transactionDetails = {}) {
+    try {
+      const customer = await this.getCustomerById(customerId);
+      if (!customer) throw new Error("Customer not found");
+
+      // Ensure points is an array
+      const currentPoints = Array.isArray(customer.points)
+        ? customer.points
+        : [];
+      const currentTotalPoints = this.calculateTotalPoints(currentPoints);
+
+      if (currentTotalPoints < points) {
+        throw new Error("Insufficient points");
+      }
+
+      // Create new point transaction for subtraction
+      const pointTransaction = {
+        amount: points,
+        type: "minus",
+        reason: transactionDetails.reason || "Points Used",
+        transactionId: transactionDetails.transactionId || null,
+        orderId: transactionDetails.orderId || null,
+        timestamp: new Date().toISOString(),
+        details: transactionDetails.details || "",
+        items: transactionDetails.items || [], // Include item details if provided
+      };
+
+      // Add new transaction to points array
+      const updatedPoints = [...currentPoints, pointTransaction];
+
+      await this.updateCustomer(customerId, { points: updatedPoints });
+
+      return this.calculateTotalPoints(updatedPoints);
+    } catch (error) {
+      console.error("Error subtracting points:", error);
+      throw error;
+    }
+  }
+
+  // Calculate total points from transactions array
+  static calculateTotalPoints(pointsArray) {
+    if (!Array.isArray(pointsArray)) return 0;
+
+    return pointsArray.reduce((total, transaction) => {
+      if (transaction.type === "added") {
+        return total + (transaction.amount || 0);
+      } else if (transaction.type === "minus") {
+        return total - (transaction.amount || 0);
+      }
+      return total;
+    }, 0);
+  }
+
+  // Get customer's current total points
+  static async getCustomerTotalPoints(customerId) {
+    try {
+      const customer = await this.getCustomerById(customerId);
+      if (!customer) throw new Error("Customer not found");
+
+      return this.calculateTotalPoints(customer.points);
+    } catch (error) {
+      console.error("Error getting customer total points:", error);
+      throw error;
+    }
+  }
+
+  // Get customer's points transaction history
+  static async getCustomerPointsHistory(customerId) {
+    try {
+      const customer = await this.getCustomerById(customerId);
+      if (!customer) throw new Error("Customer not found");
+
+      const pointsArray = Array.isArray(customer.points) ? customer.points : [];
+
+      // Sort by timestamp descending (newest first)
+      return pointsArray.sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
+    } catch (error) {
+      console.error("Error getting customer points history:", error);
       throw error;
     }
   }
@@ -192,26 +307,52 @@ export class CustomerService {
           amount: transactionData.amount,
           items: transactionData.items,
           paymentMethod: transactionData.paymentMethod || "cash",
-          pointsEarned: transactionData.pointsEarned || 0,
+          cashbackPoints: transactionData.cashbackPoints || 0,
           createdAt: serverTimestamp(),
         }
       );
+
+      const transactionId = transactionRef.id;
 
       // Update customer stats
       const customer = await this.getCustomerById(customerId);
       if (customer) {
         const newTotalSpent =
           (customer.totalSpent || 0) + transactionData.amount;
-        const newPoints =
-          (customer.points || 0) + (transactionData.pointsEarned || 0);
 
         await this.updateCustomer(customerId, {
           totalSpent: newTotalSpent,
-          points: newPoints,
         });
+
+        // Add cashback points with detailed transaction history if any cashback was earned
+        if (transactionData.cashbackPoints > 0) {
+          // Calculate detailed cashback information for each item
+          const itemDetails = transactionData.items
+            .filter((item) => item.categoryId)
+            .map((item) => {
+              let itemName = item.name;
+              // Add variant information if available
+              if (item.variants && Object.keys(item.variants).length > 0) {
+                const variantText = Object.entries(item.variants)
+                  .map(([key, value]) => `${key}: ${value}`)
+                  .join(", ");
+                itemName += ` (${variantText})`;
+              }
+              return `${itemName} (${item.quantity || 1}x)`;
+            })
+            .join(", ");
+
+          await this.addPoints(customerId, transactionData.cashbackPoints, {
+            reason: "Cashback Points",
+            transactionId: transactionId,
+            orderId: transactionId,
+            details: `Earned ${transactionData.cashbackPoints} cashback points from purchase: ${itemDetails}`,
+            items: transactionData.items, // Include full item details
+          });
+        }
       }
 
-      return { id: transactionRef.id, ...transactionData };
+      return { id: transactionId, ...transactionData };
     } catch (error) {
       console.error("Error recording transaction:", error);
       throw error;
@@ -382,6 +523,39 @@ export class AnalyticsService {
     }
   }
 }
+
+// Utility functions
+export const getTierColor = (tier) => {
+  switch (tier) {
+    case "Platinum":
+      return "text-purple-600 bg-purple-100";
+    case "Gold":
+      return "text-yellow-600 bg-yellow-100";
+    case "Silver":
+      return "text-gray-600 bg-gray-100";
+    case "Bronze":
+      return "text-orange-600 bg-orange-100";
+    default:
+      return "text-gray-600 bg-gray-100";
+  }
+};
+
+export const calculateTier = (pointsData) => {
+  let totalPoints = 0;
+
+  if (Array.isArray(pointsData)) {
+    // New points structure - array of transactions
+    totalPoints = CustomerService.calculateTotalPoints(pointsData);
+  } else {
+    // Legacy points structure - number
+    totalPoints = pointsData || 0;
+  }
+
+  if (totalPoints >= 2000) return "Platinum";
+  if (totalPoints >= 1000) return "Gold";
+  if (totalPoints >= 500) return "Silver";
+  return "Bronze";
+};
 
 export const customerService = new CustomerService();
 export const analyticsService = new AnalyticsService();
