@@ -28,7 +28,7 @@ const qualityTypes = [
   {
     id: "outdoor",
     name: "Outdoor",
-    description: "Sun-grown cannabis",
+    description: "Sun-grown",
     prices: { small: 80, normal: 150, king: 250 },
   },
   {
@@ -422,17 +422,6 @@ export default function PreRolledProducts() {
           {/* Step 1: Choose Strain Type */}
           {step === "strain" && (
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl font-bold text-center mb-8">
-                Choose Cannabis Type
-              </h2>
-
-              {/* Product Name at Top */}
-              <div className="text-center mb-8">
-                <h3 className="text-5xl font-bold text-gray-800">
-                  {strainTypes[currentStrainIndex].name}
-                </h3>
-              </div>
-
               {/* Minimalistic Navigation */}
               <div className="relative">
                 <div className="flex items-center justify-between">
@@ -585,26 +574,6 @@ export default function PreRolledProducts() {
           {/* Step 2: Choose Quality */}
           {step === "quality" && (
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl font-bold text-center mb-4">
-                Choose Quality Level
-              </h2>
-              <p className="text-xl text-center text-gray-600 mb-8">
-                {selectedStrain.name} Cannabis
-              </p>
-
-              {/* Product Name at Top */}
-              <div className="text-center mb-4">
-                <h3 className="text-5xl font-bold text-gray-800">
-                  {qualityTypes[currentQualityIndex].name}
-                </h3>
-                <div className="text-2xl text-green-600 mt-2">
-                  From $
-                  {Math.min(
-                    ...Object.values(qualityTypes[currentQualityIndex].prices)
-                  )}
-                </div>
-              </div>
-
               {/* Minimalistic Navigation */}
               <div className="relative">
                 <div className="flex items-center justify-between">
@@ -761,30 +730,8 @@ export default function PreRolledProducts() {
           {/* Step 3: Choose Size */}
           {step === "size" && (
             <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl font-bold text-center mb-4">
-                Choose Size
-              </h2>
-              <p className="text-xl text-center text-gray-600 mb-8">
-                {selectedStrain.name} • {selectedQuality.name}
-              </p>
-
               {getAvailableSizes().length > 0 && (
                 <>
-                  {/* Product Name at Top */}
-                  <div className="text-center mb-4">
-                    <h3 className="text-5xl font-bold text-gray-800">
-                      {getAvailableSizes()[currentSizeIndex].name}
-                    </h3>
-                    <div className="text-3xl text-green-600 mt-2">
-                      $
-                      {
-                        selectedQuality.prices[
-                          getAvailableSizes()[currentSizeIndex].id
-                        ]
-                      }
-                    </div>
-                  </div>
-
                   {/* Minimalistic Navigation */}
                   <div className="relative">
                     <div className="flex items-center justify-between">

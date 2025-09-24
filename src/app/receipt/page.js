@@ -117,9 +117,9 @@ export default function ReceiptPage() {
                 <h2 className="text-3xl font-bold text-gray-800 mb-2">
                   Candy Kush
                 </h2>
-                <p className="text-gray-600">Cannabis Dispensary</p>
+                <p className="text-gray-600">Dispensary</p>
                 <p className="text-sm text-gray-500 mt-2">
-                  123 Cannabis St, Weed City, WC 12345
+                  123 St, Weed City, WC 12345
                 </p>
               </div>
 

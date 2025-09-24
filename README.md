@@ -16,6 +16,7 @@ A modern cannabis dispensary kiosk application built with Next.js 15 and Firebas
 ## 🔧 Quick Start
 
 1. **Clone and Install:**
+
    ```bash
    git clone https://github.com/candykush2025/candy-kush-kiosk.git
    cd candy-kush-kiosk
@@ -23,12 +24,14 @@ A modern cannabis dispensary kiosk application built with Next.js 15 and Firebas
    ```
 
 2. **Environment Setup:**
+
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your Firebase configuration
    ```
 
 3. **Run Development Server:**
+
    ```bash
    npm run dev
    ```
@@ -41,6 +44,7 @@ A modern cannabis dispensary kiosk application built with Next.js 15 and Firebas
 See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.
 
 **Quick Deploy:**
+
 1. Import repository to Vercel
 2. Add Firebase environment variables
 3. Deploy!

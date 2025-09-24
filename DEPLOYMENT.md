@@ -5,6 +5,7 @@ This project is ready for deployment to Vercel with Firebase backend.
 ## 🚀 Quick Deploy to Vercel
 
 ### Prerequisites
+
 - A Vercel account
 - Firebase project set up
 
@@ -25,11 +26,13 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-4JZJ6PGWP5
 ### Deploy Steps
 
 1. **Connect to Vercel:**
+
    - Go to [vercel.com](https://vercel.com)
    - Import your GitHub repository
    - Or use Vercel CLI: `vercel --prod`
 
 2. **Add Environment Variables:**
+
    - Go to Project Settings → Environment Variables
    - Add all Firebase configuration variables listed above
    - Set Environment to "Production" and "Development"
@@ -41,6 +44,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-4JZJ6PGWP5
 ## 🔧 Local Development
 
 1. **Clone and Install:**
+
    ```bash
    git clone <your-repo>
    cd candy-kush-kiosk
@@ -48,6 +52,7 @@ NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-4JZJ6PGWP5
    ```
 
 2. **Environment Setup:**
+
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your Firebase config

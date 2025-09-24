@@ -1268,7 +1268,7 @@ export default function AdminDashboard() {
                         Product Management
                       </h2>
                       <p className="text-gray-600 mt-1">
-                        Manage your cannabis product inventory and pricing
+                        Manage your product inventory and pricing
                       </p>
                     </div>
                     <div className="flex space-x-2">
@@ -1527,8 +1527,8 @@ export default function AdminDashboard() {
                           </h4>
                           <p className="text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
                             Create your first category to start organizing your
-                            cannabis products. Build a structured hierarchy for
-                            better management.
+                            products. Build a structured hierarchy for better
+                            management.
                           </p>
                           <button
                             onClick={() => setShowAddCategory(true)}
@@ -3881,7 +3881,7 @@ export default function AdminDashboard() {
                           </label>
                           <textarea
                             rows="3"
-                            defaultValue="123 Cannabis Street, Amsterdam, Netherlands"
+                            defaultValue="123 Street, Amsterdam, Netherlands"
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                           />
                         </div>

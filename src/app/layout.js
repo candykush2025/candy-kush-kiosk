@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   title: "Candy Kush Kiosk",
-  description: "Cannabis Product Ordering Kiosk System",
+  description: "Product Ordering Kiosk System",
 };
 
 export default function RootLayout({ children }) {
