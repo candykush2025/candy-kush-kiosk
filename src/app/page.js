@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
+import { VisitService } from "../lib/visitService";
 
 // Import Swiper styles
 import "swiper/css";
@@ -63,13 +64,31 @@ export default function Home() {
   const [selectedLanguage, setSelectedLanguage] = useState("English");
   const [lastInteraction, setLastInteraction] = useState(Date.now());
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [visitRecorded, setVisitRecorded] = useState(false);
   const router = useRouter();
 
   // Initialize with shuffled products on component mount
   useEffect(() => {
     const shuffledProducts = shuffleArray(allProducts);
     setProducts(shuffledProducts);
-  }, []); // Auto redirect to idle screen after 30 seconds of inactivity
+  }, []);
+
+  // Record visit when page loads (only once per session)
+  useEffect(() => {
+    const recordPageVisit = async () => {
+      if (!visitRecorded) {
+        const success = await VisitService.recordVisit(
+          Math.random().toString(36).substr(2, 9)
+        );
+        if (success) {
+          setVisitRecorded(true);
+          console.log("Page visit recorded successfully");
+        }
+      }
+    };
+
+    recordPageVisit();
+  }, [visitRecorded]); // Auto redirect to idle screen after 30 seconds of inactivity
   useEffect(() => {
     const checkInactivity = () => {
       if (Date.now() - lastInteraction > 30000) {
@@ -99,7 +118,14 @@ export default function Home() {
     };
   }, [lastInteraction, router]);
 
-  const handleOrderNow = () => {
+  const handleOrderNow = async () => {
+    // Record order start
+    await VisitService.recordOrderStart(
+      Math.random().toString(36).substr(2, 9)
+    );
+    console.log("Order start recorded");
+
+    // Navigate to scanner
     router.push("/scanner");
   };
 

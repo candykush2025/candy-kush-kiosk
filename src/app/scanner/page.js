@@ -2,13 +2,32 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CustomerService } from "../../lib/customerService";
+import { VisitService } from "../../lib/visitService";
 
 export default function QRScanner() {
   const [scannedCode, setScannedCode] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [visitRecorded, setVisitRecorded] = useState(false);
   const inputRef = useRef(null);
   const router = useRouter();
+
+  // Record visit when scanner page loads (only once per session)
+  useEffect(() => {
+    const recordPageVisit = async () => {
+      if (!visitRecorded) {
+        const success = await VisitService.recordVisit(
+          Math.random().toString(36).substr(2, 9)
+        );
+        if (success) {
+          setVisitRecorded(true);
+          console.log("Scanner page visit recorded successfully");
+        }
+      }
+    };
+
+    recordPageVisit();
+  }, [visitRecorded]);
 
   // Keep input focused at all times
   useEffect(() => {

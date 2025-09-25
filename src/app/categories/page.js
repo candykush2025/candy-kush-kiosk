@@ -9,6 +9,7 @@ import {
 } from "../../lib/customerService";
 import { CategoryService } from "../../lib/productService";
 import PointsHistory from "../../components/PointsHistory";
+import { VisitService } from "../../lib/visitService";
 
 export default function Categories() {
   const [customer, setCustomer] = useState(null);
@@ -17,7 +18,25 @@ export default function Categories() {
   const [showPointsHistory, setShowPointsHistory] = useState(false);
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [visitRecorded, setVisitRecorded] = useState(false);
   const router = useRouter();
+
+  // Record visit when categories page loads (only once per session)
+  useEffect(() => {
+    const recordPageVisit = async () => {
+      if (!visitRecorded) {
+        const success = await VisitService.recordVisit(
+          Math.random().toString(36).substr(2, 9)
+        );
+        if (success) {
+          setVisitRecorded(true);
+          console.log("Categories page visit recorded successfully");
+        }
+      }
+    };
+
+    recordPageVisit();
+  }, [visitRecorded]);
 
   useEffect(() => {
     const loadData = async () => {

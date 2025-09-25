@@ -79,26 +79,6 @@ export default function AdminDashboard() {
     useState(false);
   const [editNationalitySearch, setEditNationalitySearch] = useState("");
 
-  // Product hierarchy expansion states
-  const [expandedCategories, setExpandedCategories] = useState(new Set());
-  const [expandedSubcategories, setExpandedSubcategories] = useState(new Set());
-  const [expandedProducts, setExpandedProducts] = useState(new Set());
-
-  // Product form states for comprehensive management
-  const [prefilledCategory, setPrefilledCategory] = useState(null);
-  const [prefilledSubcategory, setPrefilledSubcategory] = useState(null);
-
-  // Product status toggle loading state
-  const [isTogglingStatus, setIsTogglingStatus] = useState(null);
-
-  // Complex Product Form States
-  const [hasVariants, setHasVariants] = useState(false);
-  const [variants, setVariants] = useState([]);
-  const [productUnit, setProductUnit] = useState("pcs");
-  const [productImageFile, setProductImageFile] = useState(null);
-  const [optionImageFile, setOptionImageFile] = useState(null);
-  const [isProductSaving, setIsProductSaving] = useState(false);
-
   // Form states
   const [newCustomer, setNewCustomer] = useState({
     nationality: "",
@@ -118,16 +98,10 @@ export default function AdminDashboard() {
     subcategoryId: "",
     subcategoryName: "",
     hasVariants: false,
-    // For products without variants
     price: 0,
-    stock: 0,
-    // For products with variants
     variants: [],
-    // Common fields
-    sku: "",
     barcode: "",
     supplier: "",
-    minStock: 5,
     mainImage: "",
     images: [],
     isActive: true,
@@ -160,6 +134,16 @@ export default function AdminDashboard() {
     isActive: true,
   });
 
+  const [productForm, setProductForm] = useState({
+    name: "",
+    description: "",
+    categoryId: "",
+    subcategoryId: "",
+    hasVariants: false,
+    price: 0,
+    isActive: true,
+  });
+
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     description: "",
@@ -174,17 +158,25 @@ export default function AdminDashboard() {
   });
 
   const [cashbackForm, setCashbackForm] = useState({
-    categoryId: "",
-    categoryName: "",
-    percentage: 0,
+    name: "",
+    description: "",
+    type: "percentage",
+    rate: 0,
+    minPurchase: 0,
     isActive: true,
   });
 
   // Loading states
   const [isCustomerSaving, setIsCustomerSaving] = useState(false);
+  const [isProductSaving, setIsProductSaving] = useState(false);
   const [isCategorySaving, setIsCategorySaving] = useState(false);
   const [isLoadingSubcategory, setIsLoadingSubcategory] = useState(false);
-  const [isCashbackSaving, setIsCashbackSaving] = useState(false);
+
+  // Product variant states
+  const [hasVariants, setHasVariants] = useState(false);
+  const [variants, setVariants] = useState([]);
+  const [productImageFile, setProductImageFile] = useState(null);
+  const [optionImageFile, setOptionImageFile] = useState(null);
 
   // Country search
   const [countrySearch, setCountrySearch] = useState("");
@@ -213,47 +205,17 @@ export default function AdminDashboard() {
           const transactionId =
             pointRecord.transactionId || `${customer.customerId}-${index}`;
 
-          // CALCULATE total from items array (quantity * price)
-          let calculatedTotal = 0;
-          if (pointRecord.items && Array.isArray(pointRecord.items)) {
-            calculatedTotal = pointRecord.items.reduce((sum, item) => {
-              return sum + (item.quantity || 1) * (item.price || 0);
-            }, 0);
-          }
-
-          console.log(
-            `Transaction ${transactionId}: calculated total = ${calculatedTotal} cents = ฿${
-              calculatedTotal / 100
-            }`
-          );
-
           const transaction = {
             transactionId: transactionId,
             customerId: customer.customerId,
             customerName: customer.name,
             customerEmail: customer.email,
-            customerCell: customer.cell,
-            totalSpent: calculatedTotal,
-            // Convert from cents to baht for display
-            amount: calculatedTotal / 100,
-            pointsEarned: pointRecord.amount || 0,
-            items: pointRecord.items || [],
-            details: pointRecord.details || "",
-            orderId: pointRecord.orderId,
-            createdAt: pointRecord.timestamp
-              ? new Date(pointRecord.timestamp)
-              : pointRecord.createdAt,
+            totalSpent: pointRecord.totalSpent || 0,
+            amount: pointRecord.amount || 0,
+            createdAt: pointRecord.createdAt,
             status: "completed",
-            source: pointRecord.reason || "purchase",
-            type: pointRecord.type || "purchase",
+            source: pointRecord.source || "purchase",
           };
-
-          console.log("Transaction created:", {
-            transactionId,
-            totalSpent: pointRecord.totalSpent,
-            amount: transaction.amount,
-            pointsEarned: transaction.pointsEarned,
-          });
           allTransactions.push(transaction);
         });
       }
@@ -427,43 +389,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Product hierarchy expansion handlers
-  const toggleCategoryExpansion = (categoryId) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(categoryId)) {
-        next.delete(categoryId);
-      } else {
-        next.add(categoryId);
-      }
-      return next;
-    });
-  };
-
-  const toggleSubcategoryExpansion = (subcategoryId) => {
-    setExpandedSubcategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(subcategoryId)) {
-        next.delete(subcategoryId);
-      } else {
-        next.add(subcategoryId);
-      }
-      return next;
-    });
-  };
-
-  const toggleProductExpansion = (productId) => {
-    setExpandedProducts((prev) => {
-      const next = new Set(prev);
-      if (next.has(productId)) {
-        next.delete(productId);
-      } else {
-        next.add(productId);
-      }
-      return next;
-    });
-  };
-
   // Product handlers
   const handleSaveProduct = async () => {
     try {
@@ -527,14 +452,11 @@ export default function AdminDashboard() {
 
   const handleToggleProductStatus = async (product) => {
     try {
-      setIsTogglingStatus(product.id);
       const updatedProduct = { ...product, isActive: !product.isActive };
       await ProductService.updateProduct(product.id, updatedProduct);
       await loadDashboardData();
     } catch (error) {
       console.error("Error updating product status:", error);
-    } finally {
-      setIsTogglingStatus(null);
     }
   };
 
@@ -579,104 +501,38 @@ export default function AdminDashboard() {
 
   // Cashback handlers
   const handleAddCashbackRule = () => {
-    setCashbackForm({
+    setEditingCashbackRule({
       categoryId: "",
       categoryName: "",
-      percentage: 0,
+      cashbackPercentage: 0,
       isActive: true,
     });
-    setShowAddCashback(true);
   };
 
   const handleSaveCashback = async (e) => {
     e.preventDefault();
-    setIsCashbackSaving(true);
-
     try {
-      if (!cashbackForm.categoryId || !cashbackForm.percentage) {
-        alert("Please select a category and enter percentage");
-        return;
-      }
-
-      // Check if category already exists (only for new rules, not editing)
-      if (!editingCashback) {
-        const existingRule = cashbackRules.find(
-          (rule) => rule.categoryId === cashbackForm.categoryId
-        );
-        if (existingRule) {
-          alert(
-            "This category already has a cashback rule. Each category can only have one rule."
-          );
-          return;
-        }
-      }
-
-      // Find category name from selected categoryId
-      const selectedCategory = categories.find(
-        (cat) => cat.id === cashbackForm.categoryId
-      );
-      const cashbackData = {
-        ...cashbackForm,
-        categoryName: selectedCategory?.name || "",
-      };
-
-      if (editingCashback?.id) {
+      if (editingCashbackRule.id) {
         await CashbackService.updateCashbackRule(
-          editingCashback.id,
-          cashbackData
+          editingCashbackRule.id,
+          editingCashbackRule
         );
       } else {
-        await CashbackService.createCashbackRule(cashbackData);
+        await CashbackService.createCashbackRule(editingCashbackRule);
       }
-
-      setShowAddCashback(false);
-      setEditingCashback(null);
-      setCashbackForm({
-        categoryId: "",
-        categoryName: "",
-        percentage: 0,
-        isActive: true,
-      });
+      setEditingCashbackRule(null);
       await loadDashboardData();
     } catch (error) {
       console.error("Error saving cashback rule:", error);
-      alert("Error saving cashback rule. Please try again.");
-    } finally {
-      setIsCashbackSaving(false);
     }
   };
 
-  const handleCancelCashback = () => {
-    setShowAddCashback(false);
-    setEditingCashback(null);
-    setCashbackForm({
-      categoryId: "",
-      categoryName: "",
-      percentage: 0,
-      isActive: true,
-    });
-  };
-
-  const handleDeleteCashback = async (ruleId) => {
-    if (confirm("Are you sure you want to delete this cashback rule?")) {
-      try {
-        await CashbackService.deleteCashbackRule(ruleId);
-        await loadDashboardData();
-      } catch (error) {
-        console.error("Error deleting cashback rule:", error);
-      }
-    }
-  };
-
-  const handleToggleCashbackStatus = async (rule) => {
+  const handleDeleteCashbackRule = async (ruleId) => {
     try {
-      await CashbackService.updateCashbackRule(rule.id, {
-        ...rule,
-        isActive: !rule.isActive,
-      });
+      await CashbackService.deleteCashbackRule(ruleId);
       await loadDashboardData();
     } catch (error) {
-      console.error("Error updating cashback rule:", error);
+      console.error("Error deleting cashback rule:", error);
     }
   };
 
@@ -1406,1202 +1262,83 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              {/* Products Content */}
+              {/* Products Tab */}
               {activeTab === "products" && (
                 <div className="space-y-6">
-                  {/* Products Header */}
+                  {/* Product Stats and Add Buttons */}
                   <div className="flex justify-between items-center">
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        Product Management
-                      </h2>
-                      <p className="text-gray-600 mt-1">
-                        Manage your product inventory and pricing
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 mr-6">
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <ShoppingBag className="w-8 h-8 text-purple-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Total Products
+                            </p>
+                            <p className="text-xl font-semibold text-gray-900">
+                              {products.length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <TrendingUp className="w-8 h-8 text-green-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Active Products
+                            </p>
+                            <p className="text-xl font-semibold text-gray-900">
+                              {products.filter((p) => p.isActive).length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center">
+                          <BarChart className="w-8 h-8 text-blue-600 mr-3" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">
+                              Categories
+                            </p>
+                            <p className="text-xl font-semibold text-gray-900">
+                              {categories.length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     <div className="flex space-x-2">
                       <button
                         onClick={() => setShowAddCategory(true)}
                         className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
                       >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
                         Add Category
                       </button>
                       <button
                         onClick={() => setShowAddSubcategory(true)}
                         className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
                       >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
                         Add Subcategory
                       </button>
                       <button
                         onClick={() => setShowAddProduct(true)}
                         className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center"
                       >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
                         Add Product
                       </button>
                     </div>
                   </div>
 
-                  {/* Enhanced Product Statistics */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-6 rounded-xl shadow-lg border border-blue-200/60">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-white rounded-lg shadow-md border border-blue-200">
-                          <svg
-                            className="w-6 h-6 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-blue-700">
-                            Total Products
-                          </p>
-                          <p className="text-2xl font-bold text-blue-900">
-                            {stats.totalProducts}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-100 p-6 rounded-xl shadow-lg border border-green-200/60">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-white rounded-lg shadow-md border border-green-200">
-                          <svg
-                            className="w-6 h-6 text-green-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-green-700">
-                            Categories
-                          </p>
-                          <p className="text-2xl font-bold text-green-900">
-                            {stats.totalCategories}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-purple-50 to-violet-100 p-6 rounded-xl shadow-lg border border-purple-200/60">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-white rounded-lg shadow-md border border-purple-200">
-                          <svg
-                            className="w-6 h-6 text-purple-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-purple-700">
-                            Subcategories
-                          </p>
-                          <p className="text-2xl font-bold text-purple-900">
-                            {stats.totalSubcategories}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-orange-50 to-red-100 p-6 rounded-xl shadow-lg border border-orange-200/60">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-white rounded-lg shadow-md border border-orange-200">
-                          <svg
-                            className="w-6 h-6 text-orange-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-orange-700">
-                            Low Stock
-                          </p>
-                          <p className="text-2xl font-bold text-orange-900">
-                            {stats.lowStockProducts}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Product Hierarchy Tree */}
-                  <div className="bg-gradient-to-br from-white to-gray-50/50 rounded-xl shadow-lg border border-gray-200/60 backdrop-blur-sm">
-                    <div className="px-8 py-6 border-b border-gray-200/80 bg-gradient-to-r from-indigo-50 to-purple-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-white rounded-lg shadow-sm border border-indigo-200">
-                            <svg
-                              className="w-6 h-6 text-indigo-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                              />
-                            </svg>
-                          </div>
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-900">
-                              Product Hierarchy
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {categories.length} categories •{" "}
-                              {subcategories.length} subcategories •{" "}
-                              {products.length} products
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setShowAddCategory(true)}
-                            className="inline-flex items-center px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                          >
-                            <svg
-                              className="w-4 h-4 mr-2"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                              />
-                            </svg>
-                            Add Category
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-6 max-h-[700px] overflow-y-auto custom-scrollbar">
-                      {categories.length === 0 ? (
-                        <div className="text-center py-16">
-                          <div className="mx-auto w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mb-6">
-                            <svg
-                              className="w-12 h-12 text-indigo-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={1.5}
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                              />
-                            </svg>
-                          </div>
-                          <h4 className="text-xl font-bold text-gray-900 mb-3">
-                            Build Your Product Catalog
-                          </h4>
-                          <p className="text-gray-600 mb-8 max-w-md mx-auto leading-relaxed">
-                            Create your first category to start organizing your
-                            products. Build a structured hierarchy for better
-                            management.
-                          </p>
-                          <button
-                            onClick={() => setShowAddCategory(true)}
-                            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                          >
-                            <svg
-                              className="w-5 h-5 mr-3"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                              />
-                            </svg>
-                            Create First Category
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          {categories.map((category) => {
-                            const categorySubcategories = subcategories.filter(
-                              (sub) => sub.categoryId === category.id
-                            );
-                            const isExpanded = expandedCategories.has(
-                              category.id
-                            );
-
-                            return (
-                              <div
-                                key={category.id}
-                                className="group bg-white rounded-xl border border-gray-200/80 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden"
-                              >
-                                {/* Category Level */}
-                                <div
-                                  className="flex items-center space-x-4 p-6 hover:bg-gradient-to-r hover:from-gray-50 hover:to-indigo-50/50 cursor-pointer transition-all duration-200"
-                                  onClick={() =>
-                                    toggleCategoryExpansion(category.id)
-                                  }
-                                >
-                                  <div className="flex items-center space-x-4">
-                                    <div
-                                      className={`transform transition-transform duration-200 ${
-                                        isExpanded ? "rotate-90" : ""
-                                      }`}
-                                    >
-                                      <svg
-                                        className="w-5 h-5 text-gray-500"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M9 5l7 7-7 7"
-                                        />
-                                      </svg>
-                                    </div>
-                                    <div className="relative group">
-                                      {category.image ? (
-                                        <img
-                                          src={category.image}
-                                          alt={category.name}
-                                          className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200"
-                                        />
-                                      ) : (
-                                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200">
-                                          <svg
-                                            className="w-8 h-8 text-indigo-600"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                            />
-                                          </svg>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className="text-xl font-bold text-gray-900 mb-1">
-                                      {category.name}
-                                    </h4>
-                                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                      <span className="flex items-center">
-                                        <svg
-                                          className="w-4 h-4 mr-1"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                          />
-                                        </svg>
-                                        {categorySubcategories.length}{" "}
-                                        subcategories
-                                      </span>
-                                      <span className="flex items-center">
-                                        <svg
-                                          className="w-4 h-4 mr-1"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          viewBox="0 0 24 24"
-                                        >
-                                          <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                          />
-                                        </svg>
-                                        {
-                                          products.filter(
-                                            (p) => p.categoryId === category.id
-                                          ).length
-                                        }{" "}
-                                        products
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-3">
-                                    <span
-                                      className={`px-4 py-2 text-sm font-medium rounded-full ${
-                                        category.isActive
-                                          ? "bg-green-100 text-green-800 border border-green-200"
-                                          : "bg-red-100 text-red-800 border border-red-200"
-                                      }`}
-                                    >
-                                      {category.isActive
-                                        ? "Active"
-                                        : "Inactive"}
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleDeleteCategory(category.id);
-                                      }}
-                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                                    >
-                                      <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-
-                                {/* Subcategories Level */}
-                                {isExpanded && (
-                                  <div className="border-t border-gray-200/60 bg-gradient-to-r from-gray-50/50 to-indigo-50/30">
-                                    {categorySubcategories.length === 0 ? (
-                                      <div className="p-8 text-center">
-                                        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4">
-                                          <svg
-                                            className="w-8 h-8 text-purple-600"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                            />
-                                          </svg>
-                                        </div>
-                                        <h5 className="text-lg font-semibold text-gray-900 mb-2">
-                                          No subcategories yet
-                                        </h5>
-                                        <p className="text-gray-600 mb-6">
-                                          Create your first subcategory in this
-                                          category
-                                        </p>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setNewSubcategory((prev) => ({
-                                              ...prev,
-                                              categoryId: category.id,
-                                              categoryName: category.name,
-                                            }));
-                                            setShowAddSubcategory(true);
-                                          }}
-                                          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                                        >
-                                          <svg
-                                            className="w-4 h-4 mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                            />
-                                          </svg>
-                                          Add Subcategory
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <div className="p-4 space-y-3">
-                                        {categorySubcategories.map(
-                                          (subcategory) => {
-                                            const subcategoryProducts =
-                                              products.filter(
-                                                (prod) =>
-                                                  prod.subcategoryId ===
-                                                  subcategory.id
-                                              );
-                                            const isSubExpanded =
-                                              expandedSubcategories.has(
-                                                subcategory.id
-                                              );
-
-                                            return (
-                                              <div
-                                                key={subcategory.id}
-                                                className="bg-white rounded-lg border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ml-8"
-                                              >
-                                                {/* Subcategory Level */}
-                                                <div
-                                                  className="flex items-center space-x-4 p-5 hover:bg-gradient-to-r hover:from-gray-50 hover:to-purple-50/30 cursor-pointer"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleSubcategoryExpansion(
-                                                      subcategory.id
-                                                    );
-                                                  }}
-                                                >
-                                                  <div className="flex items-center space-x-3">
-                                                    <div
-                                                      className={`transform transition-transform duration-200 ${
-                                                        isSubExpanded
-                                                          ? "rotate-90"
-                                                          : ""
-                                                      }`}
-                                                    >
-                                                      <svg
-                                                        className="w-4 h-4 text-gray-500"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                      >
-                                                        <path
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          strokeWidth={2}
-                                                          d="M9 5l7 7-7 7"
-                                                        />
-                                                      </svg>
-                                                    </div>
-                                                    {subcategory.image ? (
-                                                      <img
-                                                        src={subcategory.image}
-                                                        alt={subcategory.name}
-                                                        className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                                      />
-                                                    ) : (
-                                                      <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-                                                        <svg
-                                                          className="w-6 h-6 text-purple-600"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          viewBox="0 0 24 24"
-                                                        >
-                                                          <path
-                                                            strokeLinecap="round"
-                                                            strokeLinejoin="round"
-                                                            strokeWidth={2}
-                                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                          />
-                                                        </svg>
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                  <div className="flex-1 min-w-0">
-                                                    <h5 className="text-lg font-semibold text-gray-900 mb-1">
-                                                      {subcategory.name}
-                                                    </h5>
-                                                    <p className="text-sm text-gray-600 flex items-center">
-                                                      <svg
-                                                        className="w-4 h-4 mr-1"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                      >
-                                                        <path
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          strokeWidth={2}
-                                                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                        />
-                                                      </svg>
-                                                      {
-                                                        subcategoryProducts.length
-                                                      }{" "}
-                                                      products
-                                                    </p>
-                                                  </div>
-                                                  <div className="flex items-center space-x-2">
-                                                    <span
-                                                      className={`px-3 py-1.5 text-sm font-medium rounded-full ${
-                                                        subcategory.isActive
-                                                          ? "bg-green-100 text-green-800 border border-green-200"
-                                                          : "bg-red-100 text-red-800 border border-red-200"
-                                                      }`}
-                                                    >
-                                                      {subcategory.isActive
-                                                        ? "Active"
-                                                        : "Inactive"}
-                                                    </span>
-                                                    <button
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteSubcategory(
-                                                          subcategory.id
-                                                        );
-                                                      }}
-                                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                                                    >
-                                                      <svg
-                                                        className="w-4 h-4"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                      >
-                                                        <path
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          strokeWidth={2}
-                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                        />
-                                                      </svg>
-                                                    </button>
-                                                  </div>
-                                                </div>
-
-                                                {/* Products Level */}
-                                                {isSubExpanded && (
-                                                  <div className="border-t border-gray-200/50 bg-gradient-to-r from-indigo-50/30 to-blue-50/30">
-                                                    {subcategoryProducts.length ===
-                                                    0 ? (
-                                                      <div className="p-8 text-center ml-12">
-                                                        <div className="mx-auto w-14 h-14 bg-gradient-to-br from-green-100 to-emerald-100 rounded-full flex items-center justify-center mb-4">
-                                                          <svg
-                                                            className="w-7 h-7 text-green-600"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                          >
-                                                            <path
-                                                              strokeLinecap="round"
-                                                              strokeLinejoin="round"
-                                                              strokeWidth={2}
-                                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                            />
-                                                          </svg>
-                                                        </div>
-                                                        <h6 className="text-base font-semibold text-gray-900 mb-2">
-                                                          No products yet
-                                                        </h6>
-                                                        <p className="text-gray-600 mb-4 text-sm">
-                                                          Add your first product
-                                                          to this subcategory
-                                                        </p>
-                                                        <button
-                                                          onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setPrefilledCategory(
-                                                              category
-                                                            );
-                                                            setPrefilledSubcategory(
-                                                              subcategory
-                                                            );
-                                                            setNewProduct(
-                                                              (prev) => ({
-                                                                ...prev,
-                                                                categoryId:
-                                                                  category.id,
-                                                                categoryName:
-                                                                  category.name,
-                                                                subcategoryId:
-                                                                  subcategory.id,
-                                                                subcategoryName:
-                                                                  subcategory.name,
-                                                              })
-                                                            );
-                                                            setShowAddProduct(
-                                                              true
-                                                            );
-                                                          }}
-                                                          className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
-                                                        >
-                                                          <svg
-                                                            className="w-4 h-4 mr-2"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                          >
-                                                            <path
-                                                              strokeLinecap="round"
-                                                              strokeLinejoin="round"
-                                                              strokeWidth={2}
-                                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                                            />
-                                                          </svg>
-                                                          Add Product
-                                                        </button>
-                                                      </div>
-                                                    ) : (
-                                                      <div className="p-3 space-y-2 ml-12">
-                                                        {subcategoryProducts.map(
-                                                          (product) => {
-                                                            const isProductExpanded =
-                                                              expandedProducts.has(
-                                                                product.id
-                                                              );
-
-                                                            return (
-                                                              <div
-                                                                key={product.id}
-                                                                className="bg-white rounded-lg border border-gray-200/70 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
-                                                              >
-                                                                {/* Product Level */}
-                                                                <div
-                                                                  className="flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30 cursor-pointer"
-                                                                  onClick={(
-                                                                    e
-                                                                  ) => {
-                                                                    e.stopPropagation();
-                                                                    toggleProductExpansion(
-                                                                      product.id
-                                                                    );
-                                                                  }}
-                                                                >
-                                                                  <div className="flex items-center space-x-3">
-                                                                    <div
-                                                                      className={`transform transition-transform duration-200 ${
-                                                                        isProductExpanded
-                                                                          ? "rotate-90"
-                                                                          : ""
-                                                                      }`}
-                                                                    >
-                                                                      <svg
-                                                                        className="w-4 h-4 text-gray-500"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                      >
-                                                                        <path
-                                                                          strokeLinecap="round"
-                                                                          strokeLinejoin="round"
-                                                                          strokeWidth={
-                                                                            2
-                                                                          }
-                                                                          d="M9 5l7 7-7 7"
-                                                                        />
-                                                                      </svg>
-                                                                    </div>
-                                                                    <div className="relative">
-                                                                      {product.mainImage ? (
-                                                                        <img
-                                                                          src={
-                                                                            product.mainImage
-                                                                          }
-                                                                          alt={
-                                                                            product.name
-                                                                          }
-                                                                          className="w-10 h-10 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                                                        />
-                                                                      ) : (
-                                                                        <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-                                                                          <svg
-                                                                            className="w-5 h-5 text-green-600"
-                                                                            fill="none"
-                                                                            stroke="currentColor"
-                                                                            viewBox="0 0 24 24"
-                                                                          >
-                                                                            <path
-                                                                              strokeLinecap="round"
-                                                                              strokeLinejoin="round"
-                                                                              strokeWidth={
-                                                                                2
-                                                                              }
-                                                                              d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                                            />
-                                                                          </svg>
-                                                                        </div>
-                                                                      )}
-                                                                      {product.hasVariants && (
-                                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                                                                          <svg
-                                                                            className="w-2.5 h-2.5 text-white"
-                                                                            fill="none"
-                                                                            stroke="currentColor"
-                                                                            viewBox="0 0 24 24"
-                                                                          >
-                                                                            <path
-                                                                              strokeLinecap="round"
-                                                                              strokeLinejoin="round"
-                                                                              strokeWidth={
-                                                                                3
-                                                                              }
-                                                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                                                            />
-                                                                          </svg>
-                                                                        </div>
-                                                                      )}
-                                                                    </div>
-                                                                  </div>
-                                                                  <div className="flex-1 min-w-0">
-                                                                    <h6 className="font-semibold text-gray-900 text-base truncate mb-1">
-                                                                      {
-                                                                        product.name
-                                                                      }
-                                                                    </h6>
-                                                                    <div className="flex items-center space-x-3 text-sm text-gray-600">
-                                                                      {product.hasVariants ? (
-                                                                        <>
-                                                                          <span className="flex items-center">
-                                                                            <svg
-                                                                              className="w-3 h-3 mr-1"
-                                                                              fill="none"
-                                                                              stroke="currentColor"
-                                                                              viewBox="0 0 24 24"
-                                                                            >
-                                                                              <path
-                                                                                strokeLinecap="round"
-                                                                                strokeLinejoin="round"
-                                                                                strokeWidth={
-                                                                                  2
-                                                                                }
-                                                                                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                                                              />
-                                                                            </svg>
-                                                                            Variable
-                                                                            Product
-                                                                          </span>
-                                                                          <span className="text-indigo-600 font-medium">
-                                                                            {product
-                                                                              .variants
-                                                                              ?.length ||
-                                                                              0}{" "}
-                                                                            variants
-                                                                          </span>
-                                                                        </>
-                                                                      ) : (
-                                                                        <>
-                                                                          <span className="flex items-center font-medium text-green-600">
-                                                                            <svg
-                                                                              className="w-3 h-3 mr-1"
-                                                                              fill="none"
-                                                                              stroke="currentColor"
-                                                                              viewBox="0 0 24 24"
-                                                                            >
-                                                                              <path
-                                                                                strokeLinecap="round"
-                                                                                strokeLinejoin="round"
-                                                                                strokeWidth={
-                                                                                  2
-                                                                                }
-                                                                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                                                                              />
-                                                                            </svg>
-                                                                            ฿
-                                                                            {(
-                                                                              product.price ||
-                                                                              0
-                                                                            ).toFixed(
-                                                                              2
-                                                                            )}
-                                                                          </span>
-                                                                          <span className="flex items-center">
-                                                                            <svg
-                                                                              className="w-3 h-3 mr-1"
-                                                                              fill="none"
-                                                                              stroke="currentColor"
-                                                                              viewBox="0 0 24 24"
-                                                                            >
-                                                                              <path
-                                                                                strokeLinecap="round"
-                                                                                strokeLinejoin="round"
-                                                                                strokeWidth={
-                                                                                  2
-                                                                                }
-                                                                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                                              />
-                                                                            </svg>
-                                                                            Stock:{" "}
-                                                                            {product.stock ||
-                                                                              0}
-                                                                          </span>
-                                                                        </>
-                                                                      )}
-                                                                    </div>
-                                                                  </div>
-                                                                  <div className="flex items-center space-x-2">
-                                                                    <button
-                                                                      onClick={(
-                                                                        e
-                                                                      ) => {
-                                                                        e.stopPropagation();
-                                                                        handleToggleProductStatus(
-                                                                          product
-                                                                        );
-                                                                      }}
-                                                                      disabled={
-                                                                        isTogglingStatus ===
-                                                                        product.id
-                                                                      }
-                                                                      className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all duration-200 hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed ${
-                                                                        (
-                                                                          product.isActive !==
-                                                                          undefined
-                                                                            ? product.isActive
-                                                                            : false
-                                                                        )
-                                                                          ? "bg-green-100 text-green-800 border border-green-200 hover:bg-green-200"
-                                                                          : "bg-red-100 text-red-800 border border-red-200 hover:bg-red-200"
-                                                                      }`}
-                                                                      title="Click to toggle status"
-                                                                    >
-                                                                      {isTogglingStatus ===
-                                                                      product.id ? (
-                                                                        <div className="flex items-center space-x-1">
-                                                                          <svg
-                                                                            className="animate-spin h-3 w-3"
-                                                                            fill="none"
-                                                                            viewBox="0 0 24 24"
-                                                                          >
-                                                                            <circle
-                                                                              className="opacity-25"
-                                                                              cx="12"
-                                                                              cy="12"
-                                                                              r="10"
-                                                                              stroke="currentColor"
-                                                                              strokeWidth="4"
-                                                                            ></circle>
-                                                                            <path
-                                                                              className="opacity-75"
-                                                                              fill="currentColor"
-                                                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                                            ></path>
-                                                                          </svg>
-                                                                          <span>
-                                                                            ...
-                                                                          </span>
-                                                                        </div>
-                                                                      ) : (
-                                                                          product.isActive !==
-                                                                          undefined
-                                                                            ? product.isActive
-                                                                            : false
-                                                                        ) ? (
-                                                                        "Active"
-                                                                      ) : (
-                                                                        "Inactive"
-                                                                      )}
-                                                                    </button>
-                                                                    <button
-                                                                      onClick={(
-                                                                        e
-                                                                      ) => {
-                                                                        e.stopPropagation();
-                                                                        setEditingProduct(
-                                                                          product
-                                                                        );
-                                                                      }}
-                                                                      className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
-                                                                    >
-                                                                      <svg
-                                                                        className="w-4 h-4"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                      >
-                                                                        <path
-                                                                          strokeLinecap="round"
-                                                                          strokeLinejoin="round"
-                                                                          strokeWidth={
-                                                                            2
-                                                                          }
-                                                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                                                        />
-                                                                      </svg>
-                                                                    </button>
-                                                                    <button
-                                                                      onClick={(
-                                                                        e
-                                                                      ) => {
-                                                                        e.stopPropagation();
-                                                                        handleDeleteProduct(
-                                                                          product.id
-                                                                        );
-                                                                      }}
-                                                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                                                                    >
-                                                                      <svg
-                                                                        className="w-4 h-4"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                      >
-                                                                        <path
-                                                                          strokeLinecap="round"
-                                                                          strokeLinejoin="round"
-                                                                          strokeWidth={
-                                                                            2
-                                                                          }
-                                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                                        />
-                                                                      </svg>
-                                                                    </button>
-                                                                  </div>
-                                                                </div>
-
-                                                                {/* Variants Level */}
-                                                                {isProductExpanded &&
-                                                                  product.hasVariants &&
-                                                                  product.variants &&
-                                                                  product
-                                                                    .variants
-                                                                    .length >
-                                                                    0 && (
-                                                                    <div className="border-t border-gray-200/50 bg-gradient-to-r from-blue-50/40 to-indigo-50/40">
-                                                                      <div className="p-4 space-y-3">
-                                                                        <div className="flex items-center space-x-2 mb-3">
-                                                                          <svg
-                                                                            className="w-4 h-4 text-indigo-600"
-                                                                            fill="none"
-                                                                            stroke="currentColor"
-                                                                            viewBox="0 0 24 24"
-                                                                          >
-                                                                            <path
-                                                                              strokeLinecap="round"
-                                                                              strokeLinejoin="round"
-                                                                              strokeWidth={
-                                                                                2
-                                                                              }
-                                                                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                                                            />
-                                                                          </svg>
-                                                                          <span className="text-sm font-semibold text-gray-800">
-                                                                            Product
-                                                                            Variants
-                                                                          </span>
-                                                                        </div>
-                                                                        {product.variants.map(
-                                                                          (
-                                                                            variantGroup,
-                                                                            groupIndex
-                                                                          ) => (
-                                                                            <div
-                                                                              key={
-                                                                                groupIndex
-                                                                              }
-                                                                              className="bg-white rounded-lg border border-gray-200/80 shadow-sm p-3"
-                                                                            >
-                                                                              <div className="flex items-center space-x-2 mb-3">
-                                                                                <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                                                                  {groupIndex +
-                                                                                    1}
-                                                                                </div>
-                                                                                <span className="font-semibold text-gray-800 text-sm">
-                                                                                  {
-                                                                                    variantGroup.variantName
-                                                                                  }
-                                                                                </span>
-                                                                              </div>
-                                                                              <div className="grid grid-cols-1 gap-2">
-                                                                                {variantGroup.options.map(
-                                                                                  (
-                                                                                    option,
-                                                                                    optionIndex
-                                                                                  ) => (
-                                                                                    <div
-                                                                                      key={
-                                                                                        optionIndex
-                                                                                      }
-                                                                                      className="flex items-center space-x-3 p-2 bg-gray-50/50 rounded-lg border border-gray-200/50 hover:bg-white hover:border-indigo-200 transition-all duration-200"
-                                                                                    >
-                                                                                      {option.imageUrl ? (
-                                                                                        <img
-                                                                                          src={
-                                                                                            option.imageUrl
-                                                                                          }
-                                                                                          alt={
-                                                                                            option.name
-                                                                                          }
-                                                                                          className="w-8 h-8 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                                                                        />
-                                                                                      ) : (
-                                                                                        <div className="w-8 h-8 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-                                                                                          <svg
-                                                                                            className="w-4 h-4 text-yellow-600"
-                                                                                            fill="none"
-                                                                                            stroke="currentColor"
-                                                                                            viewBox="0 0 24 24"
-                                                                                          >
-                                                                                            <path
-                                                                                              strokeLinecap="round"
-                                                                                              strokeLinejoin="round"
-                                                                                              strokeWidth={
-                                                                                                2
-                                                                                              }
-                                                                                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                                                                            />
-                                                                                          </svg>
-                                                                                        </div>
-                                                                                      )}
-                                                                                      <div className="flex-1 min-w-0">
-                                                                                        <div className="flex items-center space-x-2">
-                                                                                          <span className="font-medium text-gray-800 text-sm truncate">
-                                                                                            {
-                                                                                              option.name
-                                                                                            }
-                                                                                          </span>
-                                                                                          {option.price >
-                                                                                            0 && (
-                                                                                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                                                                                              ฿
-                                                                                              {(
-                                                                                                option.price ||
-                                                                                                0
-                                                                                              ).toFixed(
-                                                                                                2
-                                                                                              )}
-                                                                                            </span>
-                                                                                          )}
-                                                                                          {option.unit && (
-                                                                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                                                              {
-                                                                                                option.unit
-                                                                                              }
-                                                                                            </span>
-                                                                                          )}
-                                                                                        </div>
-                                                                                      </div>
-                                                                                    </div>
-                                                                                  )
-                                                                                )}
-                                                                              </div>
-                                                                            </div>
-                                                                          )
-                                                                        )}
-                                                                      </div>
-                                                                    </div>
-                                                                  )}
-                                                              </div>
-                                                            );
-                                                          }
-                                                        )}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            );
-                                          }
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Product Search and Filters */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          placeholder="Search products by name, category, or SKU..."
-                          value={productSearchTerm}
-                          onChange={(e) => setProductSearchTerm(e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
-                      </div>
-                      <div className="flex space-x-2">
-                        <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
-                          <option value="">All Categories</option>
-                          {categories.map((category) => (
-                            <option key={category.id} value={category.id}>
-                              {category.name}
-                            </option>
-                          ))}
-                        </select>
-                        <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
-                          <option value="">All Status</option>
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
-                          <option value="low-stock">Low Stock</option>
-                          <option value="out-of-stock">Out of Stock</option>
-                        </select>
-                      </div>
-                    </div>
+                  {/* Search */}
+                  <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <input
+                      type="text"
+                      placeholder="Search products by name or category..."
+                      value={productSearchTerm}
+                      onChange={(e) => setProductSearchTerm(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
                   </div>
 
                   {/* Products Table */}
@@ -2804,16 +1541,15 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base font-semibold text-green-600">
                                   ฿
-                                  {(transaction.amount || 0).toLocaleString(
-                                    "en-US",
-                                    {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    }
-                                  )}
+                                  {(
+                                    (transaction.totalSpent || 0) / 100
+                                  ).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base font-semibold text-blue-600">
-                                  +{transaction.pointsEarned || 0}
+                                  +{transaction.amount || 0}
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base text-gray-900">
                                   {transaction.createdAt
@@ -2830,12 +1566,9 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base font-medium">
                                   <button
-                                    onClick={() => {
-                                      setSelectedTransactionDetails(
-                                        transaction
-                                      );
-                                      setShowTransactionDetails(true);
-                                    }}
+                                    onClick={() =>
+                                      setSelectedTransaction(transaction)
+                                    }
                                     className="text-green-600 hover:text-green-900"
                                   >
                                     View Details
@@ -2921,24 +1654,13 @@ export default function AdminDashboard() {
 
                   {/* Add Rule Button */}
                   <div className="flex justify-end">
-                    {categories.filter(
-                      (cat) =>
-                        !cashbackRules.find(
-                          (rule) => rule.categoryId === cat.id
-                        )
-                    ).length > 0 ? (
-                      <button
-                        onClick={handleAddCashbackRule}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
-                      >
-                        <Plus className="w-5 h-5 mr-2" />
-                        Add Cashback Rule
-                      </button>
-                    ) : (
-                      <div className="text-gray-500 px-6 py-3">
-                        All categories already have cashback rules
-                      </div>
-                    )}
+                    <button
+                      onClick={() => setShowAddCashback(true)}
+                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
+                    >
+                      <Plus className="w-5 h-5 mr-2" />
+                      Add Cashback Rule
+                    </button>
                   </div>
 
                   {/* Cashback Rules Table */}
@@ -2953,10 +1675,16 @@ export default function AdminDashboard() {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Category
+                              Rule Name
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              Percentage
+                              Type
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Rate
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Min Purchase
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
@@ -2971,14 +1699,22 @@ export default function AdminDashboard() {
                             <tr key={rule.id} className="hover:bg-gray-50">
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm font-medium text-gray-900">
-                                  {rule.categoryName}
+                                  {rule.name}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  ID: {rule.categoryId}
+                                <div className="text-sm text-gray-500">
+                                  {rule.description}
                                 </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {rule.percentage}%
+                                {rule.type}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {rule.type === "percentage"
+                                  ? `${rule.rate}%`
+                                  : `฿${rule.rate}`}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                ฿{rule.minPurchase || 0}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap">
                                 <span
@@ -2993,16 +1729,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                 <button
-                                  onClick={() => {
-                                    setEditingCashback(rule);
-                                    setCashbackForm({
-                                      categoryId: rule.categoryId,
-                                      categoryName: rule.categoryName,
-                                      percentage: rule.percentage,
-                                      isActive: rule.isActive,
-                                    });
-                                    setShowAddCashback(true);
-                                  }}
+                                  onClick={() => setEditingCashback(rule)}
                                   className="text-green-600 hover:text-green-900"
                                 >
                                   Edit
@@ -3040,20 +1767,121 @@ export default function AdminDashboard() {
                     </h3>
 
                     <div className="space-y-6">
-                      {/* Store Name */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Store Name
-                        </label>
-                        <input
-                          type="text"
-                          defaultValue="Candy Kush Dispensary"
-                          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        />
+                      {/* General Settings */}
+                      <div className="border-b border-gray-200 pb-6">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          General
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Store Name
+                            </label>
+                            <input
+                              type="text"
+                              defaultValue="Candy Kush Dispensary"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Contact Email
+                            </label>
+                            <input
+                              type="email"
+                              defaultValue="admin@candykush.com"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Point System Settings */}
+                      <div className="border-b border-gray-200 pb-6">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Points System
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Points per ฿1 spent
+                            </label>
+                            <input
+                              type="number"
+                              defaultValue="1"
+                              min="0"
+                              step="0.1"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Point Redemption Value (฿)
+                            </label>
+                            <input
+                              type="number"
+                              defaultValue="0.01"
+                              min="0"
+                              step="0.001"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Display Settings */}
+                      <div className="border-b border-gray-200 pb-6">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Display
+                        </h4>
+                        <div className="space-y-4">
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="showStock"
+                              defaultChecked={false}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <label
+                              htmlFor="showStock"
+                              className="ml-2 block text-sm text-gray-700"
+                            >
+                              Show stock levels on products
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="showPrices"
+                              defaultChecked={true}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <label
+                              htmlFor="showPrices"
+                              className="ml-2 block text-sm text-gray-700"
+                            >
+                              Show prices to customers
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="enableCashback"
+                              defaultChecked={true}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <label
+                              htmlFor="enableCashback"
+                              className="ml-2 block text-sm text-gray-700"
+                            >
+                              Enable cashback system
+                            </label>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Save Button */}
-                      <div className="flex justify-start">
+                      <div className="flex justify-end">
                         <button className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700">
                           Save Settings
                         </button>
@@ -3747,174 +2575,47 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Add Product Modal - Complex Form */}
+        {/* Add Product Modal */}
         {showAddProduct && (
           <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
               <div className="mt-3">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Add New Product
-                  </h3>
-                  <button
-                    onClick={() => setShowAddProduct(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Product Name */}
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Add New Product
+                </h3>
+                <form onSubmit={handleSaveProduct} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Name *
+                    <label className="block text-sm font-medium text-gray-700">
+                      Product Name
                     </label>
                     <input
                       type="text"
-                      value={newProduct.name}
+                      value={productForm.name}
                       onChange={(e) =>
-                        setNewProduct({ ...newProduct, name: e.target.value })
+                        setProductForm({
+                          ...productForm,
+                          name: e.target.value,
+                        })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                      placeholder="Enter product name"
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                       required
                     />
                   </div>
 
-                  {/* Product Image - Complex Upload Section */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Product Image
-                    </label>
-                    <div className="space-y-3">
-                      {/* Image Preview */}
-                      {productImageFile && (
-                        <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 p-4 shadow-sm">
-                          <div className="flex items-center justify-center">
-                            <img
-                              src={URL.createObjectURL(productImageFile)}
-                              alt="Product preview"
-                              className="max-w-full max-h-64 object-contain rounded-lg shadow-md"
-                              style={{ aspectRatio: "auto" }}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setProductImageFile(null)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-600 shadow-lg transition-colors"
-                          >
-                            ×
-                          </button>
-                          <div className="mt-3 text-center">
-                            <p className="text-sm text-gray-600 font-medium">
-                              {productImageFile.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {(productImageFile.size / 1024 / 1024).toFixed(2)}{" "}
-                              MB
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Upload Area */}
-                      <div className="relative">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) =>
-                            setProductImageFile(e.target.files[0])
-                          }
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          id="product-image-upload"
-                        />
-                        <label
-                          htmlFor="product-image-upload"
-                          className={`block w-full px-6 py-8 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all duration-200 ${
-                            productImageFile
-                              ? "border-green-300 bg-green-50 text-green-700"
-                              : "border-gray-300 bg-gray-50 text-gray-600 hover:border-green-400 hover:bg-green-50 hover:text-green-600"
-                          }`}
-                        >
-                          <div className="flex flex-col items-center space-y-3">
-                            <div
-                              className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                                productImageFile
-                                  ? "bg-green-100"
-                                  : "bg-gray-100"
-                              }`}
-                            >
-                              <svg
-                                className={`w-6 h-6 ${
-                                  productImageFile
-                                    ? "text-green-600"
-                                    : "text-gray-400"
-                                }`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">
-                                {productImageFile
-                                  ? "Click to change image"
-                                  : "Click to upload product image"}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                PNG, JPG, JPEG up to 10MB
-                              </p>
-                            </div>
-                          </div>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Category and Subcategory - Complex Selection */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Category */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Category *
+                      <label className="block text-sm font-medium text-gray-700">
+                        Category
                       </label>
                       <select
-                        value={newProduct.categoryId}
-                        onChange={(e) => {
-                          const selectedCategory = categories.find(
-                            (cat) => cat.id === e.target.value
-                          );
-                          setNewProduct({
-                            ...newProduct,
+                        value={productForm.categoryId}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
                             categoryId: e.target.value,
-                            categoryName: selectedCategory
-                              ? selectedCategory.name
-                              : "",
-                            subcategoryId: "", // Reset subcategory when category changes
-                            subcategoryName: "",
-                          });
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          })
+                        }
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                         required
                       >
                         <option value="">Select Category</option>
@@ -3925,533 +2626,110 @@ export default function AdminDashboard() {
                         ))}
                       </select>
                     </div>
-
-                    {/* Subcategory */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
                         Subcategory
                       </label>
                       <select
-                        value={newProduct.subcategoryId}
-                        onChange={(e) => {
-                          const selectedSubcategory = subcategories.find(
-                            (sub) => sub.id === e.target.value
-                          );
-                          setNewProduct({
-                            ...newProduct,
+                        value={productForm.subcategoryId}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
                             subcategoryId: e.target.value,
-                            subcategoryName: selectedSubcategory
-                              ? selectedSubcategory.name
-                              : "",
-                          });
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        disabled={!newProduct.categoryId}
+                          })
+                        }
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                       >
                         <option value="">Select Subcategory</option>
-                        {newProduct.categoryId &&
-                          subcategories
-                            .filter(
-                              (sub) => sub.categoryId === newProduct.categoryId
-                            )
-                            .map((subcategory) => (
-                              <option
-                                key={subcategory.id}
-                                value={subcategory.id}
-                              >
-                                {subcategory.name}
-                              </option>
-                            ))}
+                        {subcategories
+                          .filter(
+                            (sub) => sub.categoryId === productForm.categoryId
+                          )
+                          .map((subcategory) => (
+                            <option key={subcategory.id} value={subcategory.id}>
+                              {subcategory.name}
+                            </option>
+                          ))}
                       </select>
                     </div>
                   </div>
 
-                  {/* Product Type Toggle - Complex Radio Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">
-                      Product Type *
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
                     </label>
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="productType"
-                          checked={!hasVariants}
-                          onChange={() => {
-                            setHasVariants(false);
-                            setVariants([]);
-                          }}
-                          className="mr-3"
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            Simple Product
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Fixed price & stock
-                          </div>
-                        </div>
-                      </label>
-                      <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="radio"
-                          name="productType"
-                          checked={hasVariants}
-                          onChange={() => setHasVariants(true)}
-                          className="mr-3"
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900">
-                            Variable Product
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Multiple variations
-                          </div>
-                        </div>
-                      </label>
-                    </div>
+                    <textarea
+                      value={productForm.description}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      rows="3"
+                    />
                   </div>
 
-                  {/* Simple Product Fields */}
-                  {!hasVariants && (
-                    <div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Price (฿) *
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={newProduct.price}
-                          onChange={(e) =>
-                            setNewProduct({
-                              ...newProduct,
-                              price: parseFloat(e.target.value) || "",
-                            })
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                          required
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="hasVariants"
+                      checked={productForm.hasVariants}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          hasVariants: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="hasVariants"
+                      className="ml-2 block text-sm text-gray-700"
+                    >
+                      This product has variants (different sizes/types)
+                    </label>
+                  </div>
 
-                  {/* Hierarchical Variants Section - Complete Implementation */}
-                  {hasVariants && (
+                  {!productForm.hasVariants && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-3">
-                        Product Variants * (Step-by-step selection)
+                      <label className="block text-sm font-medium text-gray-700">
+                        Price (฿)
                       </label>
-                      <p className="text-sm text-gray-600 mb-4">
-                        Add variant groups in order. Customers will select
-                        variants step-by-step. The last variant must have a
-                        price &gt; 0.
-                      </p>
-
-                      {/* Current Variant Groups */}
-                      {variants.length > 0 && (
-                        <div className="mb-4 space-y-4">
-                          {variants.map((variantGroup, groupIndex) => (
-                            <div
-                              key={groupIndex}
-                              className="border border-gray-300 rounded-lg p-4 bg-white"
-                            >
-                              <div className="flex items-center justify-between mb-3">
-                                <h4 className="font-medium text-gray-900">
-                                  Step {groupIndex + 1}:{" "}
-                                  {variantGroup.variantName}
-                                </h4>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setVariants(
-                                      variants.filter(
-                                        (_, i) => i !== groupIndex
-                                      )
-                                    );
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-sm"
-                                >
-                                  Remove Group
-                                </button>
-                              </div>
-                              <div className="space-y-2">
-                                {variantGroup.options.map(
-                                  (option, optionIndex) => (
-                                    <div
-                                      key={optionIndex}
-                                      className="flex items-center justify-between bg-gray-50 p-2 rounded"
-                                    >
-                                      <div className="flex items-center space-x-2">
-                                        {option.imageUrl && (
-                                          <img
-                                            src={option.imageUrl}
-                                            alt={option.name}
-                                            className="w-6 h-6 object-cover rounded border"
-                                          />
-                                        )}
-                                        <span className="text-sm">
-                                          {option.name} - ฿{option.price}
-                                          {option.unit && ` (${option.unit})`}
-                                        </span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const updatedVariants = [...variants];
-                                          updatedVariants[groupIndex].options =
-                                            updatedVariants[
-                                              groupIndex
-                                            ].options.filter(
-                                              (_, i) => i !== optionIndex
-                                            );
-                                          setVariants(updatedVariants);
-                                        }}
-                                        className="text-red-600 hover:text-red-800 text-xs"
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  )
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Add New Variant Group - Complex Form */}
-                      <div className="border border-gray-300 rounded-md p-4 bg-gray-50">
-                        <h4 className="font-medium text-gray-700 mb-3">
-                          Add New Variant Group (Step {variants.length + 1})
-                        </h4>
-
-                        {/* Variant Group Name */}
-                        <div className="mb-3">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Variant Group Name (e.g., Size, Quality, Type)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g., Size, Quality, Type"
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                            id="variant-group-name"
-                          />
-                        </div>
-
-                        {/* Options for this variant group */}
-                        <div id="variant-options-container">
-                          <label className="block text-xs font-medium text-gray-700 mb-2">
-                            Add Options to this Variant Group:
-                          </label>
-                          <div className="space-y-2" id="variant-options-list">
-                            {/* Options will be added here dynamically */}
-                          </div>
-
-                          {/* Add Option Form - Complete Implementation */}
-                          <div className="border border-gray-200 rounded-lg p-3 bg-white">
-                            <div className="grid grid-cols-1 gap-3">
-                              {/* Option Details Row */}
-                              <div className="grid grid-cols-3 gap-2">
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Option Name
-                                  </label>
-                                  <input
-                                    type="text"
-                                    placeholder="e.g., Small"
-                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                    id="option-name-input"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Price (฿)
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    placeholder="0.00"
-                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                    id="option-price-input"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                                    Unit
-                                  </label>
-                                  <input
-                                    type="text"
-                                    placeholder="pcs, g, ml"
-                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                    id="option-unit-input"
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Option Image Row */}
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Option Image (optional)
-                                </label>
-                                <div className="flex gap-3">
-                                  {/* Image Preview */}
-                                  {optionImageFile && (
-                                    <div className="relative">
-                                      <img
-                                        src={URL.createObjectURL(
-                                          optionImageFile
-                                        )}
-                                        alt="Option preview"
-                                        className="w-16 h-16 object-cover rounded border"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => setOptionImageFile(null)}
-                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  )}
-
-                                  {/* Upload Button */}
-                                  <div className="relative flex-1">
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      onChange={(e) =>
-                                        setOptionImageFile(e.target.files[0])
-                                      }
-                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                      id="option-image-upload"
-                                    />
-                                    <label
-                                      htmlFor="option-image-upload"
-                                      className={`block w-full px-3 py-2 border border-dashed rounded-md text-center cursor-pointer text-xs transition-colors ${
-                                        optionImageFile
-                                          ? "border-green-300 bg-green-50 text-green-600"
-                                          : "border-gray-300 bg-gray-50 text-gray-500 hover:border-gray-400"
-                                      }`}
-                                    >
-                                      {optionImageFile
-                                        ? "Change image"
-                                        : "Click to upload option image"}
-                                    </label>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Add Option Button with Complex Logic */}
-                              <div className="mt-3">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const optionName = document
-                                      .getElementById("option-name-input")
-                                      .value.trim();
-                                    const optionPrice =
-                                      parseFloat(
-                                        document.getElementById(
-                                          "option-price-input"
-                                        ).value
-                                      ) || 0;
-                                    const optionUnit = document
-                                      .getElementById("option-unit-input")
-                                      .value.trim();
-
-                                    if (optionName) {
-                                      // Handle option image
-                                      let optionImageData = null;
-                                      if (optionImageFile) {
-                                        optionImageData = {
-                                          file: optionImageFile,
-                                          url: URL.createObjectURL(
-                                            optionImageFile
-                                          ),
-                                          name: optionImageFile.name,
-                                        };
-                                      }
-
-                                      // Add to temporary options list display
-                                      const optionsList =
-                                        document.getElementById(
-                                          "variant-options-list"
-                                        );
-                                      const optionDiv =
-                                        document.createElement("div");
-                                      optionDiv.className =
-                                        "flex items-center justify-between bg-white p-2 rounded border";
-
-                                      const imagePreview = optionImageData
-                                        ? `<img src="${optionImageData.url}" alt="${optionName}" class="w-8 h-8 object-cover rounded mr-2" />`
-                                        : '<div class="w-8 h-8 bg-gray-200 rounded mr-2 flex items-center justify-center"><svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
-
-                                      optionDiv.innerHTML = `
-                                        <div class="flex items-center">
-                                          ${imagePreview}
-                                          <span class="text-sm">${optionName} - ฿${optionPrice}${
-                                        optionUnit ? ` (${optionUnit})` : ""
-                                      }</span>
-                                        </div>
-                                        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800 text-xs">Remove</button>
-                                      `;
-
-                                      // Store image data as a property
-                                      if (optionImageData) {
-                                        optionDiv._imageData = optionImageData;
-                                      }
-
-                                      optionsList.appendChild(optionDiv);
-
-                                      // Clear inputs
-                                      document.getElementById(
-                                        "option-name-input"
-                                      ).value = "";
-                                      document.getElementById(
-                                        "option-price-input"
-                                      ).value = "";
-                                      document.getElementById(
-                                        "option-unit-input"
-                                      ).value = "";
-                                      setOptionImageFile(null);
-                                    } else {
-                                      alert("Please enter option name");
-                                    }
-                                  }}
-                                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
-                                >
-                                  + Add Option
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Save Variant Group with Complex Logic */}
-                        <div className="mt-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const groupName = document
-                                .getElementById("variant-group-name")
-                                .value.trim();
-                              const optionsList = document.getElementById(
-                                "variant-options-list"
-                              );
-                              const optionElements = optionsList.children;
-
-                              if (!groupName) {
-                                alert("Please enter variant group name");
-                                return;
-                              }
-
-                              if (optionElements.length === 0) {
-                                alert(
-                                  "Please add at least one option to this variant group"
-                                );
-                                return;
-                              }
-
-                              // Extract options from DOM
-                              const options = [];
-                              for (let i = 0; i < optionElements.length; i++) {
-                                const optionElement = optionElements[i];
-                                const optionText =
-                                  optionElement.querySelector(
-                                    "span"
-                                  ).textContent;
-                                const parts = optionText.split(" - ฿");
-                                const name = parts[0];
-                                const priceAndUnit = parts[1];
-                                const priceParts = priceAndUnit.split(" (");
-                                const price = parseFloat(priceParts[0]) || 0;
-                                const unit =
-                                  priceParts.length > 1
-                                    ? priceParts[1].replace(")", "")
-                                    : "";
-
-                                // Get image data if exists
-                                const imageData =
-                                  optionElement._imageData || null;
-
-                                options.push({
-                                  id: Date.now().toString() + i,
-                                  name: name,
-                                  price: price,
-                                  unit: unit,
-                                  image: imageData ? imageData.file : null,
-                                  imageUrl: imageData ? imageData.url : "",
-                                  isActive: true,
-                                });
-                              }
-
-                              // Create new variant group
-                              const newVariantGroup = {
-                                id: Date.now().toString(),
-                                variantName: groupName,
-                                options: options,
-                                order: variants.length + 1,
-                              };
-
-                              setVariants([...variants, newVariantGroup]);
-
-                              // Clear form
-                              document.getElementById(
-                                "variant-group-name"
-                              ).value = "";
-                              document.getElementById(
-                                "variant-options-list"
-                              ).innerHTML = "";
-                              setOptionImageFile(null);
-                            }}
-                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Save Variant Group
-                          </button>
-                        </div>
-                      </div>
+                      <input
+                        type="number"
+                        value={productForm.price}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            price: parseFloat(e.target.value) || 0,
+                          })
+                        }
+                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                        min="0"
+                        step="0.01"
+                        required
+                      />
                     </div>
                   )}
-                </div>
 
-                {/* Complete Form Actions */}
-                <div className="flex justify-end space-x-3 mt-6">
-                  <button
-                    onClick={() => setShowAddProduct(false)}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveProduct}
-                    disabled={isProductSaving}
-                    className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
-                      isProductSaving
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                  >
-                    {isProductSaving && (
-                      <svg
-                        className="w-4 h-4 animate-spin"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                    )}
-                    <span>{isProductSaving ? "Saving..." : "Add Product"}</span>
-                  </button>
-                </div>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddProduct(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                    >
+                      Add Product
+                    </button>
+                  </div>
+                </form>
               </div>
             </div>
           </div>
@@ -4623,126 +2901,240 @@ export default function AdminDashboard() {
             <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  {editingCashback ? "Edit Cashback Rule" : "Add Cashback Rule"}
+                  Add Cashback Rule
                 </h3>
                 <form onSubmit={handleSaveCashback} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">
-                      Category
-                    </label>
-                    <select
-                      value={cashbackForm.categoryId}
-                      onChange={(e) => {
-                        const selectedCategory = categories.find(
-                          (cat) => cat.id === e.target.value
-                        );
-                        setCashbackForm({
-                          ...cashbackForm,
-                          categoryId: e.target.value,
-                          categoryName: selectedCategory?.name || "",
-                        });
-                      }}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      required
-                      disabled={isCashbackSaving}
-                    >
-                      <option value="">Select Category</option>
-                      {categories
-                        .filter((category) => {
-                          // If editing, allow current category
-                          if (
-                            editingCashback &&
-                            editingCashback.categoryId === category.id
-                          ) {
-                            return true;
-                          }
-                          // For new rules, only show categories not already used
-                          return !cashbackRules.find(
-                            (rule) => rule.categoryId === category.id
-                          );
-                        })
-                        .map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.name}
-                          </option>
-                        ))}
-                    </select>
-                    {!editingCashback &&
-                      categories.filter(
-                        (cat) =>
-                          !cashbackRules.find(
-                            (rule) => rule.categoryId === cat.id
-                          )
-                      ).length === 0 && (
-                        <p className="mt-1 text-sm text-red-600">
-                          All categories already have cashback rules.
-                        </p>
-                      )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Percentage (%)
+                      Rule Name
                     </label>
                     <input
-                      type="number"
-                      value={cashbackForm.percentage}
+                      type="text"
+                      value={cashbackForm.name}
                       onChange={(e) =>
                         setCashbackForm({
                           ...cashbackForm,
-                          percentage: parseFloat(e.target.value) || 0,
+                          name: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
+                    <textarea
+                      value={cashbackForm.description}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      rows="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Type
+                    </label>
+                    <select
+                      value={cashbackForm.type}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          type: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      required
+                    >
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed Amount</option>
+                      <option value="points">Points</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      {cashbackForm.type === "percentage"
+                        ? "Percentage (%)"
+                        : cashbackForm.type === "fixed"
+                        ? "Amount (฿)"
+                        : "Points per ฿1"}
+                    </label>
+                    <input
+                      type="number"
+                      value={cashbackForm.rate}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          rate: parseFloat(e.target.value) || 0,
                         })
                       }
                       className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
                       min="0"
-                      max="100"
-                      step="1"
+                      step={cashbackForm.type === "percentage" ? "1" : "0.01"}
                       required
-                      disabled={isCashbackSaving}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Minimum Purchase (฿)
+                    </label>
+                    <input
+                      type="number"
+                      value={cashbackForm.minPurchase}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          minPurchase: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      min="0"
+                      step="0.01"
                     />
                   </div>
                   <div className="flex justify-end space-x-3 pt-4">
                     <button
                       type="button"
-                      onClick={handleCancelCashback}
+                      onClick={() => setShowAddCashback(false)}
                       className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
-                      disabled={isCashbackSaving}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 flex items-center"
-                      disabled={isCashbackSaving}
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
                     >
-                      {isCashbackSaving && (
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-4 w-4 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                      )}
-                      {isCashbackSaving
-                        ? editingCashback
-                          ? "Updating..."
-                          : "Adding..."
-                        : editingCashback
-                        ? "Update Rule"
-                        : "Add Rule"}
+                      Add Rule
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Cashback Rule Modal */}
+        {editingCashback && (
+          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Edit Cashback Rule
+                </h3>
+                <form onSubmit={handleSaveCashback} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Rule Name
+                    </label>
+                    <input
+                      type="text"
+                      value={cashbackForm.name}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          name: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
+                    <textarea
+                      value={cashbackForm.description}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      rows="2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Type
+                    </label>
+                    <select
+                      value={cashbackForm.type}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          type: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      required
+                    >
+                      <option value="percentage">Percentage</option>
+                      <option value="fixed">Fixed Amount</option>
+                      <option value="points">Points</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      {cashbackForm.type === "percentage"
+                        ? "Percentage (%)"
+                        : cashbackForm.type === "fixed"
+                        ? "Amount (฿)"
+                        : "Points per ฿1"}
+                    </label>
+                    <input
+                      type="number"
+                      value={cashbackForm.rate}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          rate: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      min="0"
+                      step={cashbackForm.type === "percentage" ? "1" : "0.01"}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Minimum Purchase (฿)
+                    </label>
+                    <input
+                      type="number"
+                      value={cashbackForm.minPurchase}
+                      onChange={(e) =>
+                        setCashbackForm({
+                          ...cashbackForm,
+                          minPurchase: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setEditingCashback(null)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                    >
+                      Update Rule
                     </button>
                   </div>
                 </form>
@@ -5198,37 +3590,36 @@ export default function AdminDashboard() {
                     <div className="space-y-2">
                       <p>
                         <span className="font-medium">Date:</span>{" "}
-                        {selectedTransactionDetails.createdAt
+                        {selectedTransactionDetails.timestamp
                           ? new Date(
-                              selectedTransactionDetails.createdAt
-                            ).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
+                              selectedTransactionDetails.timestamp
+                            ).toLocaleDateString()
                           : "N/A"}
                       </p>
                       <p>
                         <span className="font-medium">Points Earned:</span>{" "}
-                        {selectedTransactionDetails.pointsEarned || 0}
-                      </p>
-                      <p>
-                        <span className="font-medium">Phone:</span>{" "}
-                        {selectedTransactionDetails.customerCell || "N/A"}
+                        {selectedTransactionDetails.amount || 0}
                       </p>
                       <p className="text-lg">
                         <span className="font-medium">Total Amount:</span>
                         <span className="font-bold text-green-600 ml-2">
                           ฿
-                          {selectedTransactionDetails.amount?.toLocaleString(
-                            "en-US",
-                            {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
+                          {(() => {
+                            if (selectedTransactionDetails.items) {
+                              const total =
+                                selectedTransactionDetails.items.reduce(
+                                  (sum, item) => {
+                                    return sum + item.price * item.quantity;
+                                  },
+                                  0
+                                );
+                              return (total / 100).toLocaleString("en-US", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              });
                             }
-                          ) || "0.00"}
+                            return "0.00";
+                          })()}
                         </span>
                       </p>
                     </div>

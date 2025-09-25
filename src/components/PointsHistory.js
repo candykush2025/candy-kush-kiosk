@@ -6,12 +6,6 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
   const [loading, setLoading] = useState(false);
   const [totalPoints, setTotalPoints] = useState(0);
 
-  useEffect(() => {
-    if (isOpen && customerId) {
-      loadPointsHistory();
-    }
-  }, [isOpen, customerId, loadPointsHistory]);
-
   const loadPointsHistory = useCallback(async () => {
     setLoading(true);
     try {
@@ -26,6 +20,12 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
       setLoading(false);
     }
   }, [customerId]);
+
+  useEffect(() => {
+    if (isOpen && customerId) {
+      loadPointsHistory();
+    }
+  }, [isOpen, customerId, loadPointsHistory]);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {

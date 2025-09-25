@@ -456,7 +456,6 @@ export class ProductService {
 
         // For products without variants
         price: productData.price || 0,
-        stock: productData.stock || 0,
 
         // Images
         mainImage: mainImage,
@@ -464,7 +463,6 @@ export class ProductService {
 
         // Common fields
         sku: productData.sku || "",
-        minStock: productData.minStock || 5,
         isActive:
           productData.isActive !== undefined ? productData.isActive : true,
         isFeatured: productData.isFeatured || false,
@@ -616,9 +614,7 @@ export class ProductService {
         hasVariants: productData.hasVariants,
         variants: productData.variants,
         price: productData.price,
-        stock: productData.stock,
         sku: productData.sku,
-        minStock: productData.minStock,
         isActive: productData.isActive,
         isFeatured: productData.isFeatured,
         notes: productData.notes,
@@ -700,18 +696,10 @@ export class ProductService {
 
       const totalProducts = products.length;
       const activeProducts = products.filter((p) => p.isActive).length;
-      const lowStockProducts = products.filter((p) => {
-        if (p.hasVariants) {
-          return p.variants.some((v) => v.stock <= p.minStock);
-        } else {
-          return p.stock <= p.minStock;
-        }
-      }).length;
 
       return {
         totalProducts,
         activeProducts,
-        lowStockProducts,
       };
     } catch (error) {
       console.error("Error getting product stats:", error);
