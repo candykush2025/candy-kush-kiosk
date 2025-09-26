@@ -120,14 +120,12 @@ export default function AdminDashboard() {
     hasVariants: false,
     // For products without variants
     price: 0,
-    stock: 0,
     // For products with variants
     variants: [],
     // Common fields
     sku: "",
     barcode: "",
     supplier: "",
-    minStock: 5,
     mainImage: "",
     images: [],
     isActive: true,
@@ -149,13 +147,19 @@ export default function AdminDashboard() {
 
   const [newCategory, setNewCategory] = useState({
     name: "",
+    description: "",
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
   });
 
   const [newSubcategory, setNewSubcategory] = useState({
     name: "",
+    description: "",
     categoryId: "",
     categoryName: "",
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
   });
 
@@ -175,6 +179,8 @@ export default function AdminDashboard() {
     supplier: "",
     mainImage: "",
     images: [],
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -187,6 +193,8 @@ export default function AdminDashboard() {
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     description: "",
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
@@ -194,6 +202,8 @@ export default function AdminDashboard() {
     description: "",
     categoryId: "",
     categoryName: "",
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
   });
 
@@ -202,6 +212,14 @@ export default function AdminDashboard() {
     useState(false);
   const [removeExistingSubcategoryImage, setRemoveExistingSubcategoryImage] =
     useState(false);
+  const [
+    removeExistingCategoryBackground,
+    setRemoveExistingCategoryBackground,
+  ] = useState(false);
+  const [
+    removeExistingSubcategoryBackground,
+    setRemoveExistingSubcategoryBackground,
+  ] = useState(false);
 
   const [cashbackForm, setCashbackForm] = useState({
     categoryId: "",
@@ -213,6 +231,12 @@ export default function AdminDashboard() {
   // Image upload states
   const [categoryImageFile, setCategoryImageFile] = useState(null);
   const [subcategoryImageFile, setSubcategoryImageFile] = useState(null);
+  const [categoryBackgroundImageFile, setCategoryBackgroundImageFile] =
+    useState(null);
+  const [subcategoryBackgroundImageFile, setSubcategoryBackgroundImageFile] =
+    useState(null);
+  const [productBackgroundImageFile, setProductBackgroundImageFile] =
+    useState(null);
 
   // Loading states
   const [isCustomerSaving, setIsCustomerSaving] = useState(false);
@@ -223,9 +247,12 @@ export default function AdminDashboard() {
   const [isDeletingCashback, setIsDeletingCashback] = useState(false);
   const [isCashbackSaving, setIsCashbackSaving] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(null);
-  const [isTogglingCustomerStatus, setIsTogglingCustomerStatus] = useState(null);
-  const [isTogglingCashbackStatus, setIsTogglingCashbackStatus] = useState(null);
-  const [isDeletingPointTransaction, setIsDeletingPointTransaction] = useState(null);
+  const [isTogglingCustomerStatus, setIsTogglingCustomerStatus] =
+    useState(null);
+  const [isTogglingCashbackStatus, setIsTogglingCashbackStatus] =
+    useState(null);
+  const [isDeletingPointTransaction, setIsDeletingPointTransaction] =
+    useState(null);
 
   // Country search
   const [countrySearch, setCountrySearch] = useState("");
@@ -358,6 +385,82 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Initialize productForm when editing a product
+  useEffect(() => {
+    if (editingProduct) {
+      setProductForm({
+        name: editingProduct.name || "",
+        description: editingProduct.description || "",
+        categoryId: editingProduct.categoryId || "",
+        subcategoryId: editingProduct.subcategoryId || "",
+        price: editingProduct.price || 0,
+        hasVariants: editingProduct.hasVariants || false,
+        variants: editingProduct.variants || [],
+        mainImage: editingProduct.mainImage || "",
+        sku: editingProduct.sku || "",
+        barcode: editingProduct.barcode || "",
+        supplier: editingProduct.supplier || "",
+        isActive:
+          editingProduct.isActive !== undefined
+            ? editingProduct.isActive
+            : true,
+        isFeatured: editingProduct.isFeatured || false,
+        notes: editingProduct.notes || "",
+        tags: editingProduct.tags || [],
+        images: editingProduct.images || [],
+        backgroundImage: editingProduct.backgroundImage || "",
+        backgroundFit: editingProduct.backgroundFit || "contain",
+        categoryName: editingProduct.categoryName || "",
+        subcategoryName: editingProduct.subcategoryName || "",
+      });
+      // Reset image file when starting to edit a different product
+      setProductImageFile(null);
+      setProductBackgroundImageFile(null);
+    }
+  }, [editingProduct]);
+
+  // Initialize categoryForm when editing a category
+  useEffect(() => {
+    if (editingCategory) {
+      setCategoryForm({
+        name: editingCategory.name || "",
+        description: editingCategory.description || "",
+        backgroundImage: editingCategory.backgroundImage || "",
+        backgroundFit: editingCategory.backgroundFit || "contain",
+        isActive:
+          editingCategory.isActive !== undefined
+            ? editingCategory.isActive
+            : true,
+      });
+      // Reset image file when starting to edit a different category
+      setCategoryImageFile(null);
+      setCategoryBackgroundImageFile(null);
+      setRemoveExistingCategoryImage(false);
+    }
+  }, [editingCategory]);
+
+  // Initialize subcategoryForm when editing a subcategory
+  useEffect(() => {
+    if (editingSubcategory) {
+      setSubcategoryForm({
+        name: editingSubcategory.name || "",
+        description: editingSubcategory.description || "",
+        categoryId: editingSubcategory.categoryId || "",
+        categoryName: editingSubcategory.categoryName || "",
+        backgroundImage: editingSubcategory.backgroundImage || "",
+        backgroundFit: editingSubcategory.backgroundFit || "contain",
+        isActive:
+          editingSubcategory.isActive !== undefined
+            ? editingSubcategory.isActive
+            : true,
+      });
+      // Reset image file when starting to edit a different subcategory
+      setSubcategoryImageFile(null);
+      setSubcategoryBackgroundImageFile(null);
+      setRemoveExistingSubcategoryImage(false);
+    }
+  }, [editingSubcategory]);
 
   // Customer handlers
   const handleAddCustomer = () => {
@@ -509,7 +612,8 @@ export default function AdminDashboard() {
   };
 
   // Product handlers
-  const handleSaveProduct = async () => {
+  const handleSaveProduct = async (e) => {
+    e.preventDefault(); // Prevent form reload
     try {
       setIsProductSaving(true);
 
@@ -523,8 +627,13 @@ export default function AdminDashboard() {
           productForm.variants = [];
         }
 
-        await ProductService.updateProduct(editingProduct.id, productForm);
+        await ProductService.updateProduct(
+          editingProduct.id,
+          productForm,
+          productBackgroundImageFile
+        );
         setEditingProduct(null);
+        setProductBackgroundImageFile(null);
         setProductForm({
           name: "",
           description: "",
@@ -544,6 +653,8 @@ export default function AdminDashboard() {
           isFeatured: false,
           tags: [],
           notes: "",
+          backgroundImage: "",
+          backgroundFit: "cover",
         });
       } else {
         // Handle adding new product
@@ -627,13 +738,21 @@ export default function AdminDashboard() {
         return;
       }
 
-      await CategoryService.createCategory(newCategory, categoryImageFile);
+      await CategoryService.createCategory(
+        newCategory,
+        categoryImageFile,
+        categoryBackgroundImageFile
+      );
       await loadDashboardData();
       setNewCategory({
         name: "",
+        description: "",
+        backgroundImage: "",
+        backgroundFit: "contain",
         isActive: true,
       });
       setCategoryImageFile(null);
+      setCategoryBackgroundImageFile(null);
       setShowAddCategory(false);
     } catch (error) {
       console.error("Failed to create category:", error);
@@ -689,16 +808,21 @@ export default function AdminDashboard() {
 
       await SubcategoryService.createSubcategory(
         newSubcategory,
-        subcategoryImageFile
+        subcategoryImageFile,
+        subcategoryBackgroundImageFile
       );
       await loadDashboardData();
       setNewSubcategory({
         name: "",
+        description: "",
         categoryId: "",
         categoryName: "",
+        backgroundImage: "",
+        backgroundFit: "contain",
         isActive: true,
       });
       setSubcategoryImageFile(null);
+      setSubcategoryBackgroundImageFile(null);
       setShowAddSubcategory(false);
     } catch (error) {
       console.error("Failed to create subcategory:", error);
@@ -743,17 +867,23 @@ export default function AdminDashboard() {
         editingCategory.id,
         categoryForm,
         categoryImageFile,
-        removeExistingCategoryImage
+        categoryBackgroundImageFile,
+        removeExistingCategoryImage,
+        removeExistingCategoryBackground
       );
       await loadDashboardData();
       setEditingCategory(null);
       setCategoryForm({
         name: "",
         description: "",
+        backgroundImage: "",
+        backgroundFit: "contain",
         isActive: true,
       });
       setCategoryImageFile(null);
+      setCategoryBackgroundImageFile(null);
       setRemoveExistingCategoryImage(false);
+      setRemoveExistingCategoryBackground(false);
     } catch (error) {
       console.error("Failed to update category:", error);
       alert("Failed to update category. Please try again.");
@@ -788,7 +918,9 @@ export default function AdminDashboard() {
         editingSubcategory.id,
         subcategoryForm,
         subcategoryImageFile,
-        removeExistingSubcategoryImage
+        subcategoryBackgroundImageFile,
+        removeExistingSubcategoryImage,
+        removeExistingSubcategoryBackground
       );
       await loadDashboardData();
       setEditingSubcategory(null);
@@ -797,10 +929,14 @@ export default function AdminDashboard() {
         description: "",
         categoryId: "",
         categoryName: "",
+        backgroundImage: "",
+        backgroundFit: "contain",
         isActive: true,
       });
       setSubcategoryImageFile(null);
+      setSubcategoryBackgroundImageFile(null);
       setRemoveExistingSubcategoryImage(false);
+      setRemoveExistingSubcategoryBackground(false);
     } catch (error) {
       console.error("Failed to update subcategory:", error);
       alert("Failed to update subcategory. Please try again.");
@@ -1610,7 +1746,8 @@ export default function AdminDashboard() {
                                         : "text-yellow-600 hover:text-yellow-900"
                                     }`}
                                   >
-                                    {isTogglingCustomerStatus === customer.id ? (
+                                    {isTogglingCustomerStatus ===
+                                    customer.id ? (
                                       <div className="flex items-center space-x-1">
                                         <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
                                         <span>Updating...</span>
@@ -1822,34 +1959,6 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
-
-                    <div className="bg-gradient-to-br from-orange-50 to-red-100 p-6 rounded-xl shadow-lg border border-orange-200/60">
-                      <div className="flex items-center">
-                        <div className="p-3 bg-white rounded-lg shadow-md border border-orange-200">
-                          <svg
-                            className="w-6 h-6 text-orange-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                            />
-                          </svg>
-                        </div>
-                        <div className="ml-4">
-                          <p className="text-sm font-medium text-orange-700">
-                            Low Stock
-                          </p>
-                          <p className="text-2xl font-bold text-orange-900">
-                            {stats.lowStockProducts}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Product Hierarchy Tree */}
@@ -2024,6 +2133,11 @@ export default function AdminDashboard() {
                                     <h4 className="text-xl font-bold text-gray-900 mb-1">
                                       {category.name}
                                     </h4>
+                                    {category.description && (
+                                      <p className="text-sm text-gray-600 mb-2 leading-relaxed">
+                                        {category.description}
+                                      </p>
+                                    )}
                                     <div className="flex items-center space-x-4 text-sm text-gray-600">
                                       <span className="flex items-center">
                                         <svg
@@ -2081,16 +2195,6 @@ export default function AdminDashboard() {
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setEditingCategory(category);
-                                        setCategoryForm({
-                                          name: category.name || "",
-                                          description:
-                                            category.description || "",
-                                          isActive:
-                                            category.isActive !== undefined
-                                              ? category.isActive
-                                              : true,
-                                        });
-                                        setRemoveExistingCategoryImage(false);
                                       }}
                                       className="p-2 rounded-lg transition-colors duration-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
                                     >
@@ -2294,6 +2398,13 @@ export default function AdminDashboard() {
                                                     <h5 className="text-lg font-semibold text-gray-900 mb-1">
                                                       {subcategory.name}
                                                     </h5>
+                                                    {subcategory.description && (
+                                                      <p className="text-sm text-gray-600 mb-2 leading-relaxed">
+                                                        {
+                                                          subcategory.description
+                                                        }
+                                                      </p>
+                                                    )}
                                                     <p className="text-sm text-gray-600 flex items-center">
                                                       <svg
                                                         className="w-4 h-4 mr-1"
@@ -2331,28 +2442,6 @@ export default function AdminDashboard() {
                                                         e.stopPropagation();
                                                         setEditingSubcategory(
                                                           subcategory
-                                                        );
-                                                        setSubcategoryForm({
-                                                          name:
-                                                            subcategory.name ||
-                                                            "",
-                                                          description:
-                                                            subcategory.description ||
-                                                            "",
-                                                          categoryId:
-                                                            subcategory.categoryId ||
-                                                            "",
-                                                          categoryName:
-                                                            subcategory.categoryName ||
-                                                            "",
-                                                          isActive:
-                                                            subcategory.isActive !==
-                                                            undefined
-                                                              ? subcategory.isActive
-                                                              : true,
-                                                        });
-                                                        setRemoveExistingSubcategoryImage(
-                                                          false
                                                         );
                                                       }}
                                                       className="p-1.5 rounded-lg transition-colors duration-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
@@ -2513,41 +2602,8 @@ export default function AdminDashboard() {
                                                                 className="bg-white rounded-lg border border-gray-200/70 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                                                               >
                                                                 {/* Product Level */}
-                                                                <div
-                                                                  className="flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30 cursor-pointer"
-                                                                  onClick={(
-                                                                    e
-                                                                  ) => {
-                                                                    e.stopPropagation();
-                                                                    toggleProductExpansion(
-                                                                      product.id
-                                                                    );
-                                                                  }}
-                                                                >
+                                                                <div className="flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30">
                                                                   <div className="flex items-center space-x-3">
-                                                                    <div
-                                                                      className={`transform transition-transform duration-200 ${
-                                                                        isProductExpanded
-                                                                          ? "rotate-90"
-                                                                          : ""
-                                                                      }`}
-                                                                    >
-                                                                      <svg
-                                                                        className="w-4 h-4 text-gray-500"
-                                                                        fill="none"
-                                                                        stroke="currentColor"
-                                                                        viewBox="0 0 24 24"
-                                                                      >
-                                                                        <path
-                                                                          strokeLinecap="round"
-                                                                          strokeLinejoin="round"
-                                                                          strokeWidth={
-                                                                            2
-                                                                          }
-                                                                          d="M9 5l7 7-7 7"
-                                                                        />
-                                                                      </svg>
-                                                                    </div>
                                                                     <div className="relative">
                                                                       {product.mainImage ? (
                                                                         <img
@@ -2605,6 +2661,13 @@ export default function AdminDashboard() {
                                                                         product.name
                                                                       }
                                                                     </h6>
+                                                                    {product.description && (
+                                                                      <p className="text-xs text-gray-600 mb-2 leading-relaxed truncate">
+                                                                        {
+                                                                          product.description
+                                                                        }
+                                                                      </p>
+                                                                    )}
                                                                     <div className="flex items-center space-x-3 text-sm text-gray-600">
                                                                       {product.hasVariants ? (
                                                                         <>
@@ -2660,26 +2723,6 @@ export default function AdminDashboard() {
                                                                             ).toFixed(
                                                                               2
                                                                             )}
-                                                                          </span>
-                                                                          <span className="flex items-center">
-                                                                            <svg
-                                                                              className="w-3 h-3 mr-1"
-                                                                              fill="none"
-                                                                              stroke="currentColor"
-                                                                              viewBox="0 0 24 24"
-                                                                            >
-                                                                              <path
-                                                                                strokeLinecap="round"
-                                                                                strokeLinejoin="round"
-                                                                                strokeWidth={
-                                                                                  2
-                                                                                }
-                                                                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                                                              />
-                                                                            </svg>
-                                                                            Stock:{" "}
-                                                                            {product.stock ||
-                                                                              0}
                                                                           </span>
                                                                         </>
                                                                       )}
@@ -2804,139 +2847,6 @@ export default function AdminDashboard() {
                                                                     </button>
                                                                   </div>
                                                                 </div>
-
-                                                                {/* Variants Level */}
-                                                                {isProductExpanded &&
-                                                                  product.hasVariants &&
-                                                                  product.variants &&
-                                                                  product
-                                                                    .variants
-                                                                    .length >
-                                                                    0 && (
-                                                                    <div className="border-t border-gray-200/50 bg-gradient-to-r from-blue-50/40 to-indigo-50/40">
-                                                                      <div className="p-4 space-y-3">
-                                                                        <div className="flex items-center space-x-2 mb-3">
-                                                                          <svg
-                                                                            className="w-4 h-4 text-indigo-600"
-                                                                            fill="none"
-                                                                            stroke="currentColor"
-                                                                            viewBox="0 0 24 24"
-                                                                          >
-                                                                            <path
-                                                                              strokeLinecap="round"
-                                                                              strokeLinejoin="round"
-                                                                              strokeWidth={
-                                                                                2
-                                                                              }
-                                                                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                                                            />
-                                                                          </svg>
-                                                                          <span className="text-sm font-semibold text-gray-800">
-                                                                            Product
-                                                                            Variants
-                                                                          </span>
-                                                                        </div>
-                                                                        {product.variants.map(
-                                                                          (
-                                                                            variantGroup,
-                                                                            groupIndex
-                                                                          ) => (
-                                                                            <div
-                                                                              key={
-                                                                                groupIndex
-                                                                              }
-                                                                              className="bg-white rounded-lg border border-gray-200/80 shadow-sm p-3"
-                                                                            >
-                                                                              <div className="flex items-center space-x-2 mb-3">
-                                                                                <div className="w-6 h-6 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                                                                                  {groupIndex +
-                                                                                    1}
-                                                                                </div>
-                                                                                <span className="font-semibold text-gray-800 text-sm">
-                                                                                  {
-                                                                                    variantGroup.variantName
-                                                                                  }
-                                                                                </span>
-                                                                              </div>
-                                                                              <div className="grid grid-cols-1 gap-2">
-                                                                                {variantGroup.options.map(
-                                                                                  (
-                                                                                    option,
-                                                                                    optionIndex
-                                                                                  ) => (
-                                                                                    <div
-                                                                                      key={
-                                                                                        optionIndex
-                                                                                      }
-                                                                                      className="flex items-center space-x-3 p-2 bg-gray-50/50 rounded-lg border border-gray-200/50 hover:bg-white hover:border-indigo-200 transition-all duration-200"
-                                                                                    >
-                                                                                      {option.imageUrl ? (
-                                                                                        <img
-                                                                                          src={
-                                                                                            option.imageUrl
-                                                                                          }
-                                                                                          alt={
-                                                                                            option.name
-                                                                                          }
-                                                                                          className="w-8 h-8 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
-                                                                                        />
-                                                                                      ) : (
-                                                                                        <div className="w-8 h-8 bg-gradient-to-br from-yellow-100 to-orange-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
-                                                                                          <svg
-                                                                                            className="w-4 h-4 text-yellow-600"
-                                                                                            fill="none"
-                                                                                            stroke="currentColor"
-                                                                                            viewBox="0 0 24 24"
-                                                                                          >
-                                                                                            <path
-                                                                                              strokeLinecap="round"
-                                                                                              strokeLinejoin="round"
-                                                                                              strokeWidth={
-                                                                                                2
-                                                                                              }
-                                                                                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                                                                                            />
-                                                                                          </svg>
-                                                                                        </div>
-                                                                                      )}
-                                                                                      <div className="flex-1 min-w-0">
-                                                                                        <div className="flex items-center space-x-2">
-                                                                                          <span className="font-medium text-gray-800 text-sm truncate">
-                                                                                            {
-                                                                                              option.name
-                                                                                            }
-                                                                                          </span>
-                                                                                          {option.price >
-                                                                                            0 && (
-                                                                                            <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                                                                                              ฿
-                                                                                              {(
-                                                                                                option.price ||
-                                                                                                0
-                                                                                              ).toFixed(
-                                                                                                2
-                                                                                              )}
-                                                                                            </span>
-                                                                                          )}
-                                                                                          {option.unit && (
-                                                                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                                                                                              {
-                                                                                                option.unit
-                                                                                              }
-                                                                                            </span>
-                                                                                          )}
-                                                                                        </div>
-                                                                                      </div>
-                                                                                    </div>
-                                                                                  )
-                                                                                )}
-                                                                              </div>
-                                                                            </div>
-                                                                          )
-                                                                        )}
-                                                                      </div>
-                                                                    </div>
-                                                                  )}
                                                               </div>
                                                             );
                                                           }
@@ -2986,8 +2896,6 @@ export default function AdminDashboard() {
                           <option value="">All Status</option>
                           <option value="active">Active</option>
                           <option value="inactive">Inactive</option>
-                          <option value="low-stock">Low Stock</option>
-                          <option value="out-of-stock">Out of Stock</option>
                         </select>
                       </div>
                     </div>
@@ -3000,7 +2908,13 @@ export default function AdminDashboard() {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Product ID
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Product
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Description
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Category
@@ -3040,6 +2954,9 @@ export default function AdminDashboard() {
                                   key={product.id}
                                   className="hover:bg-gray-50"
                                 >
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                    {product.productId || product.id}
+                                  </td>
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
                                       {product.mainImage && (
@@ -3053,6 +2970,13 @@ export default function AdminDashboard() {
                                         <div className="text-sm font-medium text-gray-900">
                                           {product.name}
                                         </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 text-sm text-gray-900">
+                                    <div className="max-w-xs">
+                                      <div className="truncate">
+                                        {product.description || "-"}
                                       </div>
                                     </div>
                                   </td>
@@ -3128,6 +3052,10 @@ export default function AdminDashboard() {
                                             product.isFeatured || false,
                                           tags: product.tags || [],
                                           notes: product.notes || "",
+                                          backgroundImage:
+                                            product.backgroundImage || "",
+                                          backgroundFit:
+                                            product.backgroundFit || "cover",
                                         });
                                       }}
                                       className="text-green-600 hover:text-green-900"
@@ -3168,7 +3096,9 @@ export default function AdminDashboard() {
                                           handleDeleteProduct(product.id);
                                         }
                                       }}
-                                      disabled={isDeletingProduct === product.id}
+                                      disabled={
+                                        isDeletingProduct === product.id
+                                      }
                                       className={`${
                                         isDeletingProduct === product.id
                                           ? "text-gray-400 cursor-not-allowed"
@@ -3487,7 +3417,9 @@ export default function AdminDashboard() {
                                     </div>
                                   ) : (
                                     <span>
-                                      {rule.isActive ? "Deactivate" : "Activate"}
+                                      {rule.isActive
+                                        ? "Deactivate"
+                                        : "Activate"}
                                     </span>
                                   )}
                                 </button>
@@ -4178,6 +4110,114 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Category Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Description
+                  </label>
+                  <textarea
+                    value={newCategory.description}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter category description"
+                  />
+                </div>
+
+                {/* Background Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image (Optional)
+                  </label>
+                  <div className="space-y-3">
+                    {/* Background Image Preview */}
+                    {categoryBackgroundImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(categoryBackgroundImageFile)}
+                          alt="Background preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCategoryBackgroundImageFile(null)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Upload Button/Area */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setCategoryBackgroundImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="category-background-image-upload"
+                      />
+                      <label
+                        htmlFor="category-background-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          categoryBackgroundImageFile
+                            ? "border-green-300 bg-green-50 text-green-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {categoryBackgroundImageFile
+                            ? "Change Background Image"
+                            : "Choose Background Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Background Fit Option */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image Fit
+                  </label>
+                  <select
+                    value={newCategory.backgroundFit}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        backgroundFit: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="contain">Contain (fit entire image)</option>
+                    <option value="cover">Cover (stretch to fill)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -4186,9 +4226,13 @@ export default function AdminDashboard() {
                     setShowAddCategory(false);
                     setNewCategory({
                       name: "",
+                      description: "",
+                      backgroundImage: "",
+                      backgroundFit: "contain",
                       isActive: true,
                     });
                     setCategoryImageFile(null);
+                    setCategoryBackgroundImageFile(null);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 >
@@ -4235,83 +4279,86 @@ export default function AdminDashboard() {
 
         {/* Edit Category Modal */}
         {editingCategory && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Edit Category
-                </h3>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleEditCategory();
-                  }}
-                  className="space-y-4"
-                >
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Category Name
-                    </label>
-                    <input
-                      type="text"
-                      value={categoryForm.name}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          name: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                  </div>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Edit Category
+              </h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleEditCategory();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={categoryForm.name}
+                    onChange={(e) =>
+                      setCategoryForm({
+                        ...categoryForm,
+                        name: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Description
-                    </label>
-                    <textarea
-                      value={categoryForm.description}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          description: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      rows="3"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Description
+                  </label>
+                  <textarea
+                    value={categoryForm.description}
+                    onChange={(e) =>
+                      setCategoryForm({
+                        ...categoryForm,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Enter category description"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category Image
-                    </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Image
+                  </label>
+                  <div className="space-y-3">
+                    {/* Image Preview (new selection) */}
                     {categoryImageFile && (
-                      <div className="mb-2 relative inline-block">
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
                         <img
                           src={URL.createObjectURL(categoryImageFile)}
                           alt="Category preview"
-                          className="h-20 w-20 object-cover rounded border"
+                          className="w-full max-h-48 object-contain rounded-md"
                         />
                         <button
                           type="button"
                           onClick={() => setCategoryImageFile(null)}
-                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
                         >
-                          ×
+                          ✕
                         </button>
                       </div>
                     )}
+                    {/* Existing image (when not replacing or removing) */}
                     {editingCategory.image &&
                       !categoryImageFile &&
                       !removeExistingCategoryImage && (
-                        <div className="mb-2 space-y-2">
-                          <div className="relative inline-block">
+                        <div className="space-y-2">
+                          <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
                             <img
                               src={editingCategory.image}
                               alt="Current category image"
-                              className="h-20 w-20 object-cover rounded border"
+                              className="w-full max-h-48 object-contain rounded-md"
                             />
                           </div>
                           <button
@@ -4324,7 +4371,7 @@ export default function AdminDashboard() {
                         </div>
                       )}
                     {removeExistingCategoryImage && !categoryImageFile && (
-                      <div className="mb-2 p-3 border border-yellow-300 bg-yellow-50 rounded">
+                      <div className="p-3 border border-yellow-300 bg-yellow-50 rounded">
                         <p className="text-sm text-yellow-700 mb-2">
                           ⚠️ Existing image will be removed when you save
                         </p>
@@ -4337,94 +4384,267 @@ export default function AdminDashboard() {
                         </button>
                       </div>
                     )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setCategoryImageFile(e.target.files[0])}
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      {categoryImageFile
-                        ? "New image selected (not yet uploaded)"
-                        : editingCategory.image
-                        ? "Current image will be replaced if you select a new one"
-                        : "No image uploaded"}
-                    </p>
+                    {/* Upload Area */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setCategoryImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="edit-category-image-upload"
+                      />
+                      <label
+                        htmlFor="edit-category-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          categoryImageFile
+                            ? "border-green-300 bg-green-50 text-green-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {categoryImageFile
+                            ? "Change Image"
+                            : editingCategory.image
+                            ? "Replace Current Image"
+                            : "Choose Category Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
                   </div>
+                </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="editCategoryActive"
-                      checked={categoryForm.isActive}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          isActive: e.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label
-                      htmlFor="editCategoryActive"
-                      className="ml-2 block text-sm text-gray-900"
-                    >
-                      Active
-                    </label>
+                {/* Background Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image (Optional)
+                  </label>
+                  <div className="space-y-3">
+                    {categoryBackgroundImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(categoryBackgroundImageFile)}
+                          alt="Background preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCategoryBackgroundImageFile(null)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    {editingCategory.backgroundImage &&
+                      !categoryBackgroundImageFile &&
+                      !removeExistingCategoryBackground && (
+                        <div className="space-y-2">
+                          <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                            <img
+                              src={editingCategory.backgroundImage}
+                              alt="Current background image"
+                              className="w-full max-h-48 object-contain rounded-md"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingCategoryBackground(true)
+                            }
+                            className="text-sm text-red-600 hover:text-red-700 underline"
+                          >
+                            Remove existing background
+                          </button>
+                        </div>
+                      )}
+                    {removeExistingCategoryBackground &&
+                      !categoryBackgroundImageFile && (
+                        <div className="p-3 border border-yellow-300 bg-yellow-50 rounded">
+                          <p className="text-sm text-yellow-700 mb-2">
+                            ⚠️ Existing background will be removed when you save
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingCategoryBackground(false)
+                            }
+                            className="text-sm text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Cancel removal
+                          </button>
+                        </div>
+                      )}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setCategoryBackgroundImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="edit-category-background-image-upload"
+                      />
+                      <label
+                        htmlFor="edit-category-background-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          categoryBackgroundImageFile
+                            ? "border-green-300 bg-green-50 text-green-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {categoryBackgroundImageFile
+                            ? "Change Background Image"
+                            : editingCategory.backgroundImage
+                            ? "Replace Current Background"
+                            : "Choose Background Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
                   </div>
-                </form>
-              </div>
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  onClick={() => {
-                    setEditingCategory(null);
-                    setCategoryForm({
-                      name: "",
-                      description: "",
-                      isActive: true,
-                    });
-                    setCategoryImageFile(null);
-                    setRemoveExistingCategoryImage(false);
-                  }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleEditCategory}
-                  disabled={isLoadingCategory}
-                  className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
-                    isLoadingCategory
-                      ? "bg-blue-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
-                  }`}
-                >
-                  {isLoadingCategory && (
-                    <svg
-                      className="animate-spin h-4 w-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                  )}
-                  <span>
-                    {isLoadingCategory ? "Updating..." : "Update Category"}
-                  </span>
-                </button>
-              </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {categoryBackgroundImageFile
+                      ? "New background image selected"
+                      : removeExistingCategoryBackground
+                      ? "Background scheduled for removal"
+                      : editingCategory.backgroundImage
+                      ? "Current background will be replaced if you select a new one"
+                      : "No background image uploaded"}
+                  </p>
+                </div>
+
+                {/* Background Fit Option */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image Fit
+                  </label>
+                  <select
+                    value={categoryForm.backgroundFit}
+                    onChange={(e) =>
+                      setCategoryForm({
+                        ...categoryForm,
+                        backgroundFit: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="contain">Contain (fit entire image)</option>
+                    <option value="cover">Cover (stretch to fill)</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="editCategoryActive"
+                    checked={categoryForm.isActive}
+                    onChange={(e) =>
+                      setCategoryForm({
+                        ...categoryForm,
+                        isActive: e.target.checked,
+                      })
+                    }
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label
+                    htmlFor="editCategoryActive"
+                    className="ml-2 block text-sm text-gray-900"
+                  >
+                    Active
+                  </label>
+                </div>
+
+                <div className="flex justify-end space-x-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCategory(null);
+                      setCategoryForm({
+                        name: "",
+                        description: "",
+                        backgroundImage: "",
+                        backgroundFit: "contain",
+                        isActive: true,
+                      });
+                      setCategoryImageFile(null);
+                      setCategoryBackgroundImageFile(null);
+                      setRemoveExistingCategoryImage(false);
+                      setRemoveExistingCategoryBackground(false);
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoadingCategory}
+                    className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                      isLoadingCategory
+                        ? "bg-blue-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
+                  >
+                    {isLoadingCategory && (
+                      <svg
+                        className="animate-spin h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                    )}
+                    <span>
+                      {isLoadingCategory ? "Updating..." : "Update Category"}
+                    </span>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}
@@ -4432,7 +4652,7 @@ export default function AdminDashboard() {
         {/* Add Subcategory Modal */}
         {showAddSubcategory && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Add New Subcategory
               </h3>
@@ -4486,6 +4706,25 @@ export default function AdminDashboard() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="e.g., Filters, Grinders, Papers"
                     required
+                  />
+                </div>
+
+                {/* Subcategory Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={newSubcategory.description}
+                    onChange={(e) =>
+                      setNewSubcategory({
+                        ...newSubcategory,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows="3"
+                    placeholder="Enter subcategory description"
                   />
                 </div>
 
@@ -4557,6 +4796,99 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Background Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image (Optional)
+                  </label>
+                  <div className="space-y-3">
+                    {/* Background Image Preview */}
+                    {subcategoryBackgroundImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(
+                            subcategoryBackgroundImageFile
+                          )}
+                          alt="Background preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSubcategoryBackgroundImageFile(null)
+                          }
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Upload Button/Area */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setSubcategoryBackgroundImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="subcategory-background-image-upload"
+                      />
+                      <label
+                        htmlFor="subcategory-background-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          subcategoryBackgroundImageFile
+                            ? "border-purple-300 bg-purple-50 text-purple-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {subcategoryBackgroundImageFile
+                            ? "Change Background Image"
+                            : "Choose Background Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Background Fit Option */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image Fit
+                  </label>
+                  <select
+                    value={newSubcategory.backgroundFit}
+                    onChange={(e) =>
+                      setNewSubcategory({
+                        ...newSubcategory,
+                        backgroundFit: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="contain">Contain (fit entire image)</option>
+                    <option value="cover">Cover (stretch to fill)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -4565,11 +4897,15 @@ export default function AdminDashboard() {
                     setShowAddSubcategory(false);
                     setNewSubcategory({
                       name: "",
+                      description: "",
                       categoryId: "",
                       categoryName: "",
+                      backgroundImage: "",
+                      backgroundFit: "contain",
                       isActive: true,
                     });
                     setSubcategoryImageFile(null);
+                    setSubcategoryBackgroundImageFile(null);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 >
@@ -4580,8 +4916,8 @@ export default function AdminDashboard() {
                   disabled={isLoadingSubcategory}
                   className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
                     isLoadingSubcategory
-                      ? "bg-purple-400 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-700"
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
                   {isLoadingSubcategory && (
@@ -4617,8 +4953,8 @@ export default function AdminDashboard() {
         {/* Edit Subcategory Modal */}
         {editingSubcategory && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Edit Subcategory
               </h3>
 
@@ -4669,6 +5005,25 @@ export default function AdminDashboard() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                     placeholder="e.g., Filters, Grinders, Papers"
                     required
+                  />
+                </div>
+
+                {/* Subcategory Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    value={subcategoryForm.description}
+                    onChange={(e) =>
+                      setSubcategoryForm({
+                        ...subcategoryForm,
+                        description: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    rows="3"
+                    placeholder="Enter subcategory description"
                   />
                 </div>
 
@@ -4777,6 +5132,91 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Background Image Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image
+                  </label>
+                  <div className="space-y-3">
+                    {editingSubcategory.backgroundImage &&
+                      !subcategoryBackgroundImageFile &&
+                      !removeExistingSubcategoryBackground && (
+                        <div className="mb-2 space-y-2">
+                          <div className="relative inline-block">
+                            <img
+                              src={editingSubcategory.backgroundImage}
+                              alt="Current background image"
+                              className="h-20 w-20 object-cover rounded border"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingSubcategoryBackground(true)
+                            }
+                            className="text-sm text-red-600 hover:text-red-700 underline"
+                          >
+                            Remove existing background
+                          </button>
+                        </div>
+                      )}
+                    {removeExistingSubcategoryBackground &&
+                      !subcategoryBackgroundImageFile && (
+                        <div className="mb-2 p-3 border border-yellow-300 bg-yellow-50 rounded">
+                          <p className="text-sm text-yellow-700 mb-2">
+                            ⚠️ Existing background will be removed when you save
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingSubcategoryBackground(false)
+                            }
+                            className="text-sm text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Cancel removal
+                          </button>
+                        </div>
+                      )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setSubcategoryBackgroundImageFile(e.target.files[0])
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p className="text-xs text-gray-500">
+                      {subcategoryBackgroundImageFile
+                        ? "New background image selected"
+                        : removeExistingSubcategoryBackground
+                        ? "Background scheduled for removal"
+                        : editingSubcategory.backgroundImage
+                        ? "Current background will be replaced if you select a new one"
+                        : "No background image uploaded"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Background Fit (aligned with Category modal) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Background Image Fit
+                  </label>
+                  <select
+                    value={subcategoryForm.backgroundFit || "contain"}
+                    onChange={(e) =>
+                      setSubcategoryForm({
+                        ...subcategoryForm,
+                        backgroundFit: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="contain">Contain (fit entire image)</option>
+                    <option value="cover">Cover (stretch to fill)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -4791,7 +5231,9 @@ export default function AdminDashboard() {
                       isActive: true,
                     });
                     setSubcategoryImageFile(null);
+                    setSubcategoryBackgroundImageFile(null);
                     setRemoveExistingSubcategoryImage(false);
+                    setRemoveExistingSubcategoryBackground(false);
                   }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
                 >
@@ -4802,8 +5244,8 @@ export default function AdminDashboard() {
                   disabled={isLoadingSubcategory}
                   className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
                     isLoadingSubcategory
-                      ? "bg-purple-400 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-700"
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
                   }`}
                 >
                   {isLoadingSubcategory && (
@@ -4882,6 +5324,25 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder="Enter product name"
                       required
+                    />
+                  </div>
+
+                  {/* Product Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Description
+                    </label>
+                    <textarea
+                      value={newProduct.description}
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          description: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Enter product description"
+                      rows="3"
                     />
                   </div>
 
@@ -5079,7 +5540,7 @@ export default function AdminDashboard() {
                             Simple Product
                           </div>
                           <div className="text-sm text-gray-500">
-                            Fixed price & stock
+                            Fixed price
                           </div>
                         </div>
                       </label>
@@ -5548,37 +6009,124 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Edit Product Modal */}
+        {/* Edit Product Modal - Complete Form */}
         {editingProduct && (
           <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
               <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Edit Product
-                </h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Edit Product
+                  </h3>
+                  <button
+                    onClick={() => setEditingProduct(null)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
                 <form onSubmit={handleSaveProduct} className="space-y-4">
+                  {/* Product Name */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Product Name
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Name *
                     </label>
                     <input
                       type="text"
                       value={productForm.name}
                       onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          name: e.target.value,
-                        })
+                        setProductForm({ ...productForm, name: e.target.value })
                       }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Enter product name"
                       required
                     />
                   </div>
 
+                  {/* Product Description */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Description
+                    </label>
+                    <textarea
+                      value={productForm.description}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Enter product description"
+                    />
+                  </div>
+
+                  {/* Background Image Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Background Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setProductBackgroundImageFile(e.target.files[0])
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {productForm.backgroundImage && (
+                      <div className="mt-2">
+                        <img
+                          src={productForm.backgroundImage}
+                          alt="Current background"
+                          className="w-32 h-20 object-cover rounded border"
+                        />
+                        <p className="text-sm text-gray-500 mt-1">
+                          Current background image
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Background Fit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Background Fit
+                    </label>
+                    <select
+                      value={productForm.backgroundFit || "cover"}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          backgroundFit: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="cover">Cover</option>
+                      <option value="contain">Contain</option>
+                      <option value="stretch">Stretch</option>
+                    </select>
+                  </div>
+
+                  {/* Category and Subcategory */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Category
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Category *
                       </label>
                       <select
                         value={productForm.categoryId}
@@ -5586,9 +6134,10 @@ export default function AdminDashboard() {
                           setProductForm({
                             ...productForm,
                             categoryId: e.target.value,
+                            subcategoryId: "", // Reset subcategory when category changes
                           })
                         }
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                         required
                       >
                         <option value="">Select Category</option>
@@ -5600,7 +6149,7 @@ export default function AdminDashboard() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Subcategory
                       </label>
                       <select
@@ -5611,7 +6160,7 @@ export default function AdminDashboard() {
                             subcategoryId: e.target.value,
                           })
                         }
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       >
                         <option value="">Select Subcategory</option>
                         {subcategories
@@ -5627,67 +6176,434 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
+                  {/* Product Type Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Description
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Product Type *
                     </label>
-                    <textarea
-                      value={productForm.description}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          description: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      rows="3"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="editProductType"
+                          value="simple"
+                          checked={productForm.hasVariants === false}
+                          onChange={() =>
+                            setProductForm({
+                              ...productForm,
+                              hasVariants: false,
+                              variants: [],
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            Simple Product
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Fixed price
+                          </div>
+                        </div>
+                      </label>
+                      <label className="flex items-center p-3 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="editProductType"
+                          value="variable"
+                          checked={productForm.hasVariants === true}
+                          onChange={() =>
+                            setProductForm({
+                              ...productForm,
+                              hasVariants: true,
+                              price: 0, // Clear simple price when switching to variants
+                            })
+                          }
+                          className="mr-2"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            Variable Product
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            Multiple options with different prices
+                          </div>
+                        </div>
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="editHasVariants"
-                      checked={productForm.hasVariants}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          hasVariants: e.target.checked,
-                        })
-                      }
-                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-                    />
-                    <label
-                      htmlFor="editHasVariants"
-                      className="ml-2 block text-sm text-gray-700"
-                    >
-                      This product has variants (different sizes/types)
-                    </label>
-                  </div>
-
+                  {/* Simple Product Price */}
                   {!productForm.hasVariants && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Price (฿)
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Price (฿) *
                       </label>
                       <input
                         type="number"
-                        value={productForm.price}
+                        value={productForm.price || ""}
                         onChange={(e) =>
                           setProductForm({
                             ...productForm,
                             price: parseFloat(e.target.value) || 0,
                           })
                         }
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                        min="0"
                         step="0.01"
+                        min="0"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="0.00"
                         required
                       />
                     </div>
                   )}
 
-                  <div className="flex justify-end space-x-3 pt-4">
+                  {/* Product Main Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Product Main Image
+                    </label>
+                    <div className="space-y-3">
+                      {/* Current Image or Preview */}
+                      {(productImageFile || productForm.mainImage) && (
+                        <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                          <img
+                            src={
+                              productImageFile
+                                ? URL.createObjectURL(productImageFile)
+                                : productForm.mainImage
+                            }
+                            alt="Product preview"
+                            className="w-full max-h-48 object-contain rounded-md"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductImageFile(null);
+                              if (!productImageFile) {
+                                setProductForm({
+                                  ...productForm,
+                                  mainImage: null,
+                                });
+                              }
+                            }}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Upload Button/Area */}
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) =>
+                            setProductImageFile(e.target.files[0])
+                          }
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          id="editProductImageInput"
+                        />
+                        <label
+                          htmlFor="editProductImageInput"
+                          className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg
+                              className="w-8 h-8 mb-2 text-gray-400"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                              />
+                            </svg>
+                            <p className="mb-2 text-sm text-gray-500">
+                              <span className="font-semibold">
+                                Click to upload
+                              </span>{" "}
+                              or drag and drop
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              PNG, JPG, JPEG up to 10MB
+                            </p>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Variable Product Variants */}
+                  {productForm.hasVariants && (
+                    <div className="space-y-4 border-t pt-4">
+                      <h4 className="text-md font-semibold text-gray-900">
+                        Product Variants
+                      </h4>
+                      <p className="text-sm text-gray-600">
+                        Configure the product variants step-by-step. The last
+                        variant must have a price &gt; 0.
+                      </p>
+
+                      {/* Current Variant Groups */}
+                      {productForm.variants &&
+                        productForm.variants.length > 0 && (
+                          <div className="mb-4 space-y-4">
+                            {productForm.variants.map(
+                              (variantGroup, groupIndex) => (
+                                <div
+                                  key={groupIndex}
+                                  className="border border-gray-300 rounded-lg p-4 bg-white"
+                                >
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-medium text-gray-900">
+                                      Step {groupIndex + 1}:{" "}
+                                      {variantGroup.variantName}
+                                    </h4>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updatedVariants =
+                                          productForm.variants.filter(
+                                            (_, i) => i !== groupIndex
+                                          );
+                                        setProductForm({
+                                          ...productForm,
+                                          variants: updatedVariants,
+                                        });
+                                      }}
+                                      className="text-red-600 hover:text-red-800 text-sm"
+                                    >
+                                      Remove Group
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {variantGroup.options.map(
+                                      (option, optionIndex) => (
+                                        <div
+                                          key={optionIndex}
+                                          className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                                        >
+                                          <div className="flex items-center space-x-2">
+                                            {option.imageUrl && (
+                                              <img
+                                                src={option.imageUrl}
+                                                alt={option.name}
+                                                className="w-6 h-6 object-cover rounded border"
+                                              />
+                                            )}
+                                            <span className="text-sm">
+                                              {option.name} - ฿{option.price}
+                                              {option.unit &&
+                                                ` (${option.unit})`}
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const updatedVariants = [
+                                                ...productForm.variants,
+                                              ];
+                                              updatedVariants[
+                                                groupIndex
+                                              ].options = updatedVariants[
+                                                groupIndex
+                                              ].options.filter(
+                                                (_, i) => i !== optionIndex
+                                              );
+                                              setProductForm({
+                                                ...productForm,
+                                                variants: updatedVariants,
+                                              });
+                                            }}
+                                            className="text-red-600 hover:text-red-800 text-xs"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                      )
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        )}
+
+                      {/* Add New Variant Group */}
+                      <div className="border border-gray-300 rounded-md p-4 bg-gray-50">
+                        <h4 className="font-medium text-gray-700 mb-3">
+                          Add New Variant Group (Step{" "}
+                          {(productForm.variants?.length || 0) + 1})
+                        </h4>
+
+                        {/* Variant Group Name */}
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Variant Group Name (e.g., Size, Quality, Type)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g., Size, Quality, Type"
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                            id="edit-variant-group-name"
+                          />
+                        </div>
+
+                        {/* Add Option Form */}
+                        <div className="border border-gray-200 rounded-lg p-3 bg-white">
+                          <div className="grid grid-cols-1 gap-3">
+                            {/* Option Details Row */}
+                            <div className="grid grid-cols-3 gap-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Option Name
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., Small"
+                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                  id="edit-option-name-input"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Price (฿)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                  id="edit-option-price-input"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Unit
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="pcs, g, ml"
+                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                  id="edit-option-unit-input"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Option Image Row */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Option Image (optional)
+                              </label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                id="edit-option-image-input"
+                              />
+                            </div>
+
+                            {/* Add Option Button */}
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                const nameEl = document.getElementById(
+                                  "edit-option-name-input"
+                                );
+                                const priceEl = document.getElementById(
+                                  "edit-option-price-input"
+                                );
+                                const unitEl = document.getElementById(
+                                  "edit-option-unit-input"
+                                );
+                                const imageEl = document.getElementById(
+                                  "edit-option-image-input"
+                                );
+
+                                const optionName = nameEl.value.trim();
+                                const optionPrice =
+                                  parseFloat(priceEl.value) || 0;
+                                const optionUnit = unitEl.value.trim();
+                                const optionImageFile = imageEl.files[0];
+
+                                if (!optionName) {
+                                  alert("Please enter an option name");
+                                  return;
+                                }
+
+                                let optionImageUrl = null;
+                                if (optionImageFile) {
+                                  optionImageUrl =
+                                    URL.createObjectURL(optionImageFile);
+                                }
+
+                                const variantGroupName = document
+                                  .getElementById("edit-variant-group-name")
+                                  .value.trim();
+
+                                if (!variantGroupName) {
+                                  alert(
+                                    "Please enter a variant group name first"
+                                  );
+                                  return;
+                                }
+
+                                const newOption = {
+                                  name: optionName,
+                                  price: optionPrice,
+                                  unit: optionUnit,
+                                  imageUrl: optionImageUrl,
+                                  imageFile: optionImageFile,
+                                };
+
+                                const updatedVariants = [
+                                  ...(productForm.variants || []),
+                                ];
+
+                                const existingGroupIndex =
+                                  updatedVariants.findIndex(
+                                    (group) =>
+                                      group.variantName === variantGroupName
+                                  );
+
+                                if (existingGroupIndex >= 0) {
+                                  updatedVariants[
+                                    existingGroupIndex
+                                  ].options.push(newOption);
+                                } else {
+                                  updatedVariants.push({
+                                    variantName: variantGroupName,
+                                    options: [newOption],
+                                  });
+                                }
+
+                                setProductForm({
+                                  ...productForm,
+                                  variants: updatedVariants,
+                                });
+
+                                nameEl.value = "";
+                                priceEl.value = "";
+                                unitEl.value = "";
+                                imageEl.value = "";
+                              }}
+                              className="px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                              Add Option to Group
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Form Actions */}
+                  <div className="flex justify-end space-x-3 pt-4 border-t">
                     <button
                       type="button"
                       onClick={() => setEditingProduct(null)}

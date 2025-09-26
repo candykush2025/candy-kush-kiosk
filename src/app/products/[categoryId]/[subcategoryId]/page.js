@@ -35,6 +35,10 @@ export default function Products() {
             if (!customerData.tier) {
               customerData.tier = calculateTier(customerData.points || 0);
             }
+            // Calculate total points from transactions array
+            customerData.totalPoints = CustomerService.calculateTotalPoints(
+              customerData.points
+            );
             setCustomer(customerData);
           }
         } else {
@@ -384,7 +388,7 @@ export default function Products() {
               <div className="bg-white bg-opacity-20 rounded-lg p-4">
                 <p className="text-green-100 text-sm">Points Balance</p>
                 <p className="text-3xl font-bold">
-                  {(customer.points || 0).toLocaleString()}
+                  {(customer.totalPoints || 0).toLocaleString()}
                 </p>
                 <p className="text-green-100 text-sm">pts</p>
               </div>
@@ -412,9 +416,23 @@ export default function Products() {
                     key={product.id}
                     className="bg-white border-2 border-gray-200 hover:border-green-500 
                     rounded-lg p-6 transition-all duration-200 transform hover:scale-105 
-                    shadow-lg hover:shadow-xl"
+                    shadow-lg hover:shadow-xl relative overflow-hidden"
+                    style={{
+                      backgroundImage: product.backgroundImage
+                        ? `url(${product.backgroundImage})`
+                        : "none",
+                      backgroundSize: product.backgroundImage
+                        ? product.backgroundFit || "contain"
+                        : "auto",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   >
-                    <div className="flex items-center space-x-6">
+                    {/* Overlay for better text readability when background image is present */}
+                    {product.backgroundImage && (
+                      <div className="absolute inset-0 bg-white/30 rounded-lg"></div>
+                    )}
+                    <div className="flex items-center space-x-2 relative z-10">
                       {product.mainImage || product.image ? (
                         // Use uploaded product image - updated for proper fit
                         <div className="w-24 h-24 relative overflow-hidden rounded-lg bg-gray-100">
@@ -437,7 +455,7 @@ export default function Products() {
                           {product.name}
                         </h3>
                         {product.description && (
-                          <p className="text-gray-600 text-sm mb-2">
+                          <p className="text-gray-600 text-sm mb-2 leading-relaxed">
                             {product.description}
                           </p>
                         )}

@@ -67,23 +67,41 @@ export class CategoryService {
   }
 
   // Create a new category
-  static async createCategory(categoryData, imageFile = null) {
+  static async createCategory(
+    categoryData,
+    imageFile = null,
+    backgroundImageFile = null
+  ) {
     try {
       const categoryId = await this.generateCategoryId();
 
       let imageUrl = "";
       let imagePath = "";
+      let backgroundImageUrl = "";
+      let backgroundImagePath = "";
 
       if (imageFile) {
         imagePath = `categories/${categoryId}/${imageFile.name}`;
         imageUrl = await this.uploadImage(imageFile, imagePath);
       }
 
+      if (backgroundImageFile) {
+        backgroundImagePath = `categories/${categoryId}/background_${backgroundImageFile.name}`;
+        backgroundImageUrl = await this.uploadImage(
+          backgroundImageFile,
+          backgroundImagePath
+        );
+      }
+
       const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), {
         categoryId: categoryId,
         name: categoryData.name,
+        description: categoryData.description || "",
         image: imageUrl,
         imagePath: imagePath,
+        backgroundImage: backgroundImageUrl,
+        backgroundImagePath: backgroundImagePath,
+        backgroundFit: categoryData.backgroundFit || "contain",
         isActive:
           categoryData.isActive !== undefined ? categoryData.isActive : true,
         createdAt: serverTimestamp(),
@@ -130,7 +148,9 @@ export class CategoryService {
     id,
     categoryData,
     imageFile = null,
-    removeExistingImage = false
+    backgroundImageFile = null,
+    removeExistingImage = false,
+    removeExistingBackgroundImage = false
   ) {
     try {
       const docRef = doc(db, CATEGORIES_COLLECTION, id);
@@ -143,17 +163,19 @@ export class CategoryService {
       const currentData = currentDoc.data();
       let updateData = {
         name: categoryData.name,
+        description: categoryData.description,
+        backgroundFit: categoryData.backgroundFit || "contain",
         isActive: categoryData.isActive,
         updatedAt: serverTimestamp(),
       };
 
-      // Handle image removal
+      // Handle main image removal
       if (removeExistingImage && currentData.imagePath) {
         await this.deleteImage(currentData.imagePath);
         updateData.image = null;
         updateData.imagePath = null;
       }
-      // Handle new image upload
+      // Handle new main image upload
       else if (imageFile) {
         // Delete old image if exists
         if (currentData.imagePath) {
@@ -166,6 +188,30 @@ export class CategoryService {
 
         updateData.image = imageUrl;
         updateData.imagePath = imagePath;
+      }
+
+      // Handle background image removal
+      if (removeExistingBackgroundImage && currentData.backgroundImagePath) {
+        await this.deleteImage(currentData.backgroundImagePath);
+        updateData.backgroundImage = "";
+        updateData.backgroundImagePath = "";
+      }
+      // Handle new background image upload
+      else if (backgroundImageFile) {
+        // Delete old background image if exists
+        if (currentData.backgroundImagePath) {
+          await this.deleteImage(currentData.backgroundImagePath);
+        }
+
+        // Upload new background image
+        const backgroundImagePath = `categories/${currentData.categoryId}/background_${backgroundImageFile.name}`;
+        const backgroundImageUrl = await this.uploadImage(
+          backgroundImageFile,
+          backgroundImagePath
+        );
+
+        updateData.backgroundImage = backgroundImageUrl;
+        updateData.backgroundImagePath = backgroundImagePath;
       }
 
       await updateDoc(docRef, updateData);
@@ -218,24 +264,42 @@ export class SubcategoryService {
   }
 
   // Create a new subcategory
-  static async createSubcategory(subcategoryData, imageFile = null) {
+  static async createSubcategory(
+    subcategoryData,
+    imageFile = null,
+    backgroundImageFile = null
+  ) {
     try {
       const subcategoryId = await this.generateSubcategoryId();
 
       let imageUrl = "";
       let imagePath = "";
+      let backgroundImageUrl = "";
+      let backgroundImagePath = "";
 
       if (imageFile) {
         imagePath = `subcategories/${subcategoryId}/${imageFile.name}`;
         imageUrl = await CategoryService.uploadImage(imageFile, imagePath);
       }
 
+      if (backgroundImageFile) {
+        backgroundImagePath = `subcategories/${subcategoryId}/background_${backgroundImageFile.name}`;
+        backgroundImageUrl = await CategoryService.uploadImage(
+          backgroundImageFile,
+          backgroundImagePath
+        );
+      }
+
       const docRef = await addDoc(collection(db, SUBCATEGORIES_COLLECTION), {
         subcategoryId: subcategoryId,
         name: subcategoryData.name,
+        description: subcategoryData.description || "",
         categoryId: subcategoryData.categoryId,
         image: imageUrl,
         imagePath: imagePath,
+        backgroundImage: backgroundImageUrl,
+        backgroundImagePath: backgroundImagePath,
+        backgroundFit: subcategoryData.backgroundFit || "contain",
         isActive:
           subcategoryData.isActive !== undefined
             ? subcategoryData.isActive
@@ -349,7 +413,9 @@ export class SubcategoryService {
     id,
     subcategoryData,
     imageFile = null,
-    removeExistingImage = false
+    backgroundImageFile = null,
+    removeExistingImage = false,
+    removeExistingBackgroundImage = false
   ) {
     try {
       const docRef = doc(db, SUBCATEGORIES_COLLECTION, id);
@@ -362,18 +428,20 @@ export class SubcategoryService {
       const currentData = currentDoc.data();
       let updateData = {
         name: subcategoryData.name,
+        description: subcategoryData.description,
         categoryId: subcategoryData.categoryId,
+        backgroundFit: subcategoryData.backgroundFit || "contain",
         isActive: subcategoryData.isActive,
         updatedAt: serverTimestamp(),
       };
 
-      // Handle image removal
+      // Handle main image removal
       if (removeExistingImage && currentData.imagePath) {
         await CategoryService.deleteImage(currentData.imagePath);
         updateData.image = null;
         updateData.imagePath = null;
       }
-      // Handle new image upload
+      // Handle new main image upload
       else if (imageFile) {
         // Delete old image if exists
         if (currentData.imagePath) {
@@ -389,6 +457,30 @@ export class SubcategoryService {
 
         updateData.image = imageUrl;
         updateData.imagePath = imagePath;
+      }
+
+      // Handle background image removal
+      if (removeExistingBackgroundImage && currentData.backgroundImagePath) {
+        await CategoryService.deleteImage(currentData.backgroundImagePath);
+        updateData.backgroundImage = "";
+        updateData.backgroundImagePath = "";
+      }
+      // Handle new background image upload
+      else if (backgroundImageFile) {
+        // Delete old background image if exists
+        if (currentData.backgroundImagePath) {
+          await CategoryService.deleteImage(currentData.backgroundImagePath);
+        }
+
+        // Upload new background image
+        const backgroundImagePath = `subcategories/${currentData.subcategoryId}/background_${backgroundImageFile.name}`;
+        const backgroundImageUrl = await CategoryService.uploadImage(
+          backgroundImageFile,
+          backgroundImagePath
+        );
+
+        updateData.backgroundImage = backgroundImageUrl;
+        updateData.backgroundImagePath = backgroundImagePath;
       }
 
       await updateDoc(docRef, updateData);
@@ -471,6 +563,7 @@ export class ProductService {
       const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
         productId: productId,
         name: productData.name,
+        description: productData.description || "",
         categoryId: productData.categoryId,
         subcategoryId: productData.subcategoryId,
 
@@ -633,15 +726,19 @@ export class ProductService {
       const currentData = currentDoc.data();
       let updateData = {
         name: productData.name,
+        description: productData.description || "",
         categoryId: productData.categoryId,
         subcategoryId: productData.subcategoryId,
-        hasVariants: productData.hasVariants,
-        variants: productData.variants,
-        price: productData.price,
-        sku: productData.sku,
-        isActive: productData.isActive,
-        isFeatured: productData.isFeatured,
-        notes: productData.notes,
+        hasVariants: productData.hasVariants || false,
+        variants: productData.variants || [],
+        price: productData.price || 0,
+        sku: productData.sku || "",
+        backgroundImage: productData.backgroundImage || "",
+        backgroundFit: productData.backgroundFit || "contain",
+        isActive:
+          productData.isActive !== undefined ? productData.isActive : true,
+        isFeatured: productData.isFeatured || false,
+        notes: productData.notes || "",
         updatedAt: serverTimestamp(),
       };
 

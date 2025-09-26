@@ -9,22 +9,10 @@
   --accent: #f59e0b;
 }
 
-* {
-  color-scheme: light;
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, -apple-system, sans-serif;
-  color-scheme: light;
-}
-
-/* Force light theme for all elements */
-*,
-*::before,
-*::after {
-  color-scheme: light;
 }
 
 /* Custom scrollbar styles */
@@ -99,8 +87,7 @@ p,
 span,
 div,
 input,
-select,
-button {
+select {
   color: inherit;
 }
 

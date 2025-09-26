@@ -33,6 +33,10 @@ export default function Subcategories() {
             if (!customerData.tier) {
               customerData.tier = calculateTier(customerData.points || 0);
             }
+            // Calculate total points from transactions array
+            customerData.totalPoints = CustomerService.calculateTotalPoints(
+              customerData.points
+            );
             setCustomer(customerData);
           }
         } else {
@@ -52,7 +56,10 @@ export default function Subcategories() {
           (subcategory) => ({
             id: subcategory.id,
             name: subcategory.name,
+            description: subcategory.description, // Include description
             image: subcategory.image, // Use uploaded image
+            backgroundImage: subcategory.backgroundImage, // Include background image
+            backgroundFit: subcategory.backgroundFit || "contain", // Include background fit option
             categoryId: subcategory.categoryId,
             bgColor: getSubcategoryBgColor(subcategory.name),
             borderColor: getSubcategoryBorderColor(subcategory.name),
@@ -192,7 +199,7 @@ export default function Subcategories() {
               <div className="bg-white bg-opacity-20 rounded-lg p-4">
                 <p className="text-green-100 text-sm">Points Balance</p>
                 <p className="text-3xl font-bold">
-                  {(customer.points || 0).toLocaleString()}
+                  {(customer.totalPoints || 0).toLocaleString()}
                 </p>
                 <p className="text-green-100 text-sm">pts</p>
               </div>
@@ -223,9 +230,23 @@ export default function Subcategories() {
                         : `${subcategory.bgColor} ${subcategory.borderColor} ${subcategory.hoverColor}`
                     } 
                     border-2 rounded-lg p-8 transition-all duration-200 transform hover:scale-105 
-                    shadow-lg hover:shadow-xl text-left`}
+                    shadow-lg hover:shadow-xl text-left relative overflow-hidden`}
+                    style={{
+                      backgroundImage: subcategory.backgroundImage
+                        ? `url(${subcategory.backgroundImage})`
+                        : "none",
+                      backgroundSize: subcategory.backgroundImage
+                        ? subcategory.backgroundFit
+                        : "auto",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   >
-                    <div className="flex items-center space-x-6">
+                    {/* Overlay for better text readability when background image is present */}
+                    {subcategory.backgroundImage && (
+                      <div className="absolute inset-0 bg-white/30 rounded-lg"></div>
+                    )}
+                    <div className="flex items-center space-x-2 relative z-10">
                       {subcategory.image ? (
                         // Use uploaded subcategory image
                         <div className="w-24 h-24 relative">
@@ -240,10 +261,15 @@ export default function Subcategories() {
                         // Empty space to maintain layout consistency
                         <div className="w-24 h-24"></div>
                       )}
-                      <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-800">
+                      <div className="flex-1 text-left">
+                        <h2 className="text-2xl font-bold text-gray-800 mb-1">
                           {subcategory.name}
                         </h2>
+                        {subcategory.description && (
+                          <p className="text-gray-600 text-sm leading-relaxed">
+                            {subcategory.description}
+                          </p>
+                        )}
                       </div>
                       <div className="text-gray-400">
                         <svg

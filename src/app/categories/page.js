@@ -71,7 +71,10 @@ export default function Categories() {
         const transformedCategories = categoriesData.map((category) => ({
           id: category.id,
           name: category.name,
+          description: category.description, // Include description
           image: category.image, // Use uploaded image
+          backgroundImage: category.backgroundImage, // Include background image
+          backgroundFit: category.backgroundFit || "contain", // Include background fit option
           bgColor: getCategoryBgColor(category.name),
           borderColor: getCategoryBorderColor(category.name),
           hoverColor: getCategoryHoverColor(category.name),
@@ -240,9 +243,23 @@ export default function Categories() {
                       : `${category.bgColor} ${category.borderColor} ${category.hoverColor}`
                   } 
                   border-2 rounded-lg p-8 transition-all duration-200 transform hover:scale-105 
-                  shadow-lg hover:shadow-xl text-left`}
+                  shadow-lg hover:shadow-xl text-left relative overflow-hidden`}
+                  style={{
+                    backgroundImage: category.backgroundImage
+                      ? `url(${category.backgroundImage})`
+                      : "none",
+                    backgroundSize: category.backgroundImage
+                      ? category.backgroundFit
+                      : "auto",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                  }}
                 >
-                  <div className="flex items-center space-x-6">
+                  {/* Overlay for better text readability when background image is present */}
+                  {category.backgroundImage && (
+                    <div className="absolute inset-0 bg-white/30 rounded-lg"></div>
+                  )}
+                  <div className="flex items-center space-x-2 relative z-10">
                     {category.image ? (
                       // Use uploaded category image
                       <div className="w-24 h-24 relative">
@@ -257,10 +274,15 @@ export default function Categories() {
                       // Empty space to maintain layout consistency
                       <div className="w-24 h-24"></div>
                     )}
-                    <div className="flex-1">
-                      <h2 className="text-2xl font-bold text-gray-800">
+                    <div className="flex-1 text-left">
+                      <h2 className="text-2xl font-bold text-gray-800 mb-1">
                         {category.name}
                       </h2>
+                      {category.description && (
+                        <p className="text-gray-600 text-sm leading-relaxed">
+                          {category.description}
+                        </p>
+                      )}
                     </div>
                     <div className="text-gray-400">
                       <svg
