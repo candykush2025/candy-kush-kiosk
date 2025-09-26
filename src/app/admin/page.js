@@ -136,19 +136,6 @@ export default function AdminDashboard() {
     notes: "",
   });
 
-  const [newCategory, setNewCategory] = useState({
-    name: "",
-    description: "",
-    isActive: true,
-  });
-
-  const [newSubcategory, setNewSubcategory] = useState({
-    name: "",
-    description: "",
-    categoryId: "",
-    isActive: true,
-  });
-
   // Form states for editing/adding
   const [customerForm, setCustomerForm] = useState({
     nationality: "",
@@ -160,16 +147,15 @@ export default function AdminDashboard() {
     isActive: true,
   });
 
-  const [categoryForm, setCategoryForm] = useState({
+  const [newCategory, setNewCategory] = useState({
     name: "",
-    description: "",
     isActive: true,
   });
 
-  const [subcategoryForm, setSubcategoryForm] = useState({
+  const [newSubcategory, setNewSubcategory] = useState({
     name: "",
-    description: "",
     categoryId: "",
+    categoryName: "",
     isActive: true,
   });
 
@@ -180,10 +166,17 @@ export default function AdminDashboard() {
     isActive: true,
   });
 
+  // Image upload states
+  const [categoryImageFile, setCategoryImageFile] = useState(null);
+  const [subcategoryImageFile, setSubcategoryImageFile] = useState(null);
+
   // Loading states
   const [isCustomerSaving, setIsCustomerSaving] = useState(false);
-  const [isCategorySaving, setIsCategorySaving] = useState(false);
+  const [isLoadingCategory, setIsLoadingCategory] = useState(false);
   const [isLoadingSubcategory, setIsLoadingSubcategory] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [isDeletingSubcategory, setIsDeletingSubcategory] = useState(false);
+  const [isDeletingCashback, setIsDeletingCashback] = useState(false);
   const [isCashbackSaving, setIsCashbackSaving] = useState(false);
 
   // Country search
@@ -538,42 +531,117 @@ export default function AdminDashboard() {
     }
   };
 
-  // Category handlers
+  // Category handlers (restored stable version)
   const handleSaveCategory = async () => {
+    if (isLoadingCategory) return; // Prevent double submission
+
     try {
-      setIsCategorySaving(true);
-      await CategoryService.createCategory(newCategory);
+      setIsLoadingCategory(true);
+
+      if (!newCategory.name.trim()) {
+        alert("Category name is required");
+        return;
+      }
+
+      await CategoryService.createCategory(newCategory, categoryImageFile);
+      await loadDashboardData();
       setNewCategory({
         name: "",
-        description: "",
         isActive: true,
       });
+      setCategoryImageFile(null);
       setShowAddCategory(false);
-      await loadDashboardData();
     } catch (error) {
-      console.error("Error saving category:", error);
+      console.error("Failed to create category:", error);
+      alert("Failed to create category. Please try again.");
     } finally {
-      setIsCategorySaving(false);
+      setIsLoadingCategory(false);
     }
   };
 
-  // Subcategory handlers
+  const handleDeleteCategory = async (categoryId) => {
+    if (isDeletingCategory) return; // Prevent double submission
+    
+    if (
+      confirm(
+        "Are you sure you want to delete this category? All products in this category will need to be reassigned."
+      )
+    ) {
+      try {
+        setIsDeletingCategory(true);
+        await CategoryService.deleteCategory(categoryId);
+        await loadDashboardData();
+      } catch (error) {
+        console.error("Failed to delete category:", error);
+        alert("Failed to delete category. Please try again.");
+      } finally {
+        setIsDeletingCategory(false);
+      }
+    }
+  };
+
+  // Subcategory handlers (restored stable version)
   const handleSaveSubcategory = async () => {
+    if (isLoadingSubcategory) return; // Prevent double submission
+
     try {
       setIsLoadingSubcategory(true);
-      await SubcategoryService.createSubcategory(newSubcategory);
+
+      if (!newSubcategory.name.trim()) {
+        alert("Subcategory name is required");
+        return;
+      }
+      if (!newSubcategory.categoryId) {
+        alert("Please select a category");
+        return;
+      }
+
+      const selectedCategory = categories.find(
+        (cat) => cat.id === newSubcategory.categoryId
+      );
+      if (selectedCategory) {
+        newSubcategory.categoryName = selectedCategory.name;
+      }
+
+      await SubcategoryService.createSubcategory(
+        newSubcategory,
+        subcategoryImageFile
+      );
+      await loadDashboardData();
       setNewSubcategory({
         name: "",
-        description: "",
         categoryId: "",
+        categoryName: "",
         isActive: true,
       });
+      setSubcategoryImageFile(null);
       setShowAddSubcategory(false);
-      await loadDashboardData();
     } catch (error) {
-      console.error("Error saving subcategory:", error);
+      console.error("Failed to create subcategory:", error);
+      alert("Failed to create subcategory. Please try again.");
     } finally {
       setIsLoadingSubcategory(false);
+    }
+  };
+
+  const handleDeleteSubcategory = async (subcategoryId) => {
+    if (isDeletingSubcategory) return; // Prevent double submission
+    
+    if (
+      confirm(
+        "Are you sure you want to delete this subcategory? All products in this subcategory will need to be reassigned."
+      )
+    ) {
+      try {
+        setIsDeletingSubcategory(true);
+        await SubcategoryService.deleteSubcategory(subcategoryId);
+        await loadDashboardData();
+      } catch (error) {
+        console.error("Failed to delete subcategory:", error);
+        alert("Failed to delete subcategory. Please try again.");
+      } finally {
+        setIsDeletingSubcategory(false);
+      }
     }
   };
 
@@ -658,12 +726,18 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteCashback = async (ruleId) => {
+    if (isDeletingCashback) return; // Prevent double submission
+    
     if (confirm("Are you sure you want to delete this cashback rule?")) {
       try {
+        setIsDeletingCashback(true);
         await CashbackService.deleteCashbackRule(ruleId);
         await loadDashboardData();
       } catch (error) {
         console.error("Error deleting cashback rule:", error);
+        alert("Failed to delete cashback rule. Please try again.");
+      } finally {
+        setIsDeletingCashback(false);
       }
     }
   };
@@ -1825,21 +1899,48 @@ export default function AdminDashboard() {
                                         e.stopPropagation();
                                         handleDeleteCategory(category.id);
                                       }}
-                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                      disabled={isDeletingCategory}
+                                      className={`p-2 rounded-lg transition-colors duration-200 ${
+                                        isDeletingCategory
+                                          ? "text-gray-300 cursor-not-allowed"
+                                          : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                      }`}
                                     >
-                                      <svg
-                                        className="w-5 h-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        />
-                                      </svg>
+                                      {isDeletingCategory ? (
+                                        <svg
+                                          className="w-5 h-5 animate-spin"
+                                          fill="none"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <circle
+                                            className="opacity-25"
+                                            cx="12"
+                                            cy="12"
+                                            r="10"
+                                            stroke="currentColor"
+                                            strokeWidth="4"
+                                          ></circle>
+                                          <path
+                                            className="opacity-75"
+                                            fill="currentColor"
+                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                          ></path>
+                                        </svg>
+                                      ) : (
+                                        <svg
+                                          className="w-5 h-5"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          viewBox="0 0 24 24"
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                          />
+                                        </svg>
+                                      )}
                                     </button>
                                   </div>
                                 </div>
@@ -2018,21 +2119,48 @@ export default function AdminDashboard() {
                                                           subcategory.id
                                                         );
                                                       }}
-                                                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                      disabled={isDeletingSubcategory}
+                                                      className={`p-1.5 rounded-lg transition-colors duration-200 ${
+                                                        isDeletingSubcategory
+                                                          ? "text-gray-300 cursor-not-allowed"
+                                                          : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                      }`}
                                                     >
-                                                      <svg
-                                                        className="w-4 h-4"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        viewBox="0 0 24 24"
-                                                      >
-                                                        <path
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                          strokeWidth={2}
-                                                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                        />
-                                                      </svg>
+                                                      {isDeletingSubcategory ? (
+                                                        <svg
+                                                          className="w-4 h-4 animate-spin"
+                                                          fill="none"
+                                                          viewBox="0 0 24 24"
+                                                        >
+                                                          <circle
+                                                            className="opacity-25"
+                                                            cx="12"
+                                                            cy="12"
+                                                            r="10"
+                                                            stroke="currentColor"
+                                                            strokeWidth="4"
+                                                          ></circle>
+                                                          <path
+                                                            className="opacity-75"
+                                                            fill="currentColor"
+                                                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                                          ></path>
+                                                        </svg>
+                                                      ) : (
+                                                        <svg
+                                                          className="w-4 h-4"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          viewBox="0 0 24 24"
+                                                        >
+                                                          <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth={2}
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                          />
+                                                        </svg>
+                                                      )}
                                                     </button>
                                                   </div>
                                                 </div>
@@ -3017,9 +3145,14 @@ export default function AdminDashboard() {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteCashback(rule.id)}
-                                  className="text-red-600 hover:text-red-900"
+                                  disabled={isDeletingCashback}
+                                  className={`${
+                                    isDeletingCashback
+                                      ? "text-gray-400 cursor-not-allowed"
+                                      : "text-red-600 hover:text-red-900"
+                                  }`}
                                 >
-                                  Delete
+                                  {isDeletingCashback ? "Deleting..." : "Delete"}
                                 </button>
                               </td>
                             </tr>
@@ -3600,62 +3733,151 @@ export default function AdminDashboard() {
 
         {/* Add Category Modal */}
         {showAddCategory && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Add New Category
-                </h3>
-                <form onSubmit={handleSaveCategory} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Category Name
-                    </label>
-                    <input
-                      type="text"
-                      value={categoryForm.name}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          name: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      required
-                    />
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Add New Category
+              </h3>
+
+              <div className="space-y-4">
+                {/* Category Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newCategory.name}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        name: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., Kit, Flower, Edibles"
+                    required
+                  />
+                </div>
+
+                {/* Category Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category Image
+                  </label>
+                  <div className="space-y-3">
+                    {/* Image Preview */}
+                    {categoryImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(categoryImageFile)}
+                          alt="Category preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCategoryImageFile(null)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Upload Button/Area */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setCategoryImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="category-image-upload"
+                      />
+                      <label
+                        htmlFor="category-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          categoryImageFile
+                            ? "border-green-300 bg-green-50 text-green-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {categoryImageFile
+                            ? "Change Image"
+                            : "Choose Category Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Description
-                    </label>
-                    <textarea
-                      value={categoryForm.description}
-                      onChange={(e) =>
-                        setCategoryForm({
-                          ...categoryForm,
-                          description: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      rows="3"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddCategory(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={() => {
+                    setShowAddCategory(false);
+                    setNewCategory({
+                      name: "",
+                      isActive: true,
+                    });
+                    setCategoryImageFile(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCategory}
+                  disabled={isLoadingCategory}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                    isLoadingCategory
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isLoadingCategory && (
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
                     >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
-                    >
-                      Add Category
-                    </button>
-                  </div>
-                </form>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                  <span>
+                    {isLoadingCategory ? "Adding..." : "Add Category"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -3663,85 +3885,184 @@ export default function AdminDashboard() {
 
         {/* Add Subcategory Modal */}
         {showAddSubcategory && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-              <div className="mt-3">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">
-                  Add New Subcategory
-                </h3>
-                <form onSubmit={handleSaveSubcategory} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Parent Category
-                    </label>
-                    <select
-                      value={subcategoryForm.categoryId}
-                      onChange={(e) =>
-                        setSubcategoryForm({
-                          ...subcategoryForm,
-                          categoryId: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      required
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Add New Subcategory
+              </h3>
+
+              <div className="space-y-4">
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category *
+                  </label>
+                  <select
+                    value={newSubcategory.categoryId}
+                    onChange={(e) => {
+                      const selectedCategory = categories.find(
+                        (cat) => cat.id === e.target.value
+                      );
+                      setNewSubcategory({
+                        ...newSubcategory,
+                        categoryId: e.target.value,
+                        categoryName: selectedCategory
+                          ? selectedCategory.name
+                          : "",
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Subcategory Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newSubcategory.name}
+                    onChange={(e) =>
+                      setNewSubcategory({
+                        ...newSubcategory,
+                        name: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="e.g., Filters, Grinders, Papers"
+                    required
+                  />
+                </div>
+
+                {/* Subcategory Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory Image
+                  </label>
+                  <div className="space-y-3">
+                    {/* Image Preview */}
+                    {subcategoryImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(subcategoryImageFile)}
+                          alt="Subcategory preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSubcategoryImageFile(null)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Upload Button/Area */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setSubcategoryImageFile(e.target.files[0])
+                        }
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        id="subcategory-image-upload"
+                      />
+                      <label
+                        htmlFor="subcategory-image-upload"
+                        className={`block w-full px-4 py-8 border-2 border-dashed rounded-md text-center cursor-pointer transition-colors ${
+                          subcategoryImageFile
+                            ? "border-purple-300 bg-purple-50 text-purple-600"
+                            : "border-gray-300 bg-gray-50 text-gray-600 hover:border-gray-400 hover:bg-gray-100"
+                        }`}
+                      >
+                        <svg
+                          className="mx-auto h-8 w-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {subcategoryImageFile
+                            ? "Change Image"
+                            : "Choose Subcategory Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={() => {
+                    setShowAddSubcategory(false);
+                    setNewSubcategory({
+                      name: "",
+                      categoryId: "",
+                      categoryName: "",
+                      isActive: true,
+                    });
+                    setSubcategoryImageFile(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveSubcategory}
+                  disabled={isLoadingSubcategory}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                    isLoadingSubcategory
+                      ? "bg-purple-400 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700"
+                  }`}
+                >
+                  {isLoadingSubcategory && (
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
                     >
-                      <option value="">Select Category</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Subcategory Name
-                    </label>
-                    <input
-                      type="text"
-                      value={subcategoryForm.name}
-                      onChange={(e) =>
-                        setSubcategoryForm({
-                          ...subcategoryForm,
-                          name: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Description
-                    </label>
-                    <textarea
-                      value={subcategoryForm.description}
-                      onChange={(e) =>
-                        setSubcategoryForm({
-                          ...subcategoryForm,
-                          description: e.target.value,
-                        })
-                      }
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500"
-                      rows="3"
-                    />
-                  </div>
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddSubcategory(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md hover:bg-purple-700"
-                    >
-                      Add Subcategory
-                    </button>
-                  </div>
-                </form>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                  <span>
+                    {isLoadingSubcategory ? "Adding..." : "Add Subcategory"}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
