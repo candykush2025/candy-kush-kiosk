@@ -126,7 +126,12 @@ export class CategoryService {
   }
 
   // Update category
-  static async updateCategory(id, categoryData, imageFile = null) {
+  static async updateCategory(
+    id,
+    categoryData,
+    imageFile = null,
+    removeExistingImage = false
+  ) {
     try {
       const docRef = doc(db, CATEGORIES_COLLECTION, id);
       const currentDoc = await getDoc(docRef);
@@ -142,7 +147,14 @@ export class CategoryService {
         updatedAt: serverTimestamp(),
       };
 
-      if (imageFile) {
+      // Handle image removal
+      if (removeExistingImage && currentData.imagePath) {
+        await this.deleteImage(currentData.imagePath);
+        updateData.image = null;
+        updateData.imagePath = null;
+      }
+      // Handle new image upload
+      else if (imageFile) {
         // Delete old image if exists
         if (currentData.imagePath) {
           await this.deleteImage(currentData.imagePath);
@@ -333,7 +345,12 @@ export class SubcategoryService {
   }
 
   // Update subcategory
-  static async updateSubcategory(id, subcategoryData, imageFile = null) {
+  static async updateSubcategory(
+    id,
+    subcategoryData,
+    imageFile = null,
+    removeExistingImage = false
+  ) {
     try {
       const docRef = doc(db, SUBCATEGORIES_COLLECTION, id);
       const currentDoc = await getDoc(docRef);
@@ -350,7 +367,14 @@ export class SubcategoryService {
         updatedAt: serverTimestamp(),
       };
 
-      if (imageFile) {
+      // Handle image removal
+      if (removeExistingImage && currentData.imagePath) {
+        await CategoryService.deleteImage(currentData.imagePath);
+        updateData.image = null;
+        updateData.imagePath = null;
+      }
+      // Handle new image upload
+      else if (imageFile) {
         // Delete old image if exists
         if (currentData.imagePath) {
           await CategoryService.deleteImage(currentData.imagePath);

@@ -159,6 +159,50 @@ export default function AdminDashboard() {
     isActive: true,
   });
 
+  // Product form for editing
+  const [productForm, setProductForm] = useState({
+    name: "",
+    description: "",
+    categoryId: "",
+    categoryName: "",
+    subcategoryId: "",
+    subcategoryName: "",
+    hasVariants: false,
+    price: 0,
+    variants: [],
+    sku: "",
+    barcode: "",
+    supplier: "",
+    mainImage: "",
+    images: [],
+    isActive: true,
+    isFeatured: false,
+    tags: [],
+    notes: "",
+  });
+
+  // Category and subcategory editing states
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingSubcategory, setEditingSubcategory] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({
+    name: "",
+    description: "",
+    isActive: true,
+  });
+  const [subcategoryForm, setSubcategoryForm] = useState({
+    name: "",
+    description: "",
+    categoryId: "",
+    categoryName: "",
+    isActive: true,
+  });
+
+  // Image removal tracking states
+  const [removeExistingCategoryImage, setRemoveExistingCategoryImage] =
+    useState(false);
+  const [removeExistingSubcategoryImage, setRemoveExistingSubcategoryImage] =
+    useState(false);
+
   const [cashbackForm, setCashbackForm] = useState({
     categoryId: "",
     categoryName: "",
@@ -178,6 +222,10 @@ export default function AdminDashboard() {
   const [isDeletingSubcategory, setIsDeletingSubcategory] = useState(false);
   const [isDeletingCashback, setIsDeletingCashback] = useState(false);
   const [isCashbackSaving, setIsCashbackSaving] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(null);
+  const [isTogglingCustomerStatus, setIsTogglingCustomerStatus] = useState(null);
+  const [isTogglingCashbackStatus, setIsTogglingCashbackStatus] = useState(null);
+  const [isDeletingPointTransaction, setIsDeletingPointTransaction] = useState(null);
 
   // Country search
   const [countrySearch, setCountrySearch] = useState("");
@@ -412,11 +460,14 @@ export default function AdminDashboard() {
 
   const handleToggleCustomerStatus = async (customer) => {
     try {
+      setIsTogglingCustomerStatus(customer.id);
       const updatedCustomer = { ...customer, isActive: !customer.isActive };
       await CustomerService.updateCustomer(customer.id, updatedCustomer);
       await loadDashboardData();
     } catch (error) {
       console.error("Error updating customer status:", error);
+    } finally {
+      setIsTogglingCustomerStatus(null);
     }
   };
 
@@ -462,18 +513,48 @@ export default function AdminDashboard() {
     try {
       setIsProductSaving(true);
 
-      if (hasVariants && variants.length > 0) {
-        newProduct.hasVariants = true;
-        newProduct.variants = variants;
-      } else {
-        newProduct.hasVariants = false;
-        newProduct.variants = [];
-      }
-
       if (editingProduct) {
-        await ProductService.updateProduct(editingProduct.id, editingProduct);
+        // Handle editing existing product
+        if (productForm.hasVariants && variants.length > 0) {
+          productForm.hasVariants = true;
+          productForm.variants = variants;
+        } else {
+          productForm.hasVariants = false;
+          productForm.variants = [];
+        }
+
+        await ProductService.updateProduct(editingProduct.id, productForm);
         setEditingProduct(null);
+        setProductForm({
+          name: "",
+          description: "",
+          categoryId: "",
+          categoryName: "",
+          subcategoryId: "",
+          subcategoryName: "",
+          hasVariants: false,
+          price: 0,
+          variants: [],
+          sku: "",
+          barcode: "",
+          supplier: "",
+          mainImage: "",
+          images: [],
+          isActive: true,
+          isFeatured: false,
+          tags: [],
+          notes: "",
+        });
       } else {
+        // Handle adding new product
+        if (hasVariants && variants.length > 0) {
+          newProduct.hasVariants = true;
+          newProduct.variants = variants;
+        } else {
+          newProduct.hasVariants = false;
+          newProduct.variants = [];
+        }
+
         const imageFiles = productImageFile ? [productImageFile] : [];
         await ProductService.createProduct(newProduct, imageFiles);
         setNewProduct({
@@ -511,10 +592,13 @@ export default function AdminDashboard() {
 
   const handleDeleteProduct = async (productId) => {
     try {
+      setIsDeletingProduct(productId);
       await ProductService.deleteProduct(productId);
       await loadDashboardData();
     } catch (error) {
       console.error("Error deleting product:", error);
+    } finally {
+      setIsDeletingProduct(null);
     }
   };
 
@@ -561,7 +645,7 @@ export default function AdminDashboard() {
 
   const handleDeleteCategory = async (categoryId) => {
     if (isDeletingCategory) return; // Prevent double submission
-    
+
     if (
       confirm(
         "Are you sure you want to delete this category? All products in this category will need to be reassigned."
@@ -626,7 +710,7 @@ export default function AdminDashboard() {
 
   const handleDeleteSubcategory = async (subcategoryId) => {
     if (isDeletingSubcategory) return; // Prevent double submission
-    
+
     if (
       confirm(
         "Are you sure you want to delete this subcategory? All products in this subcategory will need to be reassigned."
@@ -642,6 +726,86 @@ export default function AdminDashboard() {
       } finally {
         setIsDeletingSubcategory(false);
       }
+    }
+  };
+
+  // Category edit handlers
+  const handleEditCategory = async () => {
+    try {
+      setIsLoadingCategory(true);
+
+      if (!categoryForm.name.trim()) {
+        alert("Category name is required");
+        return;
+      }
+
+      await CategoryService.updateCategory(
+        editingCategory.id,
+        categoryForm,
+        categoryImageFile,
+        removeExistingCategoryImage
+      );
+      await loadDashboardData();
+      setEditingCategory(null);
+      setCategoryForm({
+        name: "",
+        description: "",
+        isActive: true,
+      });
+      setCategoryImageFile(null);
+      setRemoveExistingCategoryImage(false);
+    } catch (error) {
+      console.error("Failed to update category:", error);
+      alert("Failed to update category. Please try again.");
+    } finally {
+      setIsLoadingCategory(false);
+    }
+  };
+
+  // Subcategory edit handlers
+  const handleEditSubcategory = async () => {
+    try {
+      setIsLoadingSubcategory(true);
+
+      if (!subcategoryForm.name.trim()) {
+        alert("Subcategory name is required");
+        return;
+      }
+
+      if (!subcategoryForm.categoryId) {
+        alert("Please select a category");
+        return;
+      }
+
+      const selectedCategory = categories.find(
+        (cat) => cat.id === subcategoryForm.categoryId
+      );
+      if (selectedCategory) {
+        subcategoryForm.categoryName = selectedCategory.name;
+      }
+
+      await SubcategoryService.updateSubcategory(
+        editingSubcategory.id,
+        subcategoryForm,
+        subcategoryImageFile,
+        removeExistingSubcategoryImage
+      );
+      await loadDashboardData();
+      setEditingSubcategory(null);
+      setSubcategoryForm({
+        name: "",
+        description: "",
+        categoryId: "",
+        categoryName: "",
+        isActive: true,
+      });
+      setSubcategoryImageFile(null);
+      setRemoveExistingSubcategoryImage(false);
+    } catch (error) {
+      console.error("Failed to update subcategory:", error);
+      alert("Failed to update subcategory. Please try again.");
+    } finally {
+      setIsLoadingSubcategory(false);
     }
   };
 
@@ -727,7 +891,7 @@ export default function AdminDashboard() {
 
   const handleDeleteCashback = async (ruleId) => {
     if (isDeletingCashback) return; // Prevent double submission
-    
+
     if (confirm("Are you sure you want to delete this cashback rule?")) {
       try {
         setIsDeletingCashback(true);
@@ -744,6 +908,7 @@ export default function AdminDashboard() {
 
   const handleToggleCashbackStatus = async (rule) => {
     try {
+      setIsTogglingCashbackStatus(rule.id);
       await CashbackService.updateCashbackRule(rule.id, {
         ...rule,
         isActive: !rule.isActive,
@@ -751,6 +916,8 @@ export default function AdminDashboard() {
       await loadDashboardData();
     } catch (error) {
       console.error("Error updating cashback rule:", error);
+    } finally {
+      setIsTogglingCashbackStatus(null);
     }
   };
 
@@ -1434,11 +1601,27 @@ export default function AdminDashboard() {
                                     onClick={() =>
                                       handleToggleCustomerStatus(customer)
                                     }
-                                    className="text-yellow-600 hover:text-yellow-900"
+                                    disabled={
+                                      isTogglingCustomerStatus === customer.id
+                                    }
+                                    className={`${
+                                      isTogglingCustomerStatus === customer.id
+                                        ? "text-gray-400 cursor-not-allowed"
+                                        : "text-yellow-600 hover:text-yellow-900"
+                                    }`}
                                   >
-                                    {customer.isActive
-                                      ? "Deactivate"
-                                      : "Activate"}
+                                    {isTogglingCustomerStatus === customer.id ? (
+                                      <div className="flex items-center space-x-1">
+                                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                        <span>Updating...</span>
+                                      </div>
+                                    ) : (
+                                      <span>
+                                        {customer.isActive
+                                          ? "Deactivate"
+                                          : "Activate"}
+                                      </span>
+                                    )}
                                   </button>
                                   <button
                                     onClick={() =>
@@ -1897,6 +2080,37 @@ export default function AdminDashboard() {
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
+                                        setEditingCategory(category);
+                                        setCategoryForm({
+                                          name: category.name || "",
+                                          description:
+                                            category.description || "",
+                                          isActive:
+                                            category.isActive !== undefined
+                                              ? category.isActive
+                                              : true,
+                                        });
+                                        setRemoveExistingCategoryImage(false);
+                                      }}
+                                      className="p-2 rounded-lg transition-colors duration-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                    >
+                                      <svg
+                                        className="w-5 h-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                      >
+                                        <path
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                          strokeWidth={2}
+                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                        />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
                                         handleDeleteCategory(category.id);
                                       }}
                                       disabled={isDeletingCategory}
@@ -2115,11 +2329,58 @@ export default function AdminDashboard() {
                                                     <button
                                                       onClick={(e) => {
                                                         e.stopPropagation();
+                                                        setEditingSubcategory(
+                                                          subcategory
+                                                        );
+                                                        setSubcategoryForm({
+                                                          name:
+                                                            subcategory.name ||
+                                                            "",
+                                                          description:
+                                                            subcategory.description ||
+                                                            "",
+                                                          categoryId:
+                                                            subcategory.categoryId ||
+                                                            "",
+                                                          categoryName:
+                                                            subcategory.categoryName ||
+                                                            "",
+                                                          isActive:
+                                                            subcategory.isActive !==
+                                                            undefined
+                                                              ? subcategory.isActive
+                                                              : true,
+                                                        });
+                                                        setRemoveExistingSubcategoryImage(
+                                                          false
+                                                        );
+                                                      }}
+                                                      className="p-1.5 rounded-lg transition-colors duration-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                                    >
+                                                      <svg
+                                                        className="w-4 h-4"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        viewBox="0 0 24 24"
+                                                      >
+                                                        <path
+                                                          strokeLinecap="round"
+                                                          strokeLinejoin="round"
+                                                          strokeWidth={2}
+                                                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                        />
+                                                      </svg>
+                                                    </button>
+                                                    <button
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
                                                         handleDeleteSubcategory(
                                                           subcategory.id
                                                         );
                                                       }}
-                                                      disabled={isDeletingSubcategory}
+                                                      disabled={
+                                                        isDeletingSubcategory
+                                                      }
                                                       className={`p-1.5 rounded-lg transition-colors duration-200 ${
                                                         isDeletingSubcategory
                                                           ? "text-gray-300 cursor-not-allowed"
@@ -2837,7 +3098,38 @@ export default function AdminDashboard() {
                                       View
                                     </button>
                                     <button
-                                      onClick={() => setEditingProduct(product)}
+                                      onClick={() => {
+                                        setEditingProduct(product);
+                                        setProductForm({
+                                          name: product.name || "",
+                                          description:
+                                            product.description || "",
+                                          categoryId: product.categoryId || "",
+                                          categoryName:
+                                            product.categoryName || "",
+                                          subcategoryId:
+                                            product.subcategoryId || "",
+                                          subcategoryName:
+                                            product.subcategoryName || "",
+                                          hasVariants:
+                                            product.hasVariants || false,
+                                          price: product.price || 0,
+                                          variants: product.variants || [],
+                                          sku: product.sku || "",
+                                          barcode: product.barcode || "",
+                                          supplier: product.supplier || "",
+                                          mainImage: product.mainImage || "",
+                                          images: product.images || [],
+                                          isActive:
+                                            product.isActive !== undefined
+                                              ? product.isActive
+                                              : true,
+                                          isFeatured:
+                                            product.isFeatured || false,
+                                          tags: product.tags || [],
+                                          notes: product.notes || "",
+                                        });
+                                      }}
                                       className="text-green-600 hover:text-green-900"
                                     >
                                       Edit
@@ -2846,11 +3138,51 @@ export default function AdminDashboard() {
                                       onClick={() =>
                                         handleToggleProductStatus(product)
                                       }
-                                      className="text-yellow-600 hover:text-yellow-900"
+                                      disabled={isTogglingStatus === product.id}
+                                      className={`${
+                                        isTogglingStatus === product.id
+                                          ? "text-gray-400 cursor-not-allowed"
+                                          : "text-yellow-600 hover:text-yellow-900"
+                                      }`}
                                     >
-                                      {product.isActive
-                                        ? "Deactivate"
-                                        : "Activate"}
+                                      {isTogglingStatus === product.id ? (
+                                        <div className="flex items-center space-x-1">
+                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                          <span>Updating...</span>
+                                        </div>
+                                      ) : (
+                                        <span>
+                                          {product.isActive
+                                            ? "Deactivate"
+                                            : "Activate"}
+                                        </span>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (
+                                          confirm(
+                                            `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
+                                          )
+                                        ) {
+                                          handleDeleteProduct(product.id);
+                                        }
+                                      }}
+                                      disabled={isDeletingProduct === product.id}
+                                      className={`${
+                                        isDeletingProduct === product.id
+                                          ? "text-gray-400 cursor-not-allowed"
+                                          : "text-red-600 hover:text-red-900"
+                                      }`}
+                                    >
+                                      {isDeletingProduct === product.id ? (
+                                        <div className="flex items-center space-x-1">
+                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                          <span>Deleting...</span>
+                                        </div>
+                                      ) : (
+                                        "Delete"
+                                      )}
                                     </button>
                                   </td>
                                 </tr>
@@ -3139,9 +3471,25 @@ export default function AdminDashboard() {
                                   onClick={() =>
                                     handleToggleCashbackStatus(rule)
                                   }
-                                  className="text-yellow-600 hover:text-yellow-900"
+                                  disabled={
+                                    isTogglingCashbackStatus === rule.id
+                                  }
+                                  className={`${
+                                    isTogglingCashbackStatus === rule.id
+                                      ? "text-gray-400 cursor-not-allowed"
+                                      : "text-yellow-600 hover:text-yellow-900"
+                                  }`}
                                 >
-                                  {rule.isActive ? "Deactivate" : "Activate"}
+                                  {isTogglingCashbackStatus === rule.id ? (
+                                    <div className="flex items-center space-x-1">
+                                      <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                      <span>Updating...</span>
+                                    </div>
+                                  ) : (
+                                    <span>
+                                      {rule.isActive ? "Deactivate" : "Activate"}
+                                    </span>
+                                  )}
                                 </button>
                                 <button
                                   onClick={() => handleDeleteCashback(rule.id)}
@@ -3152,7 +3500,9 @@ export default function AdminDashboard() {
                                       : "text-red-600 hover:text-red-900"
                                   }`}
                                 >
-                                  {isDeletingCashback ? "Deleting..." : "Delete"}
+                                  {isDeletingCashback
+                                    ? "Deleting..."
+                                    : "Delete"}
                                 </button>
                               </td>
                             </tr>
@@ -3883,6 +4233,202 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* Edit Category Modal */}
+        {editingCategory && (
+          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                  Edit Category
+                </h3>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleEditCategory();
+                  }}
+                  className="space-y-4"
+                >
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Category Name
+                    </label>
+                    <input
+                      type="text"
+                      value={categoryForm.name}
+                      onChange={(e) =>
+                        setCategoryForm({
+                          ...categoryForm,
+                          name: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
+                    <textarea
+                      value={categoryForm.description}
+                      onChange={(e) =>
+                        setCategoryForm({
+                          ...categoryForm,
+                          description: e.target.value,
+                        })
+                      }
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      rows="3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Category Image
+                    </label>
+                    {categoryImageFile && (
+                      <div className="mb-2 relative inline-block">
+                        <img
+                          src={URL.createObjectURL(categoryImageFile)}
+                          alt="Category preview"
+                          className="h-20 w-20 object-cover rounded border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCategoryImageFile(null)}
+                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    )}
+                    {editingCategory.image &&
+                      !categoryImageFile &&
+                      !removeExistingCategoryImage && (
+                        <div className="mb-2 space-y-2">
+                          <div className="relative inline-block">
+                            <img
+                              src={editingCategory.image}
+                              alt="Current category image"
+                              className="h-20 w-20 object-cover rounded border"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setRemoveExistingCategoryImage(true)}
+                            className="text-sm text-red-600 hover:text-red-700 underline"
+                          >
+                            Remove existing image
+                          </button>
+                        </div>
+                      )}
+                    {removeExistingCategoryImage && !categoryImageFile && (
+                      <div className="mb-2 p-3 border border-yellow-300 bg-yellow-50 rounded">
+                        <p className="text-sm text-yellow-700 mb-2">
+                          ⚠️ Existing image will be removed when you save
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setRemoveExistingCategoryImage(false)}
+                          className="text-sm text-blue-600 hover:text-blue-700 underline"
+                        >
+                          Cancel removal
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setCategoryImageFile(e.target.files[0])}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {categoryImageFile
+                        ? "New image selected (not yet uploaded)"
+                        : editingCategory.image
+                        ? "Current image will be replaced if you select a new one"
+                        : "No image uploaded"}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="editCategoryActive"
+                      checked={categoryForm.isActive}
+                      onChange={(e) =>
+                        setCategoryForm({
+                          ...categoryForm,
+                          isActive: e.target.checked,
+                        })
+                      }
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label
+                      htmlFor="editCategoryActive"
+                      className="ml-2 block text-sm text-gray-900"
+                    >
+                      Active
+                    </label>
+                  </div>
+                </form>
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setCategoryForm({
+                      name: "",
+                      description: "",
+                      isActive: true,
+                    });
+                    setCategoryImageFile(null);
+                    setRemoveExistingCategoryImage(false);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditCategory}
+                  disabled={isLoadingCategory}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                    isLoadingCategory
+                      ? "bg-blue-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {isLoadingCategory && (
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                  <span>
+                    {isLoadingCategory ? "Updating..." : "Update Category"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add Subcategory Modal */}
         {showAddSubcategory && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -4061,6 +4607,230 @@ export default function AdminDashboard() {
                   )}
                   <span>
                     {isLoadingSubcategory ? "Adding..." : "Add Subcategory"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Subcategory Modal */}
+        {editingSubcategory && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-96 max-h-96 overflow-y-auto">
+              <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                Edit Subcategory
+              </h3>
+
+              <div className="space-y-4">
+                {/* Category Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Category
+                  </label>
+                  <select
+                    value={subcategoryForm.categoryId}
+                    onChange={(e) => {
+                      const selectedCategory = categories.find(
+                        (cat) => cat.id === e.target.value
+                      );
+                      setSubcategoryForm({
+                        ...subcategoryForm,
+                        categoryId: e.target.value,
+                        categoryName: selectedCategory?.name || "",
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Subcategory Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory Name
+                  </label>
+                  <input
+                    type="text"
+                    value={subcategoryForm.name}
+                    onChange={(e) =>
+                      setSubcategoryForm({
+                        ...subcategoryForm,
+                        name: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., Filters, Grinders, Papers"
+                    required
+                  />
+                </div>
+
+                {/* Subcategory Image */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Subcategory Image
+                  </label>
+                  <div className="space-y-3">
+                    {/* Image Preview */}
+                    {subcategoryImageFile && (
+                      <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                        <img
+                          src={URL.createObjectURL(subcategoryImageFile)}
+                          alt="Subcategory preview"
+                          className="w-full max-h-48 object-contain rounded-md"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setSubcategoryImageFile(null)}
+                          className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                    {editingSubcategory.image &&
+                      !subcategoryImageFile &&
+                      !removeExistingSubcategoryImage && (
+                        <div className="space-y-2">
+                          <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
+                            <img
+                              src={editingSubcategory.image}
+                              alt="Current subcategory image"
+                              className="w-full max-h-48 object-contain rounded-md"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingSubcategoryImage(true)
+                            }
+                            className="text-sm text-red-600 hover:text-red-700 underline"
+                          >
+                            Remove existing image
+                          </button>
+                        </div>
+                      )}
+                    {removeExistingSubcategoryImage &&
+                      !subcategoryImageFile && (
+                        <div className="p-3 border border-yellow-300 bg-yellow-50 rounded">
+                          <p className="text-sm text-yellow-700 mb-2">
+                            ⚠️ Existing image will be removed when you save
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setRemoveExistingSubcategoryImage(false)
+                            }
+                            className="text-sm text-blue-600 hover:text-blue-700 underline"
+                          >
+                            Cancel removal
+                          </button>
+                        </div>
+                      )}
+
+                    {/* Upload Button */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-md p-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setSubcategoryImageFile(e.target.files[0])
+                        }
+                        className="hidden"
+                        id="edit-subcategory-image-upload"
+                      />
+                      <label
+                        htmlFor="edit-subcategory-image-upload"
+                        className="cursor-pointer flex flex-col items-center justify-center text-gray-500 hover:text-gray-700"
+                      >
+                        <svg
+                          className="w-8 h-8 mb-2"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                          />
+                        </svg>
+                        <span className="text-sm font-medium">
+                          {subcategoryImageFile
+                            ? "Change Image"
+                            : editingSubcategory.image
+                            ? "Replace Current Image"
+                            : "Choose Subcategory Image"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          PNG, JPG, GIF up to 10MB
+                        </p>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 mt-6">
+                <button
+                  onClick={() => {
+                    setEditingSubcategory(null);
+                    setSubcategoryForm({
+                      name: "",
+                      description: "",
+                      categoryId: "",
+                      categoryName: "",
+                      isActive: true,
+                    });
+                    setSubcategoryImageFile(null);
+                    setRemoveExistingSubcategoryImage(false);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleEditSubcategory}
+                  disabled={isLoadingSubcategory}
+                  className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center space-x-2 ${
+                    isLoadingSubcategory
+                      ? "bg-purple-400 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700"
+                  }`}
+                >
+                  {isLoadingSubcategory && (
+                    <svg
+                      className="animate-spin h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                  )}
+                  <span>
+                    {isLoadingSubcategory
+                      ? "Updating..."
+                      : "Update Subcategory"}
                   </span>
                 </button>
               </div>
@@ -4921,15 +5691,47 @@ export default function AdminDashboard() {
                     <button
                       type="button"
                       onClick={() => setEditingProduct(null)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 border border-gray-300 rounded-md hover:bg-gray-300"
+                      disabled={isProductSaving}
+                      className={`px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md ${
+                        isProductSaving
+                          ? "bg-gray-100 cursor-not-allowed"
+                          : "bg-gray-200 hover:bg-gray-300"
+                      }`}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700"
+                      disabled={isProductSaving}
+                      className={`px-4 py-2 text-sm font-medium text-white border border-transparent rounded-md flex items-center ${
+                        isProductSaving
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700"
+                      }`}
                     >
-                      Update Product
+                      {isProductSaving && (
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                      )}
+                      {isProductSaving ? "Updating..." : "Update Product"}
                     </button>
                   </div>
                 </form>
