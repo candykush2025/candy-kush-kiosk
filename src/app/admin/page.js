@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 export default function AdminDashboard() {
+  // Active tab synced with URL (?tab=) so refresh restores last visited section
   const [activeTab, setActiveTab] = useState("dashboard");
   const [stats, setStats] = useState({
     totalCustomers: 0,
@@ -392,6 +393,45 @@ export default function AdminDashboard() {
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  // Initialize activeTab from URL on mount (only client side)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, []);
+
+  // Keep URL in sync when activeTab changes (replace state so history not polluted)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const current = new URL(window.location.href);
+    if (activeTab === "dashboard") {
+      // Remove param when default tab to keep URL clean
+      current.searchParams.delete("tab");
+    } else {
+      current.searchParams.set("tab", activeTab);
+    }
+    const newUrl =
+      current.pathname +
+      (current.search ? `?${current.searchParams.toString()}` : "");
+    if (newUrl !== window.location.pathname + window.location.search) {
+      window.history.replaceState({}, "", newUrl);
+    }
+  }, [activeTab]);
+
+  // Optional: respond to browser back/forward navigation altering ?tab=
+  useEffect(() => {
+    const handler = () => {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab") || "dashboard";
+      setActiveTab(tab);
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   // Initialize productForm when editing a product
   useEffect(() => {
