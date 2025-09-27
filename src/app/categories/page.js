@@ -75,6 +75,7 @@ export default function Categories() {
           image: category.image, // Use uploaded image
           backgroundImage: category.backgroundImage, // Include background image
           backgroundFit: category.backgroundFit || "contain", // Include background fit option
+          textColor: category.textColor || "#000000",
           bgColor: getCategoryBgColor(category.name),
           borderColor: getCategoryBorderColor(category.name),
           hoverColor: getCategoryHoverColor(category.name),
@@ -142,16 +143,44 @@ export default function Categories() {
     return cart.reduce((total, item) => total + (item.quantity || 1), 0);
   };
 
-  if (!customer || loading) {
+  // Skeleton while loading (waits for data + images)
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">
-            {loading
-              ? "Loading categories..."
-              : "Loading customer information..."}
-          </p>
+      <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
+        <div className="min-h-screen bg-gray-50 flex flex-col animate-pulse">
+          {/* Header skeleton */}
+          <div className="bg-white shadow-sm p-4 flex items-center justify-between">
+            <div className="h-8 w-20 bg-gray-200 rounded" />
+            <div className="h-8 w-40 bg-gray-200 rounded" />
+            <div className="h-8 w-16 bg-gray-200 rounded" />
+          </div>
+          {/* Customer card skeleton */}
+          <div className="bg-white p-6 m-4 rounded-lg shadow-sm space-y-4">
+            <div className="h-6 w-48 bg-gray-200 rounded" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-10 w-full bg-gray-100 rounded" />
+          </div>
+          {/* Categories grid skeleton */}
+          <div className="flex-1 p-6">
+            <div className="grid gap-6 max-w-2xl mx-auto">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="border-2 border-gray-200 rounded-lg p-8 shadow-sm bg-white relative overflow-hidden"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-6 w-2/3 bg-gray-200 rounded" />
+                      <div className="h-4 w-5/6 bg-gray-200 rounded" />
+                      <div className="h-4 w-1/2 bg-gray-200 rounded" />
+                    </div>
+                    <div className="w-8 h-8 bg-gray-200 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -275,11 +304,17 @@ export default function Categories() {
                       <div className="w-24 h-24"></div>
                     )}
                     <div className="flex-1 text-left">
-                      <h2 className="text-2xl font-bold text-gray-800 mb-1">
+                      <h2
+                        className="text-2xl font-bold mb-1"
+                        style={{ color: category.textColor || "#000000" }}
+                      >
                         {category.name}
                       </h2>
                       {category.description && (
-                        <p className="text-gray-600 text-sm leading-relaxed">
+                        <p
+                          className="text-sm leading-relaxed"
+                          style={{ color: category.textColor || "#000000" }}
+                        >
                           {category.description}
                         </p>
                       )}

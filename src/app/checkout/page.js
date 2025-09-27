@@ -181,7 +181,7 @@ export default function CheckoutPage() {
             Your cart is empty
           </div>
           <button
-            onClick={() => router.push("/products/pre-rolled")}
+            onClick={() => router.push("/")}
             className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
           >
             Continue Shopping

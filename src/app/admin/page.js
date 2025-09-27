@@ -128,6 +128,9 @@ export default function AdminDashboard() {
     supplier: "",
     mainImage: "",
     images: [],
+    textColor: "#000000",
+    backgroundImage: "",
+    backgroundFit: "contain",
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -150,6 +153,7 @@ export default function AdminDashboard() {
     description: "",
     backgroundImage: "",
     backgroundFit: "contain",
+    textColor: "#000000",
     isActive: true,
   });
 
@@ -160,6 +164,7 @@ export default function AdminDashboard() {
     categoryName: "",
     backgroundImage: "",
     backgroundFit: "contain",
+    textColor: "#000000",
     isActive: true,
   });
 
@@ -181,6 +186,7 @@ export default function AdminDashboard() {
     images: [],
     backgroundImage: "",
     backgroundFit: "contain",
+    textColor: "#000000",
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -195,6 +201,7 @@ export default function AdminDashboard() {
     description: "",
     backgroundImage: "",
     backgroundFit: "contain",
+    textColor: "#000000",
     isActive: true,
   });
   const [subcategoryForm, setSubcategoryForm] = useState({
@@ -413,6 +420,7 @@ export default function AdminDashboard() {
         backgroundFit: editingProduct.backgroundFit || "contain",
         categoryName: editingProduct.categoryName || "",
         subcategoryName: editingProduct.subcategoryName || "",
+        textColor: editingProduct.textColor || "#000000",
       });
       // Reset image file when starting to edit a different product
       setProductImageFile(null);
@@ -428,6 +436,7 @@ export default function AdminDashboard() {
         description: editingCategory.description || "",
         backgroundImage: editingCategory.backgroundImage || "",
         backgroundFit: editingCategory.backgroundFit || "contain",
+        textColor: editingCategory.textColor || "#000000",
         isActive:
           editingCategory.isActive !== undefined
             ? editingCategory.isActive
@@ -450,6 +459,7 @@ export default function AdminDashboard() {
         categoryName: editingSubcategory.categoryName || "",
         backgroundImage: editingSubcategory.backgroundImage || "",
         backgroundFit: editingSubcategory.backgroundFit || "contain",
+        textColor: editingSubcategory.textColor || "#000000",
         isActive:
           editingSubcategory.isActive !== undefined
             ? editingSubcategory.isActive
@@ -655,6 +665,7 @@ export default function AdminDashboard() {
           notes: "",
           backgroundImage: "",
           backgroundFit: "cover",
+          textColor: "#000000",
         });
       } else {
         // Handle adding new product
@@ -667,7 +678,11 @@ export default function AdminDashboard() {
         }
 
         const imageFiles = productImageFile ? [productImageFile] : [];
-        await ProductService.createProduct(newProduct, imageFiles);
+        await ProductService.createProduct(
+          newProduct,
+          imageFiles,
+          productBackgroundImageFile || null
+        );
         setNewProduct({
           name: "",
           description: "",
@@ -682,6 +697,9 @@ export default function AdminDashboard() {
           supplier: "",
           mainImage: "",
           images: [],
+          textColor: "#000000",
+          backgroundImage: "",
+          backgroundFit: "contain",
           isActive: true,
           isFeatured: false,
           tags: [],
@@ -691,6 +709,7 @@ export default function AdminDashboard() {
         setVariants([]);
         setProductImageFile(null);
         setOptionImageFile(null);
+        setProductBackgroundImageFile(null);
         setShowAddProduct(false);
       }
       await loadDashboardData();
@@ -749,6 +768,7 @@ export default function AdminDashboard() {
         description: "",
         backgroundImage: "",
         backgroundFit: "contain",
+        textColor: "#000000",
         isActive: true,
       });
       setCategoryImageFile(null);
@@ -819,6 +839,7 @@ export default function AdminDashboard() {
         categoryName: "",
         backgroundImage: "",
         backgroundFit: "contain",
+        textColor: "#000000",
         isActive: true,
       });
       setSubcategoryImageFile(null);
@@ -878,6 +899,7 @@ export default function AdminDashboard() {
         description: "",
         backgroundImage: "",
         backgroundFit: "contain",
+        textColor: "#000000",
         isActive: true,
       });
       setCategoryImageFile(null);
@@ -4218,6 +4240,51 @@ export default function AdminDashboard() {
                     <option value="cover">Cover (stretch to fill)</option>
                   </select>
                 </div>
+
+                {/* Text Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Text Color
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={newCategory.textColor}
+                      onChange={(e) =>
+                        setNewCategory({
+                          ...newCategory,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="h-10 w-16 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                      title="Pick text color"
+                    />
+                    <input
+                      type="text"
+                      value={newCategory.textColor}
+                      onChange={(e) =>
+                        setNewCategory({
+                          ...newCategory,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="#000000"
+                    />
+                    <div
+                      className="px-3 py-2 rounded text-sm border"
+                      style={{
+                        backgroundColor: newCategory.textColor,
+                        color: "#fff",
+                      }}
+                    >
+                      Aa
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will be used for category text in the kiosk.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -4229,6 +4296,8 @@ export default function AdminDashboard() {
                       description: "",
                       backgroundImage: "",
                       backgroundFit: "contain",
+                      textColor: "#000000",
+                      textColor: "#000000",
                       isActive: true,
                     });
                     setCategoryImageFile(null);
@@ -4567,6 +4636,51 @@ export default function AdminDashboard() {
                   </select>
                 </div>
 
+                {/* Text Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Text Color
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={categoryForm.textColor}
+                      onChange={(e) =>
+                        setCategoryForm({
+                          ...categoryForm,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="h-10 w-16 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                      title="Pick text color"
+                    />
+                    <input
+                      type="text"
+                      value={categoryForm.textColor}
+                      onChange={(e) =>
+                        setCategoryForm({
+                          ...categoryForm,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="#000000"
+                    />
+                    <div
+                      className="px-3 py-2 rounded text-sm border"
+                      style={{
+                        backgroundColor: categoryForm.textColor,
+                        color: "#fff",
+                      }}
+                    >
+                      Aa
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will be used for category text in the kiosk.
+                  </p>
+                </div>
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -4598,6 +4712,7 @@ export default function AdminDashboard() {
                         description: "",
                         backgroundImage: "",
                         backgroundFit: "contain",
+                        textColor: "#000000",
                         isActive: true,
                       });
                       setCategoryImageFile(null);
@@ -4889,6 +5004,51 @@ export default function AdminDashboard() {
                     <option value="cover">Cover (stretch to fill)</option>
                   </select>
                 </div>
+
+                {/* Text Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Text Color
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={newSubcategory.textColor}
+                      onChange={(e) =>
+                        setNewSubcategory({
+                          ...newSubcategory,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="h-10 w-16 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                      title="Pick text color"
+                    />
+                    <input
+                      type="text"
+                      value={newSubcategory.textColor}
+                      onChange={(e) =>
+                        setNewSubcategory({
+                          ...newSubcategory,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                      placeholder="#000000"
+                    />
+                    <div
+                      className="px-3 py-2 rounded text-sm border"
+                      style={{
+                        backgroundColor: newSubcategory.textColor,
+                        color: "#fff",
+                      }}
+                    >
+                      Aa
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will be used for subcategory text in the kiosk.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -4902,6 +5062,7 @@ export default function AdminDashboard() {
                       categoryName: "",
                       backgroundImage: "",
                       backgroundFit: "contain",
+                      textColor: "#000000",
                       isActive: true,
                     });
                     setSubcategoryImageFile(null);
@@ -5217,6 +5378,51 @@ export default function AdminDashboard() {
                     <option value="cover">Cover (stretch to fill)</option>
                   </select>
                 </div>
+
+                {/* Text Color */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Text Color
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="color"
+                      value={subcategoryForm.textColor || "#000000"}
+                      onChange={(e) =>
+                        setSubcategoryForm({
+                          ...subcategoryForm,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="h-10 w-16 p-1 border border-gray-300 rounded cursor-pointer bg-white"
+                      title="Pick text color"
+                    />
+                    <input
+                      type="text"
+                      value={subcategoryForm.textColor || "#000000"}
+                      onChange={(e) =>
+                        setSubcategoryForm({
+                          ...subcategoryForm,
+                          textColor: e.target.value,
+                        })
+                      }
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                      placeholder="#000000"
+                    />
+                    <div
+                      className="px-3 py-2 rounded text-sm border"
+                      style={{
+                        backgroundColor: subcategoryForm.textColor || "#000000",
+                        color: "#fff",
+                      }}
+                    >
+                      Aa
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    This color will be used for subcategory text in the kiosk.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end space-x-2 mt-6">
@@ -5228,6 +5434,9 @@ export default function AdminDashboard() {
                       description: "",
                       categoryId: "",
                       categoryName: "",
+                      backgroundImage: "",
+                      backgroundFit: "contain",
+                      textColor: "#000000",
                       isActive: true,
                     });
                     setSubcategoryImageFile(null);
@@ -5344,6 +5553,106 @@ export default function AdminDashboard() {
                       placeholder="Enter product description"
                       rows="3"
                     />
+                  </div>
+
+                  {/* Background Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Background Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) =>
+                        setProductBackgroundImageFile(e.target.files[0])
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {productBackgroundImageFile && (
+                      <div className="mt-2">
+                        <img
+                          src={URL.createObjectURL(productBackgroundImageFile)}
+                          alt="Background preview"
+                          className="w-32 h-20 object-cover rounded border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setProductBackgroundImageFile(null)}
+                          className="mt-2 text-xs text-red-600 hover:underline"
+                        >
+                          Remove background image
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Background Fit */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Background Fit
+                    </label>
+                    <select
+                      value={newProduct.backgroundFit || "contain"}
+                      onChange={(e) =>
+                        setNewProduct({
+                          ...newProduct,
+                          backgroundFit: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="cover">Cover</option>
+                      <option value="contain">Contain</option>
+                    </select>
+                  </div>
+
+                  {/* Text Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Text Color
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="color"
+                        value={newProduct.textColor || "#000000"}
+                        onChange={(e) =>
+                          setNewProduct({
+                            ...newProduct,
+                            textColor: e.target.value,
+                          })
+                        }
+                        className="w-12 h-10 p-1 border border-gray-300 rounded"
+                      />
+                      <input
+                        type="text"
+                        value={newProduct.textColor || "#000000"}
+                        onChange={(e) => {
+                          const val = e.target.value.startsWith("#")
+                            ? e.target.value
+                            : `#${e.target.value}`;
+                          if (
+                            /^#?[0-9A-Fa-f]{0,6}$/.test(
+                              e.target.value.replace("#", "")
+                            )
+                          ) {
+                            setNewProduct({ ...newProduct, textColor: val });
+                          }
+                        }}
+                        className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                        placeholder="#000000"
+                        maxLength={7}
+                      />
+                      <div
+                        className="w-10 h-10 rounded border"
+                        style={{
+                          backgroundColor: newProduct.textColor || "#000000",
+                        }}
+                        title="Preview"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Choose the text color for this product.
+                    </p>
                   </div>
 
                   {/* Product Image - Complex Upload Section */}
@@ -6072,6 +6381,55 @@ export default function AdminDashboard() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       placeholder="Enter product description"
                     />
+                  </div>
+
+                  {/* Text Color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Text Color
+                    </label>
+                    <div className="flex items-center space-x-4">
+                      <input
+                        type="color"
+                        value={productForm.textColor || "#000000"}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            textColor: e.target.value,
+                          })
+                        }
+                        className="w-12 h-10 p-1 border border-gray-300 rounded"
+                      />
+                      <input
+                        type="text"
+                        value={productForm.textColor || "#000000"}
+                        onChange={(e) => {
+                          const val = e.target.value.startsWith("#")
+                            ? e.target.value
+                            : `#${e.target.value}`;
+                          if (
+                            /^#?[0-9A-Fa-f]{0,6}$/.test(
+                              e.target.value.replace("#", "")
+                            )
+                          ) {
+                            setProductForm({ ...productForm, textColor: val });
+                          }
+                        }}
+                        className="w-28 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-sm"
+                        placeholder="#000000"
+                        maxLength={7}
+                      />
+                      <div
+                        className="w-10 h-10 rounded border"
+                        style={{
+                          backgroundColor: productForm.textColor || "#000000",
+                        }}
+                        title="Preview"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Choose the text color for this product.
+                    </p>
                   </div>
 
                   {/* Background Image Upload */}

@@ -56,6 +56,52 @@ export default function Products() {
 
         setProducts(productsData);
 
+        // Preload product images (main/legacy + background + variant option images) before showing UI
+        if (
+          typeof window !== "undefined" &&
+          productsData &&
+          productsData.length > 0
+        ) {
+          const preloadPromises = [];
+          productsData.forEach((p) => {
+            [p.mainImage || p.image, p.backgroundImage]
+              .filter(Boolean)
+              .forEach((src) => {
+                preloadPromises.push(
+                  new Promise((resolve) => {
+                    const img = new window.Image();
+                    img.onload = () => resolve();
+                    img.onerror = () => resolve();
+                    img.src = src;
+                  })
+                );
+              });
+            // Variant option images
+            if (p.variants) {
+              p.variants.forEach((v) => {
+                v.options?.forEach((opt) => {
+                  if (opt.image) {
+                    preloadPromises.push(
+                      new Promise((resolve) => {
+                        const img = new window.Image();
+                        img.onload = () => resolve();
+                        img.onerror = () => resolve();
+                        img.src = opt.image;
+                      })
+                    );
+                  }
+                });
+              });
+            }
+          });
+
+          // Allow up to 4s fallback so UI isn't blocked too long
+          await Promise.race([
+            Promise.all(preloadPromises),
+            new Promise((resolve) => setTimeout(resolve, 4000)),
+          ]);
+        }
+
         // Load cart from session storage
         const savedCart = sessionStorage.getItem("cart");
         if (savedCart) {
@@ -72,6 +118,8 @@ export default function Products() {
       loadData();
     }
   }, [router, categoryId, subcategoryId]);
+
+  // (Removed separate skeleton control; products page now mirrors categories/subcategories pattern.)
 
   const handleProductSelect = (product) => {
     setSelectedProduct(product);
@@ -218,12 +266,14 @@ export default function Products() {
     }
 
     if (newQuantity <= 0) {
-      // Remove from cart
+      // Remove from cart (exclude the matching simple product item)
       setCart((prevCart) => {
         const newCart = prevCart.filter(
           (item) =>
-            item.productId === product.id &&
-            (!item.variants || Object.keys(item.variants).length === 0)
+            !(
+              item.productId === product.id &&
+              (!item.variants || Object.keys(item.variants).length === 0)
+            )
         );
         sessionStorage.setItem("cart", JSON.stringify(newCart));
         return newCart;
@@ -318,16 +368,44 @@ export default function Products() {
     return "Price varies";
   };
 
-  if (!customer || loading) {
+  // Full-page skeleton (match categories & subcategories) while loading
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">
-            {loading
-              ? "Loading products..."
-              : "Loading customer information..."}
-          </p>
+      <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
+        <div className="min-h-screen bg-gray-50 flex flex-col animate-pulse">
+          {/* Header skeleton */}
+          <div className="bg-white shadow-sm p-4 flex items-center justify-between">
+            <div className="h-8 w-20 bg-gray-200 rounded" />
+            <div className="h-8 w-40 bg-gray-200 rounded" />
+            <div className="h-8 w-16 bg-gray-200 rounded" />
+          </div>
+          {/* Customer card skeleton */}
+          <div className="bg-white p-6 m-4 rounded-lg shadow-sm space-y-4">
+            <div className="h-6 w-48 bg-gray-200 rounded" />
+            <div className="h-4 w-32 bg-gray-200 rounded" />
+            <div className="h-10 w-full bg-gray-100 rounded" />
+          </div>
+          {/* Products grid skeleton */}
+          <div className="flex-1 p-6">
+            <div className="grid gap-6 max-w-2xl mx-auto">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="border-2 border-gray-200 rounded-lg p-8 shadow-sm bg-white relative overflow-hidden"
+                >
+                  <div className="flex items-center space-x-4">
+                    <div className="w-24 h-24 bg-gray-200 rounded-lg" />
+                    <div className="flex-1 space-y-3">
+                      <div className="h-6 w-2/3 bg-gray-200 rounded" />
+                      <div className="h-4 w-5/6 bg-gray-200 rounded" />
+                      <div className="h-4 w-1/2 bg-gray-200 rounded" />
+                    </div>
+                    <div className="w-8 h-8 bg-gray-200 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -414,28 +492,26 @@ export default function Products() {
                 return (
                   <div
                     key={product.id}
-                    className="bg-white border-2 border-gray-200 hover:border-green-500 
-                    rounded-lg p-6 transition-all duration-200 transform hover:scale-105 
-                    shadow-lg hover:shadow-xl relative overflow-hidden"
+                    className="bg-white border-2 border-gray-200 hover:border-green-500 rounded-lg p-6 transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl relative overflow-hidden"
                     style={{
                       backgroundImage: product.backgroundImage
                         ? `url(${product.backgroundImage})`
                         : "none",
                       backgroundSize: product.backgroundImage
-                        ? product.backgroundFit || "contain"
+                        ? product.backgroundFit === "stretch"
+                          ? "100% 100%"
+                          : product.backgroundFit || "contain"
                         : "auto",
                       backgroundPosition: "center",
                       backgroundRepeat: "no-repeat",
                     }}
                   >
-                    {/* Overlay for better text readability when background image is present */}
                     {product.backgroundImage && (
                       <div className="absolute inset-0 bg-white/30 rounded-lg"></div>
                     )}
                     <div className="flex items-center space-x-2 relative z-10">
                       {product.mainImage || product.image ? (
-                        // Use uploaded product image - updated for proper fit
-                        <div className="w-24 h-24 relative overflow-hidden rounded-lg bg-gray-100">
+                        <div className="w-24 h-24 relative overflow-hidden rounded-lg">
                           <Image
                             src={product.mainImage || product.image}
                             alt={product.name}
@@ -444,22 +520,30 @@ export default function Products() {
                           />
                         </div>
                       ) : (
-                        // Empty space to maintain layout consistency
                         <div className="w-24 h-24"></div>
                       )}
                       <button
                         onClick={() => handleProductSelect(product)}
                         className="flex-1 text-left"
                       >
-                        <h3 className="text-xl font-bold text-gray-800 mb-2">
+                        <h3
+                          className="text-xl font-bold mb-2"
+                          style={{ color: product.textColor || "#000000" }}
+                        >
                           {product.name}
                         </h3>
                         {product.description && (
-                          <p className="text-gray-600 text-sm mb-2 leading-relaxed">
+                          <p
+                            className="text-sm mb-2 leading-relaxed"
+                            style={{ color: product.textColor || "#000000" }}
+                          >
                             {product.description}
                           </p>
                         )}
-                        <p className="text-green-600 font-bold text-lg">
+                        <p
+                          className="font-bold text-lg"
+                          style={{ color: product.textColor || "#000000" }}
+                        >
                           {getProductPriceDisplay(product)}
                         </p>
                       </button>
@@ -474,7 +558,10 @@ export default function Products() {
                             >
                               -
                             </button>
-                            <span className="w-8 text-center font-semibold text-gray-700">
+                            <span
+                              className="w-8 text-center font-semibold"
+                              style={{ color: product.textColor || "#000000" }}
+                            >
                               {cartQuantity}
                             </span>
                             <button

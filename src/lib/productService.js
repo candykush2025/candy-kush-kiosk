@@ -97,6 +97,7 @@ export class CategoryService {
         categoryId: categoryId,
         name: categoryData.name,
         description: categoryData.description || "",
+        textColor: categoryData.textColor || "#000000",
         image: imageUrl,
         imagePath: imagePath,
         backgroundImage: backgroundImageUrl,
@@ -164,6 +165,7 @@ export class CategoryService {
       let updateData = {
         name: categoryData.name,
         description: categoryData.description,
+        textColor: categoryData.textColor || currentData.textColor || "#000000",
         backgroundFit: categoryData.backgroundFit || "contain",
         isActive: categoryData.isActive,
         updatedAt: serverTimestamp(),
@@ -300,6 +302,7 @@ export class SubcategoryService {
         backgroundImage: backgroundImageUrl,
         backgroundImagePath: backgroundImagePath,
         backgroundFit: subcategoryData.backgroundFit || "contain",
+        textColor: subcategoryData.textColor || "#000000",
         isActive:
           subcategoryData.isActive !== undefined
             ? subcategoryData.isActive
@@ -431,6 +434,8 @@ export class SubcategoryService {
         description: subcategoryData.description,
         categoryId: subcategoryData.categoryId,
         backgroundFit: subcategoryData.backgroundFit || "contain",
+        textColor:
+          subcategoryData.textColor || currentData.textColor || "#000000",
         isActive: subcategoryData.isActive,
         updatedAt: serverTimestamp(),
       };
@@ -533,7 +538,11 @@ export class ProductService {
   }
 
   // Create a new product
-  static async createProduct(productData, imageFiles = []) {
+  static async createProduct(
+    productData,
+    imageFiles = [],
+    backgroundImageFile = null
+  ) {
     try {
       const productId = await this.generateProductId();
 
@@ -560,6 +569,16 @@ export class ProductService {
         }
       }
 
+      // Handle background image upload if provided
+      let backgroundImageUrl = "";
+      if (backgroundImageFile) {
+        const bgPath = `products/${productId}/background_${backgroundImageFile.name}`;
+        backgroundImageUrl = await CategoryService.uploadImage(
+          backgroundImageFile,
+          bgPath
+        );
+      }
+
       const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
         productId: productId,
         name: productData.name,
@@ -580,6 +599,10 @@ export class ProductService {
 
         // Common fields
         sku: productData.sku || "",
+        backgroundImage:
+          backgroundImageUrl || productData.backgroundImage || "",
+        backgroundFit: productData.backgroundFit || "contain",
+        textColor: productData.textColor || "#000000",
         isActive:
           productData.isActive !== undefined ? productData.isActive : true,
         isFeatured: productData.isFeatured || false,
@@ -735,6 +758,7 @@ export class ProductService {
         sku: productData.sku || "",
         backgroundImage: productData.backgroundImage || "",
         backgroundFit: productData.backgroundFit || "contain",
+        textColor: productData.textColor || currentData.textColor || "#000000",
         isActive:
           productData.isActive !== undefined ? productData.isActive : true,
         isFeatured: productData.isFeatured || false,
