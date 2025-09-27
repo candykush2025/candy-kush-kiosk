@@ -3545,8 +3545,8 @@ export default function AdminDashboard() {
 
         {/* Add Customer Modal */}
         {showAddCustomer && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
+          <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
+            <div className="relative mt-10 mb-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -4077,8 +4077,8 @@ export default function AdminDashboard() {
 
         {/* Add Category Modal */}
         {showAddCategory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-[90vh] mt-10 mb-10 overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Add New Category
               </h3>
@@ -4806,8 +4806,8 @@ export default function AdminDashboard() {
 
         {/* Add Subcategory Modal */}
         {showAddSubcategory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-[90vh] mt-10 mb-10 overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Add New Subcategory
               </h3>
@@ -5531,8 +5531,8 @@ export default function AdminDashboard() {
 
         {/* Add Product Modal - Complex Form */}
         {showAddProduct && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+          <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
+            <div className="relative mt-20 mb-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -7056,8 +7056,8 @@ export default function AdminDashboard() {
 
         {/* Add Cashback Rule Modal */}
         {showAddCashback && (
-          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+          <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
+            <div className="relative mt-20 mb-10 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
               <div className="mt-3">
                 <h3 className="text-lg font-medium text-gray-900 mb-4">
                   {editingCashback ? "Edit Cashback Rule" : "Add Cashback Rule"}
