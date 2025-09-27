@@ -170,48 +170,37 @@ export default function QRScanner() {
             </div>
           )}
 
-          {/* QR Scanner Input Section */}
+          {/* Hidden input kept focusable for scanner */}
           {!isProcessing && (
             <div className="w-full max-w-md">
-              {/* Input Field */}
-              <div className="relative">
-                <input
-                  ref={inputRef}
-                  type="text"
-                  value={scannedCode}
-                  onChange={handleInputChange}
-                  placeholder="CK-0001"
-                  className="w-full px-6 py-4 text-2xl text-center font-mono bg-white border-4 border-gray-300 rounded-xl focus:border-green-500 focus:outline-none focus:ring-4 focus:ring-green-200 transition-all duration-200"
-                  autoComplete="off"
-                  autoFocus
-                />
+              <input
+                ref={inputRef}
+                type="text"
+                value={scannedCode}
+                onChange={handleInputChange}
+                autoComplete="off"
+                autoFocus
+                aria-hidden="true"
+                tabIndex={-1}
+                className="sr-only opacity-0 absolute -z-10"
+              />
 
-                {/* Input Label */}
-                <div className="mt-4 text-center">
-                  <p className="text-lg text-gray-600">
-                    Enter Member ID (e.g., CK-0001)
-                  </p>
-                  <p className="text-sm text-gray-500 mt-2">
-                    QR scanner input will appear here automatically
-                  </p>
-                </div>
-              </div>
-
-              {/* Example Format */}
-              <div className="mt-8 bg-white rounded-lg p-4 border border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                  Member ID Format:
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  <span className="bg-gray-100 px-3 py-1 rounded text-sm font-mono">
-                    CK-0001
-                  </span>
-                  <span className="bg-gray-100 px-3 py-1 rounded text-sm font-mono">
-                    CK-0042
-                  </span>
-                  <span className="bg-gray-100 px-3 py-1 rounded text-sm font-mono">
-                    CK-0199
-                  </span>
+              {/* Visible scanning status card */}
+              <div className="bg-white rounded-2xl p-8 border-4 border-dashed border-gray-300 shadow-inner">
+                <p className="text-center text-xl text-gray-700 font-semibold mb-2">
+                  Ready to Scan
+                </p>
+                <p className="text-center text-gray-500 mb-4">
+                  Present member QR / barcode to the scanner
+                </p>
+                {scannedCode && !isProcessing && (
+                  <div className="text-center">
+                    <p className="text-sm text-gray-400">Reading...</p>
+                  </div>
+                )}
+                <div className="mt-4 flex items-center justify-center gap-2 text-gray-400 text-xs">
+                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span>Input focus locked for scanner</span>
                 </div>
               </div>
             </div>
