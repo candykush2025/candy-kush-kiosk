@@ -36,7 +36,7 @@ body {
 
 /* Kiosk specific styles */
 .kiosk-container {
-  max-width: 768px;
+  max-width: 1080px;
   background: white;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
   color: #171717;

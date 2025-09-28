@@ -9,7 +9,9 @@ export default function QRScanner() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState("");
   const [visitRecorded, setVisitRecorded] = useState(false);
-  const inputRef = useRef(null);
+  // Internal buffer for keystroke-based scanner capture
+  const bufferRef = useRef("");
+  const lastKeyTimeRef = useRef(Date.now());
   const router = useRouter();
 
   // Record visit when scanner page loads (only once per session)
@@ -29,66 +31,77 @@ export default function QRScanner() {
     recordPageVisit();
   }, [visitRecorded]);
 
-  // Keep input focused at all times
-  useEffect(() => {
-    const focusInput = () => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    };
-
-    // Focus initially
-    focusInput();
-
-    // Re-focus if focus is lost
-    const interval = setInterval(focusInput, 100);
-
-    // Focus on any click
-    document.addEventListener("click", focusInput);
-    document.addEventListener("touchstart", focusInput);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener("click", focusInput);
-      document.removeEventListener("touchstart", focusInput);
-    };
-  }, []);
-
-  // Handle barcode scan input
-  const handleInputChange = async (e) => {
-    const value = e.target.value;
-    setScannedCode(value);
+  // Process a completed scan value
+  const processScan = async (value) => {
+    if (isProcessing) return;
+    if (!(value && value.startsWith("CK-") && value.length >= 7)) return;
     setError("");
-
-    // Process when we have a valid customer code (CK-XXXX format)
-    if (value.length >= 7 && value.startsWith("CK-")) {
-      setIsProcessing(true);
-
-      try {
-        // Validate customer exists in Firebase
-        const customer = await CustomerService.getCustomerByMemberId(value);
-
-        if (customer) {
-          // Store customer info and redirect to categories
-          sessionStorage.setItem("customerCode", value);
-
-          // Small delay for UX
-          setTimeout(() => {
-            router.push("/categories");
-          }, 1000);
-        } else {
-          setError("Customer not found. Please check your member ID.");
-          setIsProcessing(false);
-          setScannedCode("");
-        }
-      } catch (error) {
-        console.error("Error validating customer:", error);
-        setError("Error validating customer. Please try again.");
+    setIsProcessing(true);
+    try {
+      const customer = await CustomerService.getCustomerByMemberId(value);
+      if (customer) {
+        sessionStorage.setItem("customerCode", value);
+        setTimeout(() => {
+          router.push("/categories");
+        }, 600);
+      } else {
+        setError("Customer not found. Please check your member ID.");
         setIsProcessing(false);
         setScannedCode("");
+        bufferRef.current = "";
       }
+    } catch (err) {
+      console.error("Error validating customer:", err);
+      setError("Error validating customer. Please try again.");
+      setIsProcessing(false);
+      setScannedCode("");
+      bufferRef.current = "";
     }
   };
+
+  // Global key listener to capture hardware scanner without triggering virtual keyboard
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (isProcessing) return;
+      const now = Date.now();
+      // If long pause, reset buffer
+      if (now - lastKeyTimeRef.current > 200) {
+        bufferRef.current = "";
+      }
+      lastKeyTimeRef.current = now;
+
+      if (e.key === "Enter") {
+        const value = bufferRef.current;
+        setScannedCode(value);
+        bufferRef.current = "";
+        processScan(value.trim());
+        return;
+      }
+
+      // Ignore control keys
+      if (e.key.length === 1) {
+        bufferRef.current += e.key.toUpperCase();
+        setScannedCode(bufferRef.current);
+        // Auto-process early if pattern matches expected length
+        if (
+          bufferRef.current.startsWith("CK-") &&
+          bufferRef.current.length >= 7
+        ) {
+          // Some scanners don't send Enter; small debounce before processing
+          clearTimeout(processTimer);
+          processTimer = setTimeout(() => {
+            processScan(bufferRef.current);
+          }, 80);
+        }
+      }
+    };
+    let processTimer;
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      clearTimeout(processTimer);
+    };
+  }, [isProcessing]);
 
   const handleBack = () => {
     router.push("/");
@@ -170,22 +183,9 @@ export default function QRScanner() {
             </div>
           )}
 
-          {/* Hidden input kept focusable for scanner */}
+          {/* Scanner status (no focused input -> prevents on-screen keyboard) */}
           {!isProcessing && (
             <div className="w-full max-w-md">
-              <input
-                ref={inputRef}
-                type="text"
-                value={scannedCode}
-                onChange={handleInputChange}
-                autoComplete="off"
-                autoFocus
-                aria-hidden="true"
-                tabIndex={-1}
-                className="sr-only opacity-0 absolute -z-10"
-              />
-
-              {/* Visible scanning status card */}
               <div className="bg-white rounded-2xl p-8 border-4 border-dashed border-gray-300 shadow-inner">
                 <p className="text-center text-xl text-gray-700 font-semibold mb-2">
                   Ready to Scan
@@ -195,13 +195,11 @@ export default function QRScanner() {
                 </p>
                 {scannedCode && !isProcessing && (
                   <div className="text-center">
-                    <p className="text-sm text-gray-400">Reading...</p>
+                    <p className="text-sm text-gray-400">
+                      Reading... {scannedCode}
+                    </p>
                   </div>
                 )}
-                <div className="mt-4 flex items-center justify-center gap-2 text-gray-400 text-xs">
-                  <span className="inline-block w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span>Input focus locked for scanner</span>
-                </div>
               </div>
             </div>
           )}

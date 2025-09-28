@@ -91,24 +91,25 @@ export default function Home() {
   const languages = ["English", "Spanish", "French"];
 
   return (
-    <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        {/* Video Player - Full width, no margins */}
-        <div className="flex-1 relative bg-white overflow-hidden mb-5">
+    <div className="kiosk-container h-screen bg-white portrait:max-w-md mx-auto">
+      <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
+        {/* Video Section fills remaining space above fixed action bar */}
+        <div className="flex-1 relative bg-white overflow-hidden">
           <video
             className="w-full h-full object-cover"
             autoPlay
             loop
             muted
             playsInline
+            onClick={handleOrderNow}
           >
             <source src="/indoor-video.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
         </div>
 
-        {/* Bottom Actions - Only bottom padding */}
-        <div className="bg-white pb-6 px-6">
+        {/* Bottom Actions - fixed height, no vertical overflow */}
+        <div className="bg-white px-6 pb-6 pt-4 shrink-0">
           <div className="flex items-center space-x-4">
             {/* Order Now Button */}
             <button
