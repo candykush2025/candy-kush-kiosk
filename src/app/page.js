@@ -231,7 +231,10 @@ export default function Home() {
             playsInline
             onClick={handleOrderNow}
           >
-            <source src="/indoor-video.mp4" type="video/mp4" />
+            <source
+              src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
+              type="video/mp4"
+            />
             Your browser does not support the video tag.
           </video>
         </div>
