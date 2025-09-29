@@ -14,11 +14,11 @@ export default function Home() {
   const [lastInteraction, setLastInteraction] = useState(Date.now());
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [visitRecorded, setVisitRecorded] = useState(false);
-  
+
   // Barcode scanning state (hidden from UI)
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(Date.now());
-  
+
   const router = useRouter();
 
   // Record visit when page loads (only once per session)
@@ -69,15 +69,17 @@ export default function Home() {
   // Barcode scanner processing function (hidden from UI) - Works like scanner page
   const processBarcodeScn = async (value) => {
     console.log("🔍 Homepage: Barcode scan detected:", value);
-    
+
     // Same validation as scanner page
     if (!(value && value.startsWith("CK-") && value.length >= 7)) {
       console.log("❌ Homepage: Invalid barcode format:", value);
       return;
     }
-    
-    console.log("✅ Homepage: Valid barcode format, checking customer in database...");
-    
+
+    console.log(
+      "✅ Homepage: Valid barcode format, checking customer in database..."
+    );
+
     try {
       // Same database check as scanner page
       const customer = await CustomerService.getCustomerByMemberId(value);
@@ -85,20 +87,23 @@ export default function Home() {
         console.log("🎉 Homepage: Customer found in database:", {
           name: customer.name,
           id: customer.customerId,
-          points: customer.totalPoints || 0
+          points: customer.totalPoints || 0,
         });
-        
+
         // Same session storage as scanner page
         sessionStorage.setItem("customerCode", value);
         console.log("� Homepage: Customer code saved to session storage");
-        
+
         // Same navigation delay as scanner page
         setTimeout(() => {
           console.log("🚀 Homepage: Navigating to categories page...");
           router.push("/categories");
         }, 600);
       } else {
-        console.log("❌ Homepage: Customer not found in database for barcode:", value);
+        console.log(
+          "❌ Homepage: Customer not found in database for barcode:",
+          value
+        );
       }
     } catch (err) {
       console.error("💥 Homepage: Error validating customer in database:", err);
@@ -109,11 +114,14 @@ export default function Home() {
   useEffect(() => {
     const handleBarcodeKey = (e) => {
       const now = Date.now();
-      
+
       // If long pause, reset buffer (same as scanner page)
       if (now - lastKeyTimeRef.current > 200) {
         if (bufferRef.current) {
-          console.log("🔄 Homepage: Buffer reset due to timeout, was:", bufferRef.current);
+          console.log(
+            "🔄 Homepage: Buffer reset due to timeout, was:",
+            bufferRef.current
+          );
         }
         bufferRef.current = "";
       }
@@ -133,13 +141,16 @@ export default function Home() {
       if (e.key.length === 1) {
         bufferRef.current += e.key.toUpperCase();
         console.log("📝 Homepage: Buffer updated:", bufferRef.current);
-        
+
         // Auto-process if pattern matches expected length (same logic as scanner page)
         if (
           bufferRef.current.startsWith("CK-") &&
           bufferRef.current.length >= 7
         ) {
-          console.log("🔄 Homepage: Auto-processing buffer (length match):", bufferRef.current);
+          console.log(
+            "🔄 Homepage: Auto-processing buffer (length match):",
+            bufferRef.current
+          );
           clearTimeout(processTimer);
           processTimer = setTimeout(() => {
             processBarcodeScn(bufferRef.current);
@@ -148,11 +159,13 @@ export default function Home() {
         }
       }
     };
-    
+
     let processTimer;
-    console.log("👂 Homepage: Barcode scanner listener activated (same as scanner page)");
+    console.log(
+      "👂 Homepage: Barcode scanner listener activated (same as scanner page)"
+    );
     window.addEventListener("keydown", handleBarcodeKey);
-    
+
     return () => {
       console.log("🔇 Homepage: Barcode scanner listener deactivated");
       window.removeEventListener("keydown", handleBarcodeKey);
@@ -196,7 +209,7 @@ export default function Home() {
       ja: "🇯🇵",
       zh: "🇨🇳",
       ru: "🇷🇺",
-      pt: "��",
+      pt: "🇵🇹",
       hi: "🇮🇳",
       ko: "🇰🇷",
       nl: "🇳🇱",
@@ -211,7 +224,7 @@ export default function Home() {
         {/* Video Section fills remaining space above fixed action bar */}
         <div className="flex-1 relative bg-white overflow-hidden">
           <video
-            className="w-full h-full object-cover"
+            className="w-full h-full object-fill"
             autoPlay
             loop
             muted
@@ -223,40 +236,40 @@ export default function Home() {
           </video>
         </div>
 
-        {/* Bottom Actions - fixed height, no vertical overflow */}
-        <div className="bg-white px-6 pb-6 pt-4 shrink-0">
-          <div className="flex items-center space-x-4">
-            {/* Order Now Button */}
+        {/* Bottom Actions - bigger buttons with more space */}
+        <div className="bg-white px-6 pb-8 pt-6 shrink-0">
+          <div className="flex items-center space-x-6">
+            {/* Order Now Button - Made bigger */}
             <button
               onClick={handleOrderNow}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-lg text-xl transition-colors duration-200 shadow-lg"
+              className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-6 px-12 rounded-xl text-2xl transition-colors duration-200 shadow-lg"
             >
               {t("orderNow")}
             </button>
 
-            {/* Language Icon with Dropdown - ICON ONLY */}
+            {/* Language Icon with Dropdown - Made bigger */}
             <div className="relative">
               <button
                 onClick={toggleLanguageDropdown}
-                className="flex items-center justify-center w-16 h-16 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-300 transition-colors duration-200"
+                className="flex items-center justify-center w-20 h-20 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-300 transition-colors duration-200"
               >
-                <span className="text-3xl">
+                <span className="text-4xl">
                   {getLanguageIcon(selectedLanguage)}
                 </span>
               </button>
 
-              {/* Dropdown - ICONS ONLY */}
+              {/* Dropdown - Made bigger icons */}
               {showLanguageDropdown && (
-                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-2 min-w-[60px] z-50 max-h-80 overflow-y-auto">
+                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-2 min-w-[80px] z-50 max-h-80 overflow-y-auto">
                   {supportedLanguages.map((lng) => (
                     <button
                       key={lng}
                       onClick={() => selectLanguage(lng)}
-                      className={`w-full flex items-center justify-center px-3 py-3 hover:bg-gray-50 ${
+                      className={`w-full flex items-center justify-center px-4 py-4 hover:bg-gray-50 ${
                         selectedLanguage === lng ? "bg-green-50" : ""
                       }`}
                     >
-                      <span className="text-2xl" title={lng}>
+                      <span className="text-3xl" title={lng}>
                         {getLanguageIcon(lng)}
                       </span>
                     </button>
