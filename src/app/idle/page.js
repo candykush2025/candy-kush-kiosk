@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import i18n from "../../i18n";
 
 export default function IdleScreen() {
   const [lastInteraction, setLastInteraction] = useState(Date.now());
@@ -8,6 +9,17 @@ export default function IdleScreen() {
 
   // Handle interaction to start kiosk
   const handleInteraction = () => {
+    // Reset language to English when going back to homepage
+    console.log(
+      "🔄 Idle: Resetting language to English for new customer session"
+    );
+    i18n.changeLanguage("en");
+
+    // Clear language preference from localStorage
+    if (typeof window !== "undefined") {
+      localStorage.setItem("i18nextLng", "en");
+    }
+
     router.push("/");
   };
 

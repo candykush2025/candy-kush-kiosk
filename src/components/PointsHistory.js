@@ -28,12 +28,10 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
   }, [isOpen, customerId, loadPointsHistory]);
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
       year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
@@ -80,20 +78,20 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl border border-gray-200">
         {/* Header */}
-        <div className="bg-green-600 text-white p-6">
+        <div className="bg-green-600 text-white p-6" style={{ color: "white" }}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">Points History</h2>
-              <p className="text-green-100">
-                Total Points: {totalPoints.toLocaleString()}
-              </p>
+              <h2 className="text-2xl font-bold" style={{ color: "white" }}>
+                Points Statement
+              </h2>
             </div>
             <button
               onClick={onClose}
-              className="text-white hover:bg-green-700 rounded-full p-2"
+              className="text-white hover:bg-green-700 rounded-full p-2 transition-colors"
+              style={{ color: "white" }}
             >
               <svg
                 className="w-6 h-6"
@@ -137,97 +135,69 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
                 </svg>
               </div>
               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                No Points History
+                No Transaction History
               </h3>
               <p className="text-gray-600">
-                You haven&apos;t earned or used any points yet.
+                Your points statement is empty. Start shopping to earn points!
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-0">
+              {/* Statement Header */}
+              <div className="bg-gray-100 px-4 py-3 border-b border-gray-300">
+                <div className="grid grid-cols-3 gap-4 text-sm font-semibold text-gray-700">
+                  <div>Transaction ID</div>
+                  <div>Date</div>
+                  <div className="text-right">Points</div>
+                </div>
+              </div>
+
+              {/* Statement Rows */}
               {history.map((transaction, index) => (
                 <div
                   key={index}
-                  className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg"
+                  className="px-4 py-3 border-b border-gray-200 hover:bg-gray-50 transition-colors"
                 >
-                  {getTypeIcon(transaction.type)}
-
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-semibold text-gray-800">
-                        {transaction.reason}
-                      </h4>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div className="font-mono text-gray-800">
+                      {transaction.transactionId
+                        ? transaction.transactionId.slice(-6).toUpperCase()
+                        : `${(646363 + index).toString()}`}
+                    </div>
+                    <div className="text-gray-700">
+                      {formatDate(transaction.timestamp)}
+                    </div>
+                    <div className="text-right">
                       <span
-                        className={`font-bold ${
-                          transaction.type === "added"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
+                        className="font-bold text-base"
+                        style={{
+                          color:
+                            transaction.type === "added"
+                              ? "#059669"
+                              : "#dc2626",
+                        }}
                       >
                         {transaction.type === "added" ? "+" : "-"}
-                        {transaction.amount} pts
+                        {transaction.amount} point
+                        {transaction.amount !== 1 ? "s" : ""}
                       </span>
-                    </div>
-
-                    {transaction.details && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        {transaction.details}
-                      </p>
-                    )}
-
-                    {/* Show item details if available */}
-                    {transaction.items && transaction.items.length > 0 && (
-                      <div className="mt-2 p-2 bg-gray-50 rounded-md">
-                        <p className="text-xs font-medium text-gray-700 mb-1">
-                          Items:
-                        </p>
-                        <div className="space-y-1">
-                          {transaction.items.map((item, itemIndex) => (
-                            <div
-                              key={itemIndex}
-                              className="text-xs text-gray-600"
-                            >
-                              <div className="flex justify-between">
-                                <span className="font-medium">
-                                  {item.name} x{item.quantity || 1}
-                                </span>
-                                <span>
-                                  ฿{((item.price || 0) / 100).toFixed(2)}
-                                </span>
-                              </div>
-                              {/* Show variants if available */}
-                              {item.variants &&
-                                Object.keys(item.variants).length > 0 && (
-                                  <div className="text-xs text-gray-500 ml-2">
-                                    {Object.entries(item.variants).map(
-                                      ([key, value]) => (
-                                        <span key={key} className="mr-2">
-                                          {key}: {value}
-                                        </span>
-                                      )
-                                    )}
-                                  </div>
-                                )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-500">
-                        {formatDate(transaction.timestamp)}
-                      </span>
-                      {transaction.transactionId && (
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                          ID:{" "}
-                          {transaction.transactionId.slice(-6).toUpperCase()}
-                        </span>
-                      )}
                     </div>
                   </div>
                 </div>
               ))}
+
+              {/* Statement Footer */}
+              <div className="bg-green-50 px-4 py-3 border-t-2 border-green-200">
+                <div className="grid grid-cols-3 gap-4 text-sm font-semibold">
+                  <div className="col-span-2 text-gray-700">
+                    Current Balance:
+                  </div>
+                  <div className="text-right text-green-700 text-lg">
+                    {totalPoints.toLocaleString()} point
+                    {totalPoints !== 1 ? "s" : ""}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>

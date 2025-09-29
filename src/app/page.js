@@ -5,6 +5,7 @@ import { VisitService } from "../lib/visitService";
 import { CustomerService } from "../lib/customerService";
 import { useTranslation } from "react-i18next";
 import i18n, { supportedLanguages } from "../i18n";
+import ReactCountryFlag from "react-country-flag";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -14,6 +15,7 @@ export default function Home() {
   const [lastInteraction, setLastInteraction] = useState(Date.now());
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [visitRecorded, setVisitRecorded] = useState(false);
+  const [languageChangeTime, setLanguageChangeTime] = useState(null); // Track when language was changed
 
   // Barcode scanning state (hidden from UI)
   const bufferRef = useRef("");
@@ -39,7 +41,7 @@ export default function Home() {
   }, [visitRecorded]); // Auto redirect to idle screen after 30 seconds of inactivity
   useEffect(() => {
     const checkInactivity = () => {
-      if (Date.now() - lastInteraction > 30000) {
+      if (Date.now() - lastInteraction > 60000) {
         // 30 seconds
         router.push("/idle");
       }
@@ -65,6 +67,36 @@ export default function Home() {
       document.removeEventListener("keydown", handleInteraction);
     };
   }, [lastInteraction, router]);
+
+  // Language reset timer - Reset to English after 1 minute of staying on homepage
+  useEffect(() => {
+    if (!languageChangeTime || selectedLanguage === "en") {
+      return; // No timer needed if language wasn't changed or already English
+    }
+
+    const checkLanguageReset = () => {
+      const timeSinceLanguageChange = Date.now() - languageChangeTime;
+      if (timeSinceLanguageChange > 60000) {
+        // 1 minute = 60000ms
+        console.log(
+          "🔄 Homepage: Auto-resetting language to English after 1 minute"
+        );
+        i18n.changeLanguage("en");
+        setSelectedLanguage("en");
+        setLanguageChangeTime(null);
+        // Update localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem("i18nextLng", "en");
+        }
+      }
+    };
+
+    const languageResetInterval = setInterval(checkLanguageReset, 1000);
+
+    return () => {
+      clearInterval(languageResetInterval);
+    };
+  }, [languageChangeTime, selectedLanguage]);
 
   // Barcode scanner processing function (hidden from UI) - Works like scanner page
   const processBarcodeScn = async (value) => {
@@ -192,30 +224,44 @@ export default function Home() {
     i18n.changeLanguage(lng);
     setSelectedLanguage(lng);
     setShowLanguageDropdown(false);
+
+    // Track language change time for auto-reset timer
+    if (lng !== "en") {
+      setLanguageChangeTime(Date.now());
+      console.log(
+        "🕐 Homepage: Language changed to",
+        lng,
+        "- Starting 1-minute timer for auto-reset"
+      );
+    } else {
+      setLanguageChangeTime(null); // Clear timer if switching to English
+      console.log("🔄 Homepage: Language changed to English - Timer cleared");
+    }
+
     // Persist language selection to localStorage
     if (typeof window !== "undefined") {
       localStorage.setItem("i18nextLng", lng);
     }
   };
 
-  const getLanguageIcon = (lng) => {
+  const getLanguageData = (lng) => {
     const map = {
-      en: "🇺🇸",
-      th: "🇹🇭",
-      es: "🇪🇸",
-      fr: "🇫🇷",
-      de: "🇩🇪",
-      it: "🇮🇹",
-      ja: "🇯🇵",
-      zh: "🇨🇳",
-      ru: "🇷🇺",
-      pt: "🇵🇹",
-      hi: "🇮🇳",
-      ko: "🇰🇷",
-      nl: "🇳🇱",
-      tr: "🇹🇷",
+      en: { countryCode: "GB", name: "English" }, // Changed from "us" to "en" with GB flag
+      th: { countryCode: "TH", name: "Thai" },
+      es: { countryCode: "ES", name: "Spanish" },
+      fr: { countryCode: "FR", name: "French" },
+      de: { countryCode: "DE", name: "German" },
+      it: { countryCode: "IT", name: "Italian" },
+      ja: { countryCode: "JP", name: "Japanese" },
+      zh: { countryCode: "CN", name: "Chinese" },
+      ru: { countryCode: "RU", name: "Russian" },
+      pt: { countryCode: "PT", name: "Portuguese" },
+      hi: { countryCode: "IN", name: "Hindi" },
+      ko: { countryCode: "KR", name: "Korean" },
+      nl: { countryCode: "NL", name: "Dutch" },
+      tr: { countryCode: "TR", name: "Turkish" },
     };
-    return map[lng] || "🌐";
+    return map[lng] || { countryCode: "UN", name: "Unknown" };
   };
 
   return (
@@ -254,29 +300,55 @@ export default function Home() {
             <div className="relative">
               <button
                 onClick={toggleLanguageDropdown}
-                className="flex items-center justify-center w-20 h-20 bg-gray-100 hover:bg-gray-200 rounded-xl border border-gray-300 transition-colors duration-200"
+                className="flex items-center justify-center w-20 h-20 bg-white rounded-xl border border-gray-300 transition-colors duration-200 overflow-hidden"
               >
-                <span className="text-4xl">
-                  {getLanguageIcon(selectedLanguage)}
-                </span>
+                <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+                  <ReactCountryFlag
+                    countryCode={getLanguageData(selectedLanguage).countryCode}
+                    svg
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
               </button>
 
-              {/* Dropdown - Made bigger icons */}
+              {/* Dropdown - Bigger modal with larger text and icons for kiosk */}
               {showLanguageDropdown && (
-                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-2 min-w-[80px] z-50 max-h-80 overflow-y-auto">
-                  {supportedLanguages.map((lng) => (
-                    <button
-                      key={lng}
-                      onClick={() => selectLanguage(lng)}
-                      className={`w-full flex items-center justify-center px-4 py-4 hover:bg-gray-50 ${
-                        selectedLanguage === lng ? "bg-green-50" : ""
-                      }`}
-                    >
-                      <span className="text-3xl" title={lng}>
-                        {getLanguageIcon(lng)}
-                      </span>
-                    </button>
-                  ))}
+                <div className="absolute bottom-full mb-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-6 min-w-[500px] z-50">
+                  <div className="grid grid-cols-2 gap-3 px-4">
+                    {supportedLanguages.map((lng) => {
+                      const langData = getLanguageData(lng);
+                      return (
+                        <button
+                          key={lng}
+                          onClick={() => selectLanguage(lng)}
+                          className={`flex items-center px-4 py-4 hover:bg-gray-50 text-left space-x-4 rounded-md transition-colors ${
+                            selectedLanguage === lng
+                              ? "bg-green-50 border border-green-200"
+                              : ""
+                          }`}
+                        >
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+                            <ReactCountryFlag
+                              countryCode={langData.countryCode}
+                              svg
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </div>
+                          <span className="text-lg font-semibold text-gray-700 flex-1">
+                            {langData.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

@@ -7,6 +7,8 @@ import {
   calculateTier,
 } from "../../../../lib/customerService";
 import { ProductService } from "../../../../lib/productService";
+import CustomerSection from "../../../../components/CustomerSection";
+import KioskHeader from "../../../../components/KioskHeader";
 import { useTranslation } from "react-i18next";
 
 export default function Products() {
@@ -324,18 +326,6 @@ export default function Products() {
     router.push(`/subcategories/${categoryId}`);
   };
 
-  const handleCheckout = () => {
-    if (cart.length > 0) {
-      // Save cart to session storage
-      sessionStorage.setItem("cart", JSON.stringify(cart));
-      router.push("/checkout");
-    }
-  };
-
-  const getCartTotalQuantity = () => {
-    return cart.reduce((total, item) => total + (item.quantity || 1), 0);
-  };
-
   // Helper function to get price range for products with variants
   const getProductPriceDisplay = (product) => {
     if (product.variants && product.variants.length > 0) {
@@ -374,12 +364,29 @@ export default function Products() {
   if (loading) {
     return (
       <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
-        <div className="min-h-screen bg-gray-50 flex flex-col animate-pulse">
+        <div
+          className="min-h-screen bg-gray-50 flex flex-col animate-pulse"
+          style={{
+            backgroundImage: "url(/background.jpg)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+          }}
+        >
           {/* Header skeleton */}
-          <div className="bg-white shadow-sm p-4 flex items-center justify-between">
-            <div className="h-8 w-20 bg-gray-200 rounded" />
-            <div className="h-8 w-40 bg-gray-200 rounded" />
-            <div className="h-8 w-16 bg-gray-200 rounded" />
+          <div className="p-4 flex items-center justify-between">
+            {/* Back button skeleton */}
+            <div className="bg-gray-200 px-5 py-5 rounded-lg">
+              <div className="w-12 h-12 bg-gray-300 rounded" />
+            </div>
+            {/* Logo skeleton */}
+            <div className="relative">
+              <div className="w-32 h-32 bg-gray-200 rounded-lg" />
+            </div>
+            {/* Cart button skeleton */}
+            <div className="bg-gray-200 px-5 py-5 rounded-lg">
+              <div className="w-12 h-12 bg-gray-300 rounded" />
+            </div>
           </div>
           {/* Customer card skeleton */}
           <div className="bg-white p-6 m-4 rounded-lg shadow-sm space-y-4">
@@ -415,68 +422,20 @@ export default function Products() {
 
   return (
     <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div
+        className="min-h-screen bg-gray-50 flex flex-col"
+        style={{
+          backgroundImage: "url(/background.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         {/* Header */}
-        <div className="bg-white shadow-sm p-4 flex items-center justify-between">
-          <button
-            onClick={handleBack}
-            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg
-              className="w-6 h-6 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t("back")}
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800">
-            {t("selectProducts")}
-          </h1>
-          <button
-            onClick={handleCheckout}
-            className="relative bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-bold transition-colors flex items-center"
-          >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-            </svg>
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">
-                {getCartTotalQuantity()}
-              </span>
-            )}
-          </button>
-        </div>
+        <KioskHeader onBack={handleBack} cart={cart} />
 
         {/* Customer Info Section */}
-        <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6 m-4 rounded-lg shadow-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">
-                {t("welcomeUser", { name: customer.name })}
-              </h2>
-              <p className="text-green-100 mb-2">
-                {t("memberIdLabel")} {customer.customerId}
-              </p>
-            </div>
-            <div className="text-right">
-              <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                <p className="text-green-100 text-sm">{t("pointsBalance")}</p>
-                <p className="text-3xl font-bold">
-                  {(customer.totalPoints || 0).toLocaleString()}
-                </p>
-                <p className="text-green-100 text-sm">{t("pointsAbbrev")}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <CustomerSection customer={customer} />
 
         {/* Products Grid */}
         <div className="flex-1 p-6">
