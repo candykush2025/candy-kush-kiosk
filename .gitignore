@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Large media files (stored in Firebase)
+*.MOV
+*.mov
+public/idle.MOV
