@@ -66,38 +66,51 @@ export default function Home() {
     };
   }, [lastInteraction, router]);
 
-  // Barcode scanner processing function (hidden from UI)
+  // Barcode scanner processing function (hidden from UI) - Works like scanner page
   const processBarcodeScn = async (value) => {
     console.log("🔍 Homepage: Barcode scan detected:", value);
     
+    // Same validation as scanner page
     if (!(value && value.startsWith("CK-") && value.length >= 7)) {
       console.log("❌ Homepage: Invalid barcode format:", value);
       return;
     }
     
-    console.log("✅ Homepage: Valid barcode format, checking customer...");
+    console.log("✅ Homepage: Valid barcode format, checking customer in database...");
     
     try {
+      // Same database check as scanner page
       const customer = await CustomerService.getCustomerByMemberId(value);
       if (customer) {
-        console.log("🎉 Homepage: Customer found:", customer.name);
+        console.log("🎉 Homepage: Customer found in database:", {
+          name: customer.name,
+          id: customer.customerId,
+          points: customer.totalPoints || 0
+        });
+        
+        // Same session storage as scanner page
         sessionStorage.setItem("customerCode", value);
-        console.log("🚀 Homepage: Navigating to categories...");
-        router.push("/categories");
+        console.log("� Homepage: Customer code saved to session storage");
+        
+        // Same navigation delay as scanner page
+        setTimeout(() => {
+          console.log("🚀 Homepage: Navigating to categories page...");
+          router.push("/categories");
+        }, 600);
       } else {
-        console.log("❌ Homepage: Customer not found for barcode:", value);
+        console.log("❌ Homepage: Customer not found in database for barcode:", value);
       }
     } catch (err) {
-      console.error("💥 Homepage: Error validating customer:", err);
+      console.error("💥 Homepage: Error validating customer in database:", err);
     }
   };
 
-  // Global barcode scanner listener (hidden functionality)
+  // Global barcode scanner listener (hidden functionality) - Same as scanner page
   useEffect(() => {
     const handleBarcodeKey = (e) => {
       const now = Date.now();
       
-      // If long pause, reset buffer
+      // If long pause, reset buffer (same as scanner page)
       if (now - lastKeyTimeRef.current > 200) {
         if (bufferRef.current) {
           console.log("🔄 Homepage: Buffer reset due to timeout, was:", bufferRef.current);
@@ -116,12 +129,12 @@ export default function Home() {
         return;
       }
 
-      // Ignore control keys, only capture single characters
+      // Ignore control keys, only capture single characters (same as scanner page)
       if (e.key.length === 1) {
         bufferRef.current += e.key.toUpperCase();
         console.log("📝 Homepage: Buffer updated:", bufferRef.current);
         
-        // Auto-process if pattern matches expected length (some scanners don't send Enter)
+        // Auto-process if pattern matches expected length (same logic as scanner page)
         if (
           bufferRef.current.startsWith("CK-") &&
           bufferRef.current.length >= 7
@@ -137,7 +150,7 @@ export default function Home() {
     };
     
     let processTimer;
-    console.log("👂 Homepage: Barcode scanner listener activated");
+    console.log("👂 Homepage: Barcode scanner listener activated (same as scanner page)");
     window.addEventListener("keydown", handleBarcodeKey);
     
     return () => {
