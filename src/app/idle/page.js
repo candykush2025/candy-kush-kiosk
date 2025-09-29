@@ -42,7 +42,7 @@ export default function IdleScreen() {
           muted
           playsInline
         >
-          <source src="/indoor-video.mp4" type="video/mp4" />
+          <source src="/idle.MOV" type="video/mp4" />
           Your browser does not support the video tag.
         </video>
       </div>
