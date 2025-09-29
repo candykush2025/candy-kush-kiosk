@@ -16,6 +16,8 @@ export const metadata = {
   description: "Product Ordering Kiosk System",
 };
 
+import I18nProvider from "../components/I18nProvider";
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en" data-theme="light" style={{ colorScheme: "light" }}>
@@ -27,7 +29,7 @@ export default function RootLayout({ children }) {
           color: "#171717",
         }}
       >
-        {children}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

@@ -8,7 +8,7 @@ export default function IdleScreen() {
 
   // Handle interaction to start kiosk
   const handleInteraction = () => {
-    router.push("/scanner");
+    router.push("/");
   };
 
   // Touch/click anywhere to start

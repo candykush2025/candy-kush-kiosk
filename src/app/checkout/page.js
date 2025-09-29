@@ -5,6 +5,7 @@ import Image from "next/image";
 import CustomerLookup from "../../components/CustomerLookup";
 import { CustomerService } from "../../lib/customerService";
 import { CashbackService } from "../../lib/productService";
+import { useTranslation } from "react-i18next";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState([]);
@@ -15,6 +16,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState("");
   const [cashbackPoints, setCashbackPoints] = useState(0);
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Load cart from session storage
@@ -96,7 +98,7 @@ export default function CheckoutPage() {
 
   const processPayment = async () => {
     if (cart.length === 0) {
-      setError("Cart is empty");
+      setError(t("cartEmpty"));
       return;
     }
 
@@ -178,13 +180,13 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-2xl font-bold text-gray-600 mb-4">
-            Your cart is empty
+            {t("cartEmpty")}
           </div>
           <button
             onClick={() => router.push("/")}
             className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-bold transition-colors"
           >
-            Continue Shopping
+            {t("continueShopping")}
           </button>
         </div>
       </div>
@@ -213,26 +215,28 @@ export default function CheckoutPage() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back to Products
+            {t("backToProducts")}
           </button>
-          <h1 className="text-xl font-bold text-gray-800">Checkout Summary</h1>
+          <h1 className="text-xl font-bold text-gray-800">
+            {t("checkoutSummary")}
+          </h1>
           <div className="text-green-600 font-bold">
-            {cart.length} item{cart.length !== 1 ? "s" : ""}
+            {t("itemsCount", { count: cart.length })}
           </div>
         </div>
 
         <div className="flex-1 p-6">
           <div className="max-w-4xl mx-auto">
             <h2 className="text-4xl font-bold text-center mb-4">
-              Order Summary
+              {t("orderSummary")}
             </h2>
             <p className="text-xl text-center text-gray-600 mb-12">
-              Review your items before proceeding to payment
+              {t("reviewBeforePayment")}
             </p>
 
             {/* Cart Items */}
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-2xl font-bold mb-6">Your Items</h3>
+              <h3 className="text-2xl font-bold mb-6">{t("yourItems")}</h3>
               <div className="space-y-4">
                 {cart.map((item) => (
                   <div
@@ -348,17 +352,19 @@ export default function CheckoutPage() {
             {/* Grand Total */}
             <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl shadow-lg p-8 mb-8 border-2 border-green-200">
               <div className="text-center">
-                <div className="text-lg text-gray-600 mb-2">Grand Total</div>
+                <div className="text-lg text-gray-600 mb-2">
+                  {t("grandTotal")}
+                </div>
                 <div className="text-6xl font-bold text-green-600 mb-4">
                   ฿{getTotalPrice()}
                 </div>
                 <div className="text-gray-600">
-                  {cart.length} item{cart.length !== 1 ? "s" : ""} •{" "}
+                  {t("itemsCount", { count: cart.length })} •{" "}
                   {cart.reduce(
                     (total, item) => total + (item.quantity || 1),
                     0
                   )}{" "}
-                  total quantity
+                  {t("totalQuantity")}
                 </div>
 
                 {/* Cashback Points Display */}
@@ -376,14 +382,14 @@ export default function CheckoutPage() {
                           clipRule="evenodd"
                         />
                       </svg>
-                      Cashback Reward
+                      {t("cashbackReward")}
                     </div>
                     <div className="text-lg font-bold text-yellow-900">
-                      {cashbackPoints} points will be added to your account!
+                      {t("cashbackPointsAdded", { points: cashbackPoints })}
                     </div>
                     {cashbackPoints === 0 && (
                       <div className="text-xs text-yellow-600 mt-1">
-                        (Add items from categories with cashback to earn points)
+                        {t("cashbackNoPointsHint")}
                       </div>
                     )}
                   </div>
@@ -393,7 +399,7 @@ export default function CheckoutPage() {
 
             {/* Payment Method */}
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-              <h3 className="text-2xl font-bold mb-4">Payment Method</h3>
+              <h3 className="text-2xl font-bold mb-4">{t("paymentMethod")}</h3>
               <div className="grid grid-cols-3 gap-4">
                 <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
                   <input
@@ -404,7 +410,7 @@ export default function CheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="text-green-500"
                   />
-                  <span className="font-medium">Cash</span>
+                  <span className="font-medium">{t("cash")}</span>
                 </label>
                 <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
                   <input
@@ -415,7 +421,7 @@ export default function CheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="text-green-500"
                   />
-                  <span className="font-medium">Crypto</span>
+                  <span className="font-medium">{t("crypto")}</span>
                 </label>
                 <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
                   <input
@@ -426,7 +432,7 @@ export default function CheckoutPage() {
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="text-green-500"
                   />
-                  <span className="font-medium">Bank Transfer</span>
+                  <span className="font-medium">{t("bankTransfer")}</span>
                 </label>
               </div>
             </div>
@@ -444,7 +450,7 @@ export default function CheckoutPage() {
                 onClick={handleBack}
                 className="px-8 py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-xl font-bold text-lg transition-colors"
               >
-                Add More Items
+                {t("addMoreItems")}
               </button>
               <button
                 onClick={processPayment}
@@ -452,8 +458,8 @@ export default function CheckoutPage() {
                 className="px-8 py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-xl font-bold text-lg transition-colors"
               >
                 {processing
-                  ? "Processing..."
-                  : `Complete Order - $${getTotalPrice()}`}
+                  ? t("processingEllipsis")
+                  : t("completeOrder", { total: getTotalPrice() })}
               </button>
             </div>
           </div>

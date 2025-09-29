@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 
 export default function OrderCompletePage() {
   const [orderData, setOrderData] = useState(null);
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     // Get the last order from session storage
@@ -26,6 +29,10 @@ export default function OrderCompletePage() {
     sessionStorage.removeItem("currentCustomer");
     sessionStorage.removeItem("selectedPaymentMethod");
 
+    // Reset language to English default for next customer
+    localStorage.removeItem("i18nextLng");
+    i18n.changeLanguage("en");
+
     // Go back to homepage for next customer
     router.push("/");
   };
@@ -36,7 +43,7 @@ export default function OrderCompletePage() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold text-gray-800 mb-4">
-              Loading...
+              {t("loading")}
             </h1>
           </div>
         </div>
@@ -86,10 +93,10 @@ export default function OrderCompletePage() {
           {/* Order Info */}
           <div style={{ marginBottom: "4mm" }}>
             <div>
-              Date: {new Date(orderData?.timestamp).toLocaleDateString()}
+              {t("date")}: {new Date(orderData?.timestamp).toLocaleDateString()}
             </div>
             <div>
-              Time: {new Date(orderData?.timestamp).toLocaleTimeString()}
+              {t("time")}: {new Date(orderData?.timestamp).toLocaleTimeString()}
             </div>
             {orderData?.transactionId && (
               <div>ID: {orderData.transactionId}</div>
@@ -138,14 +145,14 @@ export default function OrderCompletePage() {
                 fontWeight: "bold",
               }}
             >
-              <span>TOTAL:</span>
+              <span>{t("total")}</span>
               <span>฿{orderData?.total}</span>
             </div>
 
             {/* Payment Method */}
             <div style={{ fontSize: "12px", marginTop: "2mm" }}>
               <div>
-                Payment Method:{" "}
+                {t("paymentMethodLabel")}{" "}
                 {orderData?.paymentMethod === "bank_transfer"
                   ? "Bank Transfer"
                   : orderData?.paymentMethod === "crypto"
@@ -156,10 +163,16 @@ export default function OrderCompletePage() {
 
             {orderData?.customer && (
               <div style={{ fontSize: "10px", marginTop: "2mm" }}>
-                <div>Customer: {orderData.customer.name}</div>
-                <div>Points Earned: {orderData.pointsEarned || 0}</div>
+                <div>
+                  {t("customerLabel")}: {orderData.customer.name}
+                </div>
+                <div>
+                  {t("pointsEarned")}: {orderData.pointsEarned || 0}
+                </div>
                 {orderData.cashbackPoints > 0 && (
-                  <div>Cashback Points: {orderData.cashbackPoints}</div>
+                  <div>
+                    {t("cashbackPoints")}: {orderData.cashbackPoints}
+                  </div>
                 )}
               </div>
             )}
@@ -172,8 +185,8 @@ export default function OrderCompletePage() {
             <div
               style={{ borderTop: "1px dashed #000", margin: "2mm 0" }}
             ></div>
-            <div>Thank you for your purchase!</div>
-            <div>Visit us again soon</div>
+            <div>{t("thankYouPurchase")}</div>
+            <div>{t("visitUsAgain")}</div>
           </div>
         </div>
       </div>
@@ -202,13 +215,13 @@ export default function OrderCompletePage() {
             </div>
 
             <h1 className="text-3xl font-bold text-gray-800 mb-2">
-              Order Complete!
+              {t("orderComplete")}
             </h1>
-            <p className="text-gray-600 mb-6">Thank you for your purchase</p>
+            <p className="text-gray-600 mb-6">{t("thankYouPurchase")}</p>
 
             {/* Order Summary */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
-              <h3 className="font-bold text-lg mb-3">Order Summary</h3>
+              <h3 className="font-bold text-lg mb-3">{t("orderSummary")}</h3>
               <div className="space-y-2">
                 {orderData?.items.map((item, index) => (
                   <div key={index} className="space-y-1">
@@ -239,13 +252,13 @@ export default function OrderCompletePage() {
               </div>
               <div className="border-t pt-2 mt-3">
                 <div className="flex justify-between font-bold text-lg">
-                  <span>Total:</span>
+                  <span>{t("total")}</span>
                   <span className="text-green-600">฿{orderData?.total}</span>
                 </div>
 
                 {/* Payment Method */}
                 <div className="flex justify-between text-sm text-gray-600 mt-2">
-                  <span>Payment Method:</span>
+                  <span>{t("paymentMethodLabel")}</span>
                   <span>
                     {orderData?.paymentMethod === "bank_transfer"
                       ? "Bank Transfer"
@@ -260,16 +273,16 @@ export default function OrderCompletePage() {
             {/* Customer Info */}
             {orderData?.customer && (
               <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
-                <h3 className="font-bold text-lg mb-2">Customer</h3>
+                <h3 className="font-bold text-lg mb-2">{t("customerLabel")}</h3>
                 <p className="text-gray-700">{orderData.customer.name}</p>
                 {orderData.pointsEarned > 0 && (
                   <p className="text-green-600 font-medium">
-                    Points Earned: {orderData.pointsEarned}
+                    {t("pointsEarned")}: {orderData.pointsEarned}
                   </p>
                 )}
                 {orderData.cashbackPoints > 0 && (
                   <p className="text-yellow-600 font-medium">
-                    Cashback Points: {orderData.cashbackPoints}
+                    {t("cashbackPoints")}: {orderData.cashbackPoints}
                   </p>
                 )}
               </div>
@@ -277,11 +290,11 @@ export default function OrderCompletePage() {
 
             {/* Order Details */}
             <div className="text-sm text-gray-500 mb-6">
-              <p>Order completed at:</p>
+              <p>{t("orderCompletedAt")}</p>
               <p>{new Date(orderData?.timestamp).toLocaleString()}</p>
               {orderData?.transactionId && (
                 <p className="mt-1">
-                  Transaction ID: {orderData.transactionId}
+                  {t("transactionId")} {orderData.transactionId}
                 </p>
               )}
             </div>
@@ -292,13 +305,13 @@ export default function OrderCompletePage() {
                 onClick={handlePrintReceipt}
                 className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
-                Print Receipt
+                {t("printReceipt")}
               </button>
               <button
                 onClick={startNewOrder}
                 className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
-                Start New Order
+                {t("startNewOrder")}
               </button>
             </div>
           </div>

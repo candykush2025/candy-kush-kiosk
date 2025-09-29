@@ -7,6 +7,7 @@ import {
   calculateTier,
 } from "../../../../lib/customerService";
 import { ProductService } from "../../../../lib/productService";
+import { useTranslation } from "react-i18next";
 
 export default function Products() {
   const [customer, setCustomer] = useState(null);
@@ -20,6 +21,7 @@ export default function Products() {
   const [quantity, setQuantity] = useState(1);
   const router = useRouter();
   const { categoryId, subcategoryId } = useParams();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadData = async () => {
@@ -365,7 +367,7 @@ export default function Products() {
       return `฿${product.price.toLocaleString()}`;
     }
 
-    return "Price varies";
+    return t("priceVaries");
   };
 
   // Full-page skeleton (match categories & subcategories) while loading
@@ -433,9 +435,11 @@ export default function Products() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back
+            {t("back")}
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Select Products</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t("selectProducts")}
+          </h1>
           <button
             onClick={handleCheckout}
             className="relative bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-bold transition-colors flex items-center"
@@ -456,19 +460,19 @@ export default function Products() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-1">
-                Welcome, {customer.name}!
+                {t("welcomeUser", { name: customer.name })}
               </h2>
               <p className="text-green-100 mb-2">
-                Member ID: {customer.customerId}
+                {t("memberIdLabel")} {customer.customerId}
               </p>
             </div>
             <div className="text-right">
               <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                <p className="text-green-100 text-sm">Points Balance</p>
+                <p className="text-green-100 text-sm">{t("pointsBalance")}</p>
                 <p className="text-3xl font-bold">
                   {(customer.totalPoints || 0).toLocaleString()}
                 </p>
-                <p className="text-green-100 text-sm">pts</p>
+                <p className="text-green-100 text-sm">{t("pointsAbbrev")}</p>
               </div>
             </div>
           </div>
@@ -479,10 +483,8 @@ export default function Products() {
           <div className="grid gap-6 max-w-2xl mx-auto">
             {products.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-xl text-gray-600">No products found</p>
-                <p className="text-gray-500 mt-2">
-                  This subcategory may not have products yet.
-                </p>
+                <p className="text-xl text-gray-600">{t("noProducts")}</p>
+                <p className="text-gray-500 mt-2">{t("noProductsDesc")}</p>
               </div>
             ) : (
               products.map((product) => {
@@ -647,9 +649,11 @@ export default function Products() {
                 selectedProduct.variants[currentVariantStep] && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-gray-800">
-                      Select{" "}
-                      {selectedProduct.variants[currentVariantStep].variantName}
-                      :
+                      {t("variantSelect", {
+                        variantName:
+                          selectedProduct.variants[currentVariantStep]
+                            .variantName,
+                      })}
                     </h3>
                     <div className="grid gap-2">
                       {selectedProduct.variants[

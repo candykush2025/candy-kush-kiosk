@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CustomerService } from "../../lib/customerService";
 import { VisitService } from "../../lib/visitService";
+import { useTranslation } from "react-i18next";
 
 export default function QRScanner() {
   const [scannedCode, setScannedCode] = useState("");
@@ -13,6 +14,9 @@ export default function QRScanner() {
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(Date.now());
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDev = searchParams.get("dev") === "true"; // dev mode: show manual input
+  const { t } = useTranslation();
 
   // Record visit when scanner page loads (only once per session)
   useEffect(() => {
@@ -45,14 +49,14 @@ export default function QRScanner() {
           router.push("/categories");
         }, 600);
       } else {
-        setError("Customer not found. Please check your member ID.");
+        setError(t("customerNotFound"));
         setIsProcessing(false);
         setScannedCode("");
         bufferRef.current = "";
       }
     } catch (err) {
       console.error("Error validating customer:", err);
-      setError("Error validating customer. Please try again.");
+      setError(t("errorValidatingCustomer"));
       setIsProcessing(false);
       setScannedCode("");
       bufferRef.current = "";
@@ -61,6 +65,7 @@ export default function QRScanner() {
 
   // Global key listener to capture hardware scanner without triggering virtual keyboard
   useEffect(() => {
+    if (isDev) return; // In dev manual mode we skip hardware listener to avoid conflicts
     const handleKey = (e) => {
       if (isProcessing) return;
       const now = Date.now();
@@ -101,7 +106,7 @@ export default function QRScanner() {
       window.removeEventListener("keydown", handleKey);
       clearTimeout(processTimer);
     };
-  }, [isProcessing]);
+  }, [isProcessing, isDev]);
 
   const handleBack = () => {
     router.push("/");
@@ -129,9 +134,11 @@ export default function QRScanner() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back
+            {t("back")}
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Member Access</h1>
+          <h1 className="text-2xl font-bold text-gray-800">
+            {t("memberAccess")}
+          </h1>
           <div className="w-16"></div> {/* Spacer */}
         </div>
 
@@ -140,10 +147,10 @@ export default function QRScanner() {
           {/* Top Text */}
           <div className="mb-12">
             <h2 className="text-4xl font-bold text-gray-800 text-center mb-4">
-              Scan Member Card
+              {t("scanMemberCard")}
             </h2>
             <p className="text-xl text-gray-600 text-center">
-              Use your QR code scanner or enter your member ID
+              {t("useScannerOrEnter")}
             </p>
           </div>
 
@@ -169,7 +176,7 @@ export default function QRScanner() {
             <div className="mb-8 text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
               <p className="text-xl text-green-600 font-semibold">
-                Processing Member Card...
+                {t("processing")}
               </p>
             </div>
           )}
@@ -183,22 +190,76 @@ export default function QRScanner() {
             </div>
           )}
 
-          {/* Scanner status (no focused input -> prevents on-screen keyboard) */}
-          {!isProcessing && (
+          {/* Scanner status or Dev Manual Entry */}
+          {!isProcessing && !isDev && (
             <div className="w-full max-w-md">
               <div className="bg-white rounded-2xl p-8 border-4 border-dashed border-gray-300 shadow-inner">
                 <p className="text-center text-xl text-gray-700 font-semibold mb-2">
-                  Ready to Scan
+                  {t("readyToScan")}
                 </p>
                 <p className="text-center text-gray-500 mb-4">
-                  Present member QR / barcode to the scanner
+                  {t("presentCode")}
                 </p>
                 {scannedCode && !isProcessing && (
                   <div className="text-center">
                     <p className="text-sm text-gray-400">
-                      Reading... {scannedCode}
+                      {t("reading")} {scannedCode}
                     </p>
                   </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isProcessing && isDev && (
+            <div className="w-full max-w-md">
+              <div className="bg-white rounded-2xl p-8 border-4 border-blue-300 shadow-inner">
+                <p className="text-center text-xl text-blue-700 font-semibold mb-4">
+                  {t("devManualEntryMode")}
+                </p>
+                <label className="block text-sm font-medium text-gray-600 mb-2">
+                  {t("memberIdFormatInput")}
+                </label>
+                <input
+                  autoFocus
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-lg tracking-wider focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder={t("memberIdPlaceholder")}
+                  value={scannedCode}
+                  onChange={(e) => {
+                    setScannedCode(e.target.value.toUpperCase());
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      processScan(scannedCode.trim().toUpperCase());
+                    }
+                  }}
+                />
+                <div className="flex gap-3 mt-4">
+                  <button
+                    onClick={() =>
+                      processScan(scannedCode.trim().toUpperCase())
+                    }
+                    disabled={isProcessing || !scannedCode}
+                    className="flex-1 bg-blue-600 disabled:bg-blue-300 text-white font-semibold py-3 rounded-lg shadow hover:bg-blue-700 transition-colors"
+                  >
+                    {t("process")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScannedCode("");
+                      bufferRef.current = "";
+                      setError("");
+                    }}
+                    className="px-4 py-3 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium"
+                  >
+                    {t("clear")}
+                  </button>
+                </div>
+                {scannedCode && !scannedCode.startsWith("CK-") && (
+                  <p className="mt-3 text-xs text-red-500 font-medium">
+                    {t("idShouldStartWith")}
+                  </p>
                 )}
               </div>
             </div>
@@ -207,9 +268,7 @@ export default function QRScanner() {
 
         {/* Footer Info */}
         <div className="bg-white border-t p-4 text-center">
-          <p className="text-gray-600">
-            Having trouble? Please ask our staff for assistance
-          </p>
+          <p className="text-gray-600">{t("havingTrouble")}</p>
         </div>
       </div>
     </div>

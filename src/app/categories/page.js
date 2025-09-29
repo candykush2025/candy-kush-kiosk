@@ -10,6 +10,8 @@ import {
 import { CategoryService } from "../../lib/productService";
 import PointsHistory from "../../components/PointsHistory";
 import { VisitService } from "../../lib/visitService";
+import { useTranslation } from "react-i18next";
+import i18n from "../../i18n";
 
 export default function Categories() {
   const [customer, setCustomer] = useState(null);
@@ -20,6 +22,16 @@ export default function Categories() {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [visitRecorded, setVisitRecorded] = useState(false);
   const router = useRouter();
+  const { t } = useTranslation();
+
+  // Ensure language is loaded from localStorage on page mount
+  useEffect(() => {
+    const storedLanguage = localStorage.getItem("i18nextLng");
+    if (storedLanguage && storedLanguage !== i18n.language) {
+      i18n.changeLanguage(storedLanguage);
+      console.log(`Categories page: Language changed to ${storedLanguage}`);
+    }
+  }, []);
 
   // Record visit when categories page loads (only once per session)
   useEffect(() => {
@@ -125,9 +137,47 @@ export default function Categories() {
     }, 150);
   };
 
+  // Function to translate category names
+  const translateCategoryName = (categoryName) => {
+    if (!categoryName) return "";
+
+    // Convert category name to translation key
+    const normalizedName = categoryName
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/-/g, "");
+
+    // Map common category names to translation keys
+    const categoryKeyMap = {
+      indoor: "indoor",
+      outdoor: "outdoor",
+      prerolled: "preRolled",
+      "pre-rolled": "preRolled",
+      flower: "flower",
+      flowers: "flower",
+      edibles: "edibles",
+      edible: "edibles",
+      vape: "vape",
+      vapes: "vape",
+      concentrates: "concentrates",
+      concentrate: "concentrates",
+      accessories: "accessories",
+      accessory: "accessories",
+    };
+
+    // Try to find a matching translation key
+    const translationKey = categoryKeyMap[normalizedName];
+
+    // If we have a translation, use it; otherwise, return original name
+    return translationKey ? t(translationKey) : categoryName;
+  };
+
   const handleBack = () => {
     // Clear customer session and go back to scanner
     sessionStorage.removeItem("customerCode");
+    // Reset language to English default
+    localStorage.removeItem("i18nextLng");
+    i18n.changeLanguage("en");
     router.push("/scanner");
   };
 
@@ -208,10 +258,10 @@ export default function Categories() {
                 d="M15 19l-7-7 7-7"
               />
             </svg>
-            Back
+            {t("back")}
           </button>
           <h1 className="text-2xl font-bold text-gray-800">
-            Product Categories
+            {t("productCategories")}
           </h1>
           <button
             onClick={handleCheckout}
@@ -233,24 +283,24 @@ export default function Categories() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold mb-1">
-                Welcome, {customer.name}!
+                {t("welcomeUser", { name: customer.name })}
               </h2>
               <p className="text-green-100 mb-2">
-                Member ID: {customer.customerId}
+                {t("memberIdLabel")} {customer.customerId}
               </p>
             </div>
             <div className="text-right">
               <div className="bg-white bg-opacity-20 rounded-lg p-4">
-                <p className="text-green-100 text-sm">Points Balance</p>
+                <p className="text-green-100 text-sm">{t("pointsBalance")}</p>
                 <p className="text-3xl font-bold">
                   {(customer.totalPoints || 0).toLocaleString()}
                 </p>
-                <p className="text-green-100 text-sm">pts</p>
+                <p className="text-green-100 text-sm">{t("pointsAbbrev")}</p>
                 <button
                   onClick={() => setShowPointsHistory(true)}
                   className="mt-2 text-xs bg-white bg-opacity-20 text-white px-3 py-1 rounded-full hover:bg-opacity-30 transition-colors"
                 >
-                  View History
+                  {t("viewHistory")}
                 </button>
               </div>
             </div>
@@ -308,7 +358,7 @@ export default function Categories() {
                         className="text-2xl font-bold mb-1"
                         style={{ color: category.textColor || "#000000" }}
                       >
-                        {category.name}
+                        {translateCategoryName(category.name)}
                       </h2>
                       {category.description && (
                         <p
