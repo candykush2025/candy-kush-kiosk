@@ -4388,8 +4388,8 @@ export default function AdminDashboard() {
 
         {/* Edit Category Modal */}
         {editingCategory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-[90vh] mt-10 mb-10 overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Edit Category
               </h3>
@@ -5153,8 +5153,8 @@ export default function AdminDashboard() {
 
         {/* Edit Subcategory Modal */}
         {editingSubcategory && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-5xl max-h-5xl overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
+            <div className="bg-white rounded-lg p-6 w-5xl max-h-[90vh] mt-10 mb-10 overflow-y-auto">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Edit Subcategory
               </h3>
@@ -6361,7 +6361,7 @@ export default function AdminDashboard() {
         {/* Edit Product Modal - Complete Form */}
         {editingProduct && (
           <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
-            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto mb-10">
               <div className="mt-3">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
