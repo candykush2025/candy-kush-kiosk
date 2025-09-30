@@ -6,6 +6,7 @@ import { CustomerService } from "../lib/customerService";
 import { useTranslation } from "react-i18next";
 import i18n, { supportedLanguages } from "../i18n";
 import ReactCountryFlag from "react-country-flag";
+import KioskHeader from "../components/KioskHeader";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -267,8 +268,8 @@ export default function Home() {
   return (
     <div className="kiosk-container h-screen bg-white portrait:max-w-md mx-auto">
       <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
-        {/* Video Section fills remaining space above fixed action bar */}
-        <div className="flex-1 relative bg-white overflow-hidden">
+        {/* Video Section with overlay header */}
+        <div className="flex-1 relative bg-black overflow-hidden">
           <video
             className="w-full h-full object-fill"
             autoPlay
@@ -283,6 +284,13 @@ export default function Home() {
             />
             Your browser does not support the video tag.
           </video>
+          <div className="absolute top-0 left-0 right-0 z-20 pointer-events-none">
+            {/* Header overlay - allow internal buttons to be clickable */}
+            <div className="pointer-events-auto">
+              <KioskHeader showBack={false} showCart={false} />
+            </div>
+          </div>
+          {/* Optional gradient fade at bottom if desired later */}
         </div>
 
         {/* Bottom Actions - bigger buttons with more space */}

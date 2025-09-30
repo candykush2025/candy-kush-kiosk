@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CustomerService } from "../../lib/customerService";
 import { VisitService } from "../../lib/visitService";
 import { useTranslation } from "react-i18next";
+import KioskHeader from "../../components/KioskHeader";
 
 export default function QRScanner() {
   const [scannedCode, setScannedCode] = useState("");
@@ -116,31 +117,7 @@ export default function QRScanner() {
     <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col">
         {/* Header */}
-        <div className="bg-white shadow-sm p-4 flex items-center justify-between">
-          <button
-            onClick={handleBack}
-            className="flex items-center text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <svg
-              className="w-6 h-6 mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 19l-7-7 7-7"
-              />
-            </svg>
-            {t("back")}
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800">
-            {t("memberAccess")}
-          </h1>
-          <div className="w-16"></div> {/* Spacer */}
-        </div>
+        <KioskHeader onBack={handleBack} showCart={false} />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-8">

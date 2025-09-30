@@ -157,6 +157,13 @@ export default function CheckoutPage() {
     router.push("/categories");
   };
 
+  const handleCancelOrder = () => {
+    // Clear cart and return to home screen
+    sessionStorage.removeItem("cart");
+    setCart([]);
+    router.push("/");
+  };
+
   const removeFromCart = (itemIdToRemove) => {
     const updatedCart = cart.filter((item) => item.id !== itemIdToRemove);
     setCart(updatedCart);
@@ -645,23 +652,31 @@ export default function CheckoutPage() {
             )}
 
             {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 mb-4">
               <button
                 onClick={handleBack}
-                className="px-8 py-4 bg-gray-500 hover:bg-gray-600 text-white rounded-xl font-bold text-lg transition-colors"
+                disabled={processing}
+                className="px-8 py-4 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white rounded-xl font-bold text-lg transition-colors"
               >
                 {t("addMoreItems")}
               </button>
               <button
-                onClick={processPayment}
+                onClick={handleCancelOrder}
                 disabled={processing}
-                className="px-8 py-4 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-xl font-bold text-lg transition-colors"
+                className="px-8 py-4 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white rounded-xl font-bold text-lg transition-colors"
               >
-                {processing
-                  ? t("processingEllipsis")
-                  : t("completeOrder", { total: getTotalPrice() })}
+                {t("cancelOrder") || "Cancel Order"}
               </button>
             </div>
+            <button
+              onClick={processPayment}
+              disabled={processing}
+              className="w-full px-8 py-5 bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white rounded-xl font-bold text-2xl transition-colors"
+            >
+              {processing
+                ? t("processingEllipsis")
+                : t("completeOrder", { total: getTotalPrice() })}
+            </button>
           </div>
         </div>
 
