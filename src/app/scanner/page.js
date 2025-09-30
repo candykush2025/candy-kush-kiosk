@@ -45,9 +45,16 @@ export default function QRScanner() {
     try {
       const customer = await CustomerService.getCustomerByMemberId(value);
       if (customer) {
+        // Save customer code and customer data to session storage
         sessionStorage.setItem("customerCode", value);
+        sessionStorage.setItem("currentCustomer", JSON.stringify(customer));
+        console.log(
+          "Scanner: Customer found and saved to session:",
+          customer.name
+        );
+
         setTimeout(() => {
-          router.push("/categories");
+          router.push("/shop");
         }, 600);
       } else {
         setError(t("customerNotFound"));

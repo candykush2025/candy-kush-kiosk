@@ -6,6 +6,7 @@ import CustomerLookup from "../../components/CustomerLookup";
 import KioskHeader from "../../components/KioskHeader";
 import { CustomerService } from "../../lib/customerService";
 import { CashbackService } from "../../lib/productService";
+import { TransactionService } from "../../lib/transactionService";
 import { useTranslation } from "react-i18next";
 
 export default function CheckoutPage() {
@@ -110,24 +111,57 @@ export default function CheckoutPage() {
       // Simulate payment processing
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      const totalAmount = getTotalPrice() * 100; // Convert to cents
+      const totalAmount = getTotalPrice();
+      const orderNumber = `ORDER-${Date.now()}`;
 
-      // Record transaction if customer is selected
-      let transactionData = null;
-      if (customer) {
-        transactionData = await CustomerService.recordTransaction(customer.id, {
-          amount: totalAmount,
-          items: cart.map((item) => ({
-            name: item.name, // Use the actual product name
-            price: item.price * 100, // Convert to cents for database storage
-            quantity: item.quantity || 1,
-            categoryId: item.categoryId, // Include categoryId for cashback tracking
-            productId: item.productId, // Include productId for reference
-            variants: item.variants, // Include variant information
-          })),
-          paymentMethod,
-          cashbackPoints: cashbackPoints,
-        });
+      // Create transaction data for Firebase
+      const transactionData = {
+        customerId: customer?.id || null,
+        customerName: customer?.name || "Guest",
+        orderNumber: orderNumber,
+        items: cart.map((item) => ({
+          productId: item.productId || item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          variants: item.variants || {},
+          categoryId: item.categoryId,
+          subcategoryId: item.subcategoryId,
+          total: item.price * (item.quantity || 1),
+        })),
+        subtotal: totalAmount,
+        tax: 0, // Add tax calculation if needed
+        discount: 0, // Add discount calculation if needed
+        total: totalAmount,
+        paymentMethod: paymentMethod,
+        paymentStatus: "completed",
+        transactionType: "sale",
+        status: "completed",
+        cashier: "Checkout",
+        location: "Main Checkout",
+        notes: `Cashback points earned: ${cashbackPoints}`,
+        refundReason: "",
+        originalTransactionId: null,
+      };
+
+      // Record transaction to Firebase using TransactionService
+      console.log("Recording transaction to Firebase:", transactionData);
+      const transactionResult = await TransactionService.createTransaction(
+        transactionData
+      );
+      console.log("Transaction recorded successfully:", transactionResult);
+
+      // Update customer points if customer exists
+      if (customer && cashbackPoints > 0) {
+        try {
+          await CustomerService.addPoints(customer.id, cashbackPoints);
+          console.log(
+            `Added ${cashbackPoints} points to customer ${customer.name}`
+          );
+        } catch (pointsError) {
+          console.error("Error adding points to customer:", pointsError);
+          // Don't fail the transaction if points update fails
+        }
       }
 
       // Clear cart and redirect to success
@@ -135,11 +169,13 @@ export default function CheckoutPage() {
       sessionStorage.setItem(
         "lastOrder",
         JSON.stringify({
+          id: transactionResult.transactionId,
+          orderId: orderNumber,
           items: cart,
-          total: getTotalPrice(),
+          total: totalAmount,
           customer: customer,
           cashbackPoints: customer ? cashbackPoints : 0,
-          transactionId: transactionData?.id,
+          transactionId: transactionResult.id,
           paymentMethod: paymentMethod,
           timestamp: new Date().toISOString(),
         })
@@ -147,6 +183,7 @@ export default function CheckoutPage() {
 
       router.push("/order-complete");
     } catch (err) {
+      console.error("Payment processing error:", err);
       setError(err.message || "Payment processing failed");
     } finally {
       setProcessing(false);

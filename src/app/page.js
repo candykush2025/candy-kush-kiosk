@@ -213,7 +213,7 @@ export default function Home() {
     );
     console.log("Order start recorded");
 
-    // Navigate to scanner
+    // Navigate to scanner for customer verification
     router.push("/scanner");
   };
 
