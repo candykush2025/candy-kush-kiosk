@@ -10,6 +10,7 @@ export default function KioskHeader({
   cartItemCount = 0,
   showCart = true,
   showBack = true,
+  onLogoClick = null, // New optional prop for logo click handler
 }) {
   const router = useRouter();
 
@@ -20,6 +21,21 @@ export default function KioskHeader({
       // Save cart to session storage
       sessionStorage.setItem("cart", JSON.stringify(cart));
       router.push("/checkout");
+    }
+  };
+
+  const handleLogoClick = () => {
+    if (onLogoClick && typeof onLogoClick === "function") {
+      // Use custom logo click handler if provided
+      onLogoClick();
+    } else {
+      // Default behavior: clear cart and go to home
+      sessionStorage.removeItem("cart");
+      sessionStorage.removeItem("customerCode");
+      sessionStorage.removeItem("currentCustomer");
+      sessionStorage.removeItem("selectedPaymentMethod");
+      sessionStorage.removeItem("lastOrder");
+      router.push("/");
     }
   };
 
@@ -226,6 +242,7 @@ export default function KioskHeader({
           src="/logo.png"
           className="cursor-pointer object-cover"
           style={{ color: "transparent" }}
+          onClick={handleLogoClick}
         />
       </div>
       {showCart ? (
