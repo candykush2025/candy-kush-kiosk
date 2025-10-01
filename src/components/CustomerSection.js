@@ -12,7 +12,7 @@ export default function CustomerSection({ customer }) {
   return (
     <>
       {/* Customer Info Section */}
-      <div className="bg-gradient-to-r from-green-500 to-blue-500 text-white p-6 m-4 rounded-lg shadow-lg">
+      <div className="bg-gradient-to-r from-green-800 to-green-500 text-white p-6 m-4 rounded-lg shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold mb-1">
@@ -24,8 +24,8 @@ export default function CustomerSection({ customer }) {
           </div>
           <div className="text-right">
             <div className="bg-white bg-opacity-20 rounded-lg p-4">
-              <p className="text-green-100 text-sm">{t("pointsBalance")}</p>
-              <p className="text-3xl font-bold">
+              <p className="text-green-600 text-sm">{t("pointsBalance")}</p>
+              <p className="text-green-600 text-3xl font-bold">
                 {(customer.totalPoints || 0).toLocaleString()}
               </p>
               <button

@@ -121,45 +121,54 @@ export default function QRScanner() {
   };
 
   return (
-    <div className="kiosk-container min-h-screen bg-white portrait:max-w-md mx-auto">
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col">
+    <div className="kiosk-container min-h-screen portrait:max-w-md mx-auto">
+      <div
+        className="min-h-screen flex flex-col"
+        style={{
+          backgroundImage: "url(/background.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         {/* Header */}
         <KioskHeader onBack={handleBack} showCart={false} />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-8">
-          {/* Top Text */}
+          {/* Top Text - All Caps and Green */}
           <div className="mb-12">
-            <h2 className="text-4xl font-bold text-gray-800 text-center mb-4">
+            <h2 className="text-7xl font-bold text-green-600 text-center mb-4 uppercase tracking-wide">
               {t("scanMemberCard")}
             </h2>
-            <p className="text-xl text-gray-600 text-center">
-              {t("useScannerOrEnter")}
-            </p>
           </div>
 
-          {/* Large QR Code Icon */}
-          <div className="mb-12">
-            <div className="w-48 h-48 bg-white rounded-2xl shadow-xl flex items-center justify-center border-4 border-gray-200">
-              <svg
-                className="w-32 h-32 text-gray-600"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {/* QR Code Icon */}
-                <path d="M3 3h6v6H3V3zm2 2v2h2V5H5zM3 15h6v6H3v-6zm2 2v2h2v-2H5zM15 3h6v6h-6V3zm2 2v2h2V5h-2z" />
-                <path d="M13 13h2v2h-2v-2zM15 15h2v2h-2v-2zM17 13h2v2h-2v-2zM19 15h2v2h-2v-2z" />
-                <path d="M13 17h2v2h-2v-2zM17 17h2v2h-2v-2zM15 19h2v2h-2v-2zM19 19h2v2h-2v-2z" />
-                <path d="M11 11h2v2h-2v-2zM11 15h2v2h-2v-2zM13 11h2v2h-2v-2z" />
-              </svg>
+          {/* QR Code Section with Logo */}
+          <div className="mb-12 text-center">
+            {/* Green rounded box with gradient */}
+            <div className="w-96 h-96 bg-gradient-to-br from-green-400 to-green-600 rounded-4xl shadow-xl flex flex-col items-center justify-center relative overflow-hidden">
+              {/* White gradient overlay in center */}
+              <div className="absolute inset-0 bg-gradient-radial from-white/20 via-transparent to-transparent"></div>
+
+              {/* QR Logo */}
+              <img
+                src="/qrlogo.png"
+                alt="QR Logo"
+                className="w-60 h-60 mb-3 relative z-10"
+              />
+
+              {/* Text inside the box */}
+              <p className="text-white font-semibold text-3xl mt-6 relative z-10">
+                {t("presentMemberQr")}
+              </p>
             </div>
           </div>
 
           {/* Processing State */}
           {isProcessing && (
             <div className="mb-8 text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
-              <p className="text-xl text-green-600 font-semibold">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+              <p className="text-xl text-white font-semibold bg-green-600/80 px-6 py-2 rounded-lg">
                 {t("processing")}
               </p>
             </div>
@@ -168,36 +177,16 @@ export default function QRScanner() {
           {/* Error Message */}
           {error && (
             <div className="mb-8 w-full max-w-md">
-              <div className="p-4 bg-red-100 border border-red-300 rounded-lg">
-                <p className="text-red-700 text-center font-medium">{error}</p>
+              <div className="p-4 bg-red-500/90 border border-red-400 rounded-lg">
+                <p className="text-white text-center font-medium">{error}</p>
               </div>
             </div>
           )}
 
           {/* Scanner status or Dev Manual Entry */}
-          {!isProcessing && !isDev && (
-            <div className="w-full max-w-md">
-              <div className="bg-white rounded-2xl p-8 border-4 border-dashed border-gray-300 shadow-inner">
-                <p className="text-center text-xl text-gray-700 font-semibold mb-2">
-                  {t("readyToScan")}
-                </p>
-                <p className="text-center text-gray-500 mb-4">
-                  {t("presentCode")}
-                </p>
-                {scannedCode && !isProcessing && (
-                  <div className="text-center">
-                    <p className="text-sm text-gray-400">
-                      {t("reading")} {scannedCode}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
           {!isProcessing && isDev && (
             <div className="w-full max-w-md">
-              <div className="bg-white rounded-2xl p-8 border-4 border-blue-300 shadow-inner">
+              <div className="bg-white/90 rounded-2xl p-8 border-4 border-blue-300 shadow-inner">
                 <p className="text-center text-xl text-blue-700 font-semibold mb-4">
                   {t("devManualEntryMode")}
                 </p>
@@ -251,8 +240,8 @@ export default function QRScanner() {
         </div>
 
         {/* Footer Info */}
-        <div className="bg-white border-t p-4 text-center">
-          <p className="text-gray-600">{t("havingTrouble")}</p>
+        <div className="bg-green-600/90 border-t border-green-500 p-4 text-center">
+          <p className="text-white text-3xl">{t("havingTrouble")}</p>
         </div>
       </div>
     </div>

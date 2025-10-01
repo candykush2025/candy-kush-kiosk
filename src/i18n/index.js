@@ -98,6 +98,7 @@ const resources = {
       idShouldStartWith: "ID should start with CK-",
       customerNotFound: "Customer not found. Please check your member ID.",
       errorValidatingCustomer: "Error validating customer. Please try again.",
+      presentMemberQr: "Present Member QR",
       // Category names
       indoor: "Indoor",
       outdoor: "Outdoor",
@@ -187,6 +188,7 @@ const resources = {
       customerNotFound: "ไม่พบลูกค้า กรุณาตรวจสอบรหัสสมาชิกของคุณ",
       errorValidatingCustomer:
         "เกิดข้อผิดพลาดในการตรวจสอบลูกค้า กรุณาลองอีกครั้ง",
+      presentMemberQr: "แสดงรหัส QR สมาชิก",
       // Category names
       indoor: "ในร่ม",
       outdoor: "กลางแจ้ง",
@@ -278,6 +280,7 @@ const resources = {
         "Cliente no encontrado. Por favor verifica tu ID de miembro.",
       errorValidatingCustomer:
         "Error validando cliente. Por favor intenta de nuevo.",
+      presentMemberQr: "Presenta QR de Miembro",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -370,6 +373,7 @@ const resources = {
       customerNotFound: "Client non trouvé. Veuillez vérifier votre ID membre.",
       errorValidatingCustomer:
         "Erreur lors de la validation du client. Veuillez réessayer.",
+      presentMemberQr: "Présentez le QR Membre",
       // Category names
       indoor: "Intérieur",
       outdoor: "Extérieur",
@@ -463,6 +467,7 @@ const resources = {
         "Kunde nicht gefunden. Bitte überprüfen Sie Ihre Mitglieds-ID.",
       errorValidatingCustomer:
         "Fehler beim Validieren des Kunden. Bitte versuchen Sie es erneut.",
+      presentMemberQr: "Mitglieds-QR Vorzeigen",
       // Category names
       indoor: "Innen",
       outdoor: "Draußen",
@@ -554,6 +559,7 @@ const resources = {
       idShouldStartWith: "L'ID dovrebbe iniziare con CK-",
       customerNotFound: "Cliente non trovato. Controlla il tuo ID membro.",
       errorValidatingCustomer: "Errore nella convalida del cliente. Riprova.",
+      presentMemberQr: "Presenta QR Membro",
       // Category names
       indoor: "Interno",
       outdoor: "Esterno",
@@ -643,6 +649,7 @@ const resources = {
       idShouldStartWith: "IDはCK-で始まる必要があります",
       customerNotFound: "お客様が見つかりません。会員IDを確認してください。",
       errorValidatingCustomer: "お客様の検証エラー。もう一度お試しください。",
+      presentMemberQr: "会員QRを提示",
       // Category names
       indoor: "屋内",
       outdoor: "屋外",
@@ -730,6 +737,7 @@ const resources = {
       idShouldStartWith: "ID应以CK-开头",
       customerNotFound: "未找到客户。请检查您的会员ID。",
       errorValidatingCustomer: "验证客户时出错。请重试。",
+      presentMemberQr: "出示会员二维码",
       // Category names
       indoor: "室内",
       outdoor: "户外",
@@ -818,6 +826,7 @@ const resources = {
       idShouldStartWith: "ID должен начинаться с CK-",
       customerNotFound: "Клиент не найден. Проверьте ваш ID участника.",
       errorValidatingCustomer: "Ошибка проверки клиента. Попробуйте снова.",
+      presentMemberQr: "Предъявите QR Участника",
       // Category names
       indoor: "Внутренний",
       outdoor: "Наружный",
@@ -907,6 +916,7 @@ const resources = {
       idShouldStartWith: "ID deve começar com CK-",
       customerNotFound: "Cliente não encontrado. Verifique seu ID de membro.",
       errorValidatingCustomer: "Erro ao validar cliente. Tente novamente.",
+      presentMemberQr: "Apresente QR do Membro",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -997,6 +1007,7 @@ const resources = {
       customerNotFound: "ग्राहक नहीं मिला। कृपया अपनी सदस्य ID जांचें।",
       errorValidatingCustomer:
         "ग्राहक सत्यापन में त्रुटि। कृपया फिर से कोशिश करें।",
+      presentMemberQr: "सदस्य QR प्रस्तुत करें",
       // Category names
       indoor: "इनडोर",
       outdoor: "आउटडोर",
@@ -1086,6 +1097,7 @@ const resources = {
       idShouldStartWith: "ID는 CK-로 시작해야 합니다",
       customerNotFound: "고객을 찾을 수 없습니다. 회원 ID를 확인해 주세요.",
       errorValidatingCustomer: "고객 검증 오류입니다. 다시 시도해 주세요.",
+      presentMemberQr: "회원 QR 제시",
       // Category names
       indoor: "실내",
       outdoor: "실외",
@@ -1176,6 +1188,7 @@ const resources = {
       idShouldStartWith: "ID moet beginnen met CK-",
       customerNotFound: "Klant niet gevonden. Controleer je lid ID.",
       errorValidatingCustomer: "Fout bij valideren klant. Probeer opnieuw.",
+      presentMemberQr: "Toon Lid QR",
       // Category names
       indoor: "Binnen",
       outdoor: "Buiten",
@@ -1264,6 +1277,7 @@ const resources = {
       idShouldStartWith: "ID CK- ile başlamalıdır",
       customerNotFound: "Müşteri bulunamadı. Üye ID'nizi kontrol edin.",
       errorValidatingCustomer: "Müşteri doğrulama hatası. Tekrar deneyin.",
+      presentMemberQr: "Üye QR'ını Gösterin",
       // Category names
       indoor: "İç Mekan",
       outdoor: "Dış Mekan",

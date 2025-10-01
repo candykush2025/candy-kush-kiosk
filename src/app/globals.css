@@ -12,7 +12,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-poppins), system-ui, sans-serif;
 }
 
 /* Custom scrollbar styles */
@@ -76,7 +76,7 @@ body {
 }
 
 /* Ensure text readability */
-h1,
+/* h1,
 h2,
 h3,
 h4,
@@ -88,7 +88,7 @@ div,
 input,
 select {
   color: inherit;
-}
+} */
 
 /* Input field styling */
 input,
