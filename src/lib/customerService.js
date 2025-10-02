@@ -185,8 +185,22 @@ export class CustomerService {
         transactionId: transactionDetails.transactionId || null,
         orderId: transactionDetails.orderId || null,
         timestamp: new Date().toISOString(),
+        createdAt: new Date(),
         details: transactionDetails.details || "",
         items: transactionDetails.items || [], // Include item details if provided
+        pointCalculation: transactionDetails.pointCalculation || null,
+        purchaseAmount: transactionDetails.purchaseAmount || 0,
+        paymentMethod: transactionDetails.paymentMethod || null,
+        // Add structured point breakdown for history display
+        pointBreakdown:
+          transactionDetails.items?.map((item) => ({
+            productName: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.itemTotal,
+            cashbackPercentage: item.cashbackPercentage,
+            pointsEarned: item.pointsEarned,
+          })) || [],
       };
 
       // Add new transaction to points array
@@ -225,8 +239,25 @@ export class CustomerService {
         transactionId: transactionDetails.transactionId || null,
         orderId: transactionDetails.orderId || null,
         timestamp: new Date().toISOString(),
+        createdAt: new Date(),
         details: transactionDetails.details || "",
         items: transactionDetails.items || [], // Include item details if provided
+        pointCalculation: transactionDetails.pointCalculation || null,
+        purchaseAmount: transactionDetails.purchaseAmount || 0,
+        paymentMethod: transactionDetails.paymentMethod || null,
+        isManualAdjustment: transactionDetails.isManualAdjustment || false,
+        adjustmentType: transactionDetails.adjustmentType || null,
+        adjustmentReason: transactionDetails.adjustmentReason || null,
+        // Add structured point breakdown for history display
+        pointBreakdown:
+          transactionDetails.items?.map((item) => ({
+            productName: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            total: item.itemTotal,
+            cashbackPercentage: item.cashbackPercentage,
+            pointsEarned: item.pointsEarned,
+          })) || [],
       };
 
       // Add new transaction to points array

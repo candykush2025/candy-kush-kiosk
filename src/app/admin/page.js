@@ -213,6 +213,16 @@ export default function AdminPage() {
   // Loading states
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [updatingCustomer, setUpdatingCustomer] = useState(false);
+  const [applyingBirthdayBonuses, setApplyingBirthdayBonuses] = useState(false);
+
+  // Point adjustment modal states
+  const [showPointAdjustmentModal, setShowPointAdjustmentModal] =
+    useState(false);
+  const [pointAdjustmentType, setPointAdjustmentType] = useState("add"); // 'add' or 'reduce'
+  const [pointAdjustmentAmount, setPointAdjustmentAmount] = useState("");
+  const [pointAdjustmentReason, setPointAdjustmentReason] = useState("");
+  const [isProcessingPointAdjustment, setIsProcessingPointAdjustment] =
+    useState(false);
 
   // Transaction details modal states
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
@@ -256,6 +266,8 @@ export default function AdminPage() {
     email: "",
     cell: "",
     isActive: true,
+    dateOfBirth: "",
+    customPoints: 0,
   });
 
   const [newProduct, setNewProduct] = useState({
@@ -296,6 +308,8 @@ export default function AdminPage() {
     cell: "",
     memberId: "",
     isActive: true,
+    dateOfBirth: "",
+    customPoints: 0,
   });
   const [memberIdError, setMemberIdError] = useState("");
 
@@ -449,9 +463,7 @@ export default function AdminPage() {
           }
 
           console.log(
-            `Transaction ${transactionId}: calculated total = ${calculatedTotal} cents = ฿${
-              calculatedTotal / 100
-            }`
+            `Transaction ${transactionId}: calculated total = ฿${calculatedTotal}`
           );
 
           const transaction = {
@@ -461,8 +473,8 @@ export default function AdminPage() {
             customerEmail: customer.email,
             customerCell: customer.cell,
             totalSpent: calculatedTotal,
-            // Convert from cents to baht for display
-            amount: calculatedTotal / 100,
+            // Amount is already in baht
+            amount: calculatedTotal,
             pointsEarned: pointRecord.amount || 0,
             items: pointRecord.items || [],
             details: pointRecord.details || "",
@@ -684,6 +696,8 @@ export default function AdminPage() {
       cell: "",
       memberId: "",
       isActive: true,
+      dateOfBirth: "",
+      customPoints: 0,
     });
     setMemberIdError("");
   };
@@ -860,6 +874,281 @@ export default function AdminPage() {
     }
   };
 
+  // Birthday bonus automation
+  const checkAndApplyBirthdayBonuses = async (manual = false) => {
+    try {
+      if (manual) setApplyingBirthdayBonuses(true);
+
+      const today = new Date();
+      const todayString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
+      let bonusesApplied = 0;
+
+      for (const customer of customers) {
+        if (customer.dateOfBirth && customer.isActive) {
+          const customerBirthday = new Date(customer.dateOfBirth);
+          const customerBirthdayThisYear = new Date(
+            today.getFullYear(),
+            customerBirthday.getMonth(),
+            customerBirthday.getDate()
+          );
+          const birthdayString = customerBirthdayThisYear
+            .toISOString()
+            .split("T")[0];
+
+          // Check if today is the customer's birthday (or manual override)
+          if (birthdayString === todayString || manual) {
+            // Check if birthday bonus was already given this year
+            const lastBonusYear = customer.lastBirthdayBonusYear;
+            const currentYear = today.getFullYear();
+
+            if (lastBonusYear !== currentYear) {
+              // Apply birthday bonus (50 points)
+              const birthdayBonus = 50;
+              const updatedCustomer = {
+                ...customer,
+                points: (customer.points || 0) + birthdayBonus,
+                lastBirthdayBonusYear: currentYear,
+              };
+
+              await CustomerService.updateCustomer(
+                customer.id,
+                updatedCustomer
+              );
+              console.log(
+                `Birthday bonus of ${birthdayBonus} points applied to ${customer.name}`
+              );
+              bonusesApplied++;
+            }
+          }
+        }
+      }
+
+      // Reload dashboard to reflect changes
+      await loadDashboardData();
+
+      if (manual) {
+        alert(`Birthday bonuses applied to ${bonusesApplied} customers!`);
+      }
+    } catch (error) {
+      console.error("Error applying birthday bonuses:", error);
+      if (manual) {
+        alert("Error applying birthday bonuses. Please try again.");
+      }
+    } finally {
+      if (manual) setApplyingBirthdayBonuses(false);
+    }
+  };
+
+  // Calculate potential points for a transaction (for transactions without point data)
+  const calculatePotentialPoints = async (transaction) => {
+    try {
+      if (!transaction.items || transaction.items.length === 0) {
+        return { totalPoints: 0, breakdown: [] };
+      }
+
+      let totalPoints = 0;
+      const breakdown = [];
+
+      for (const item of transaction.items) {
+        if (item.categoryId) {
+          try {
+            const cashbackPercentage =
+              await CashbackService.getCashbackPercentage(item.categoryId);
+            const itemTotal = (item.price || 0) * (item.quantity || 1);
+            const itemPoints = Math.floor(
+              (itemTotal * cashbackPercentage) / 100
+            );
+
+            breakdown.push({
+              productName: item.name,
+              quantity: item.quantity || 1,
+              price: item.price || 0,
+              total: itemTotal,
+              cashbackPercentage: cashbackPercentage,
+              pointsEarned: itemPoints,
+            });
+
+            totalPoints += itemPoints;
+          } catch (error) {
+            console.error(
+              `Error calculating cashback for category ${item.categoryId}:`,
+              error
+            );
+            // If we can't get cashback percentage, assume 0
+            breakdown.push({
+              productName: item.name,
+              quantity: item.quantity || 1,
+              price: item.price || 0,
+              total: (item.price || 0) * (item.quantity || 1),
+              cashbackPercentage: 0,
+              pointsEarned: 0,
+            });
+          }
+        } else {
+          // No category ID, so no points
+          breakdown.push({
+            productName: item.name,
+            quantity: item.quantity || 1,
+            price: item.price || 0,
+            total: (item.price || 0) * (item.quantity || 1),
+            cashbackPercentage: 0,
+            pointsEarned: 0,
+          });
+        }
+      }
+
+      return { totalPoints, breakdown };
+    } catch (error) {
+      console.error("Error calculating potential points:", error);
+      return { totalPoints: 0, breakdown: [] };
+    }
+  };
+
+  // Point adjustment functions
+  const openPointAdjustmentModal = (type) => {
+    setPointAdjustmentType(type);
+    setPointAdjustmentAmount("");
+    setPointAdjustmentReason("");
+    setShowPointAdjustmentModal(true);
+  };
+
+  const closePointAdjustmentModal = () => {
+    setShowPointAdjustmentModal(false);
+    setPointAdjustmentAmount("");
+    setPointAdjustmentReason("");
+  };
+
+  const processPointAdjustment = async () => {
+    if (!selectedCustomerForPoints) {
+      alert("No customer selected");
+      return;
+    }
+
+    const amount = parseInt(pointAdjustmentAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid positive number");
+      return;
+    }
+
+    if (!pointAdjustmentReason.trim()) {
+      alert("Please enter a reason for the point adjustment");
+      return;
+    }
+
+    setIsProcessingPointAdjustment(true);
+
+    try {
+      const transactionDetails = {
+        reason: `Manual ${
+          pointAdjustmentType === "add" ? "Addition" : "Subtraction"
+        }: ${pointAdjustmentReason}`,
+        details: `${
+          pointAdjustmentType === "add" ? "Added" : "Subtracted"
+        } ${amount} points - ${pointAdjustmentReason}`,
+        isManualAdjustment: true,
+        adjustmentType: pointAdjustmentType,
+        adjustmentReason: pointAdjustmentReason,
+      };
+
+      if (pointAdjustmentType === "add") {
+        await CustomerService.addPoints(
+          selectedCustomerForPoints.id,
+          amount,
+          transactionDetails
+        );
+      } else {
+        await CustomerService.subtractPoints(
+          selectedCustomerForPoints.id,
+          amount,
+          transactionDetails
+        );
+      }
+
+      // Refresh customer data
+      await loadDashboardData();
+
+      // Update the selected customer data
+      const updatedCustomer = await CustomerService.getCustomerById(
+        selectedCustomerForPoints.id
+      );
+      setSelectedCustomerForPoints(updatedCustomer);
+
+      alert(
+        `Successfully ${
+          pointAdjustmentType === "add" ? "added" : "subtracted"
+        } ${amount} points`
+      );
+      closePointAdjustmentModal();
+    } catch (error) {
+      console.error("Error adjusting points:", error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsProcessingPointAdjustment(false);
+    }
+  };
+
+  // Helper function to calculate total spent from transactions
+  const calculateTotalSpentFromTransactions = (customer) => {
+    if (!customer.id) return 0;
+
+    // Filter transactions that belong to this customer
+    const customerTransactions = transactions.filter((transaction) => {
+      // Match by customer ID (most reliable)
+      if (transaction.customerId === customer.id) {
+        return true;
+      }
+
+      // Fallback: Match by customer name (for older transactions)
+      if (
+        transaction.customerName &&
+        transaction.customerName.trim() !== "" &&
+        transaction.customerName !== "Guest"
+      ) {
+        const customerFullName = `${customer.name} ${
+          customer.lastName || ""
+        }`.trim();
+        const transactionName = transaction.customerName.trim();
+
+        return (
+          transactionName === customerFullName ||
+          transactionName === customer.name ||
+          transactionName === `${customer.name} ${customer.lastName}`
+        );
+      }
+
+      return false;
+    });
+
+    // Calculate total from transaction data
+    const total = customerTransactions.reduce((sum, transaction) => {
+      return sum + (transaction.total || 0);
+    }, 0);
+
+    return total;
+  };
+
+  // Helper function to calculate total points from customer's points array
+  const calculateTotalPoints = (customer) => {
+    if (!customer.points || !Array.isArray(customer.points)) {
+      return customer.currentPoints || 0;
+    }
+
+    return customer.points.reduce((total, point) => {
+      if (point.type === "minus") {
+        return total - (point.amount || 0);
+      } else {
+        return total + (point.amount || 0);
+      }
+    }, 0);
+  };
+
+  // Run birthday bonus check when customers data loads
+  useEffect(() => {
+    if (customers.length > 0) {
+      checkAndApplyBirthdayBonuses();
+    }
+  }, [customers.length]);
+
   // Product hierarchy expansion handlers
   const toggleCategoryExpansion = (categoryId) => {
     setExpandedCategories((prev) => {
@@ -914,6 +1203,23 @@ export default function AdminPage() {
     e.preventDefault(); // Prevent form reload
     try {
       setIsProductSaving(true);
+
+      // Validate required fields
+      const productData = editingProduct ? productForm : newProduct;
+
+      if (!productData.name?.trim()) {
+        alert("Product name is required");
+        setIsProductSaving(false);
+        return;
+      }
+
+      if (!productData.categoryId) {
+        alert("Please select a category");
+        setIsProductSaving(false);
+        return;
+      }
+
+      // Note: subcategoryId is optional and not validated
 
       // Helper function to upload variant option images
       const uploadVariantImages = async (variants, productId) => {
@@ -1498,6 +1804,16 @@ export default function AdminPage() {
   };
 
   const handleDeletePointTransaction = async (customer, pointIndex) => {
+    // Validate that points is an array and pointIndex is valid
+    if (
+      !Array.isArray(customer.points) ||
+      pointIndex < 0 ||
+      pointIndex >= customer.points.length
+    ) {
+      console.error("Invalid points data or index");
+      return;
+    }
+
     const point = customer.points[pointIndex];
     const pointsAmount = point.amount || 0;
     const transactionId = point.transactionId
@@ -1532,12 +1848,14 @@ export default function AdminPage() {
       );
 
       // Create a new points array without the selected point
-      const updatedPoints = [...customer.points];
+      const updatedPoints = Array.isArray(customer.points)
+        ? [...customer.points]
+        : [];
       updatedPoints.splice(pointIndex, 1);
 
       console.log(
         "Original points:",
-        customer.points.length,
+        Array.isArray(customer.points) ? customer.points.length : 0,
         "Updated points:",
         updatedPoints.length
       );
@@ -1787,6 +2105,88 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Birthday Bonus Action */}
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Birthday Bonuses
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Apply birthday bonuses to eligible customers
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => checkAndApplyBirthdayBonuses(true)}
+                        disabled={applyingBirthdayBonuses}
+                        className="bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
+                      >
+                        {applyingBirthdayBonuses
+                          ? "Applying..."
+                          : "Apply Birthday Bonuses"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Point Calculation Utility */}
+                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Point Calculator
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          Calculate potential points for transactions
+                        </p>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          // Find transactions without point data
+                          const transactionsWithoutPoints = transactions.filter(
+                            (t) =>
+                              !t.pointsEarned && t.items && t.items.length > 0
+                          );
+
+                          if (transactionsWithoutPoints.length === 0) {
+                            alert(
+                              "No transactions found that need point calculation."
+                            );
+                            return;
+                          }
+
+                          let results = "Potential Points Analysis:\n\n";
+
+                          for (const transaction of transactionsWithoutPoints.slice(
+                            0,
+                            10
+                          )) {
+                            const pointData = await calculatePotentialPoints(
+                              transaction
+                            );
+                            results += `Transaction: ${transaction.transactionId}\n`;
+                            results += `Total: ฿${transaction.total || 0}\n`;
+                            results += `Potential Points: ${pointData.totalPoints}\n`;
+                            results += `Customer: ${
+                              transaction.customerName || "Guest"
+                            }\n`;
+                            if (pointData.breakdown.length > 0) {
+                              results += "Breakdown:\n";
+                              pointData.breakdown.forEach((item) => {
+                                results += `  - ${item.productName}: ${item.cashbackPercentage}% = ${item.pointsEarned} pts\n`;
+                              });
+                            }
+                            results += "\n";
+                          }
+
+                          alert(results);
+                        }}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors"
+                      >
+                        Calculate Missing Points
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Recent Activity */}
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="px-6 py-4 border-b border-gray-200">
@@ -1844,6 +2244,20 @@ export default function AdminPage() {
                                   <p className="font-semibold text-green-600">
                                     ฿
                                     {(() => {
+                                      // Use transaction total if available
+                                      if (
+                                        transaction.total &&
+                                        transaction.total > 0
+                                      ) {
+                                        return transaction.total.toLocaleString(
+                                          "en-US",
+                                          {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                          }
+                                        );
+                                      }
+
                                       // Find customer and calculate total from items
                                       const customer = customers.find(
                                         (c) =>
@@ -1864,7 +2278,7 @@ export default function AdminPage() {
                                           transactionDetail &&
                                           transactionDetail.items
                                         ) {
-                                          // Calculate total from items (price is in cents, convert to baht)
+                                          // Calculate total from items (prices are already in baht)
                                           const total =
                                             transactionDetail.items.reduce(
                                               (sum, item) => {
@@ -1876,13 +2290,10 @@ export default function AdminPage() {
                                               0
                                             );
 
-                                          return (total / 100).toLocaleString(
-                                            "en-US",
-                                            {
-                                              minimumFractionDigits: 2,
-                                              maximumFractionDigits: 2,
-                                            }
-                                          );
+                                          return total.toLocaleString("en-US", {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                          });
                                         }
                                       }
 
@@ -1891,16 +2302,28 @@ export default function AdminPage() {
                                         transaction.totalSpent &&
                                         transaction.totalSpent > 0
                                       ) {
-                                        return (
-                                          transaction.totalSpent / 100
-                                        ).toLocaleString("en-US", {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        });
+                                        return transaction.totalSpent.toLocaleString(
+                                          "en-US",
+                                          {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2,
+                                          }
+                                        );
                                       }
 
                                       return "0.00";
                                     })()}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Points: {transaction.pointsEarned || 0}
+                                    {!transaction.pointsEarned &&
+                                      transaction.items &&
+                                      transaction.items.length > 0 && (
+                                        <span className="text-orange-500">
+                                          {" "}
+                                          (Not calculated)
+                                        </span>
+                                      )}
                                   </p>
                                   <p className="text-xs text-gray-500">
                                     {(() => {
@@ -2026,6 +2449,9 @@ export default function AdminPage() {
                               Total Spent
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Total Points
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -2074,64 +2500,23 @@ export default function AdminPage() {
                                   <span className="font-medium text-green-600">
                                     ฿
                                     {(() => {
-                                      // If customer has totalSpent field and it's > 0, use it
-                                      if (
-                                        customer.totalSpent &&
-                                        customer.totalSpent > 0
-                                      ) {
-                                        return (
-                                          customer.totalSpent / 100
-                                        ).toLocaleString("en-US", {
-                                          minimumFractionDigits: 2,
-                                          maximumFractionDigits: 2,
-                                        });
-                                      }
-                                      // Otherwise, calculate from points array
-                                      if (
-                                        customer.points &&
-                                        Array.isArray(customer.points)
-                                      ) {
-                                        const total = customer.points.reduce(
-                                          (sum, point) => {
-                                            // If point has totalSpent, use it (convert from cents to baht)
-                                            if (
-                                              point.totalSpent &&
-                                              point.totalSpent > 0
-                                            ) {
-                                              return (
-                                                sum + point.totalSpent / 100
-                                              );
-                                            }
-                                            // Check other possible amount fields
-                                            if (
-                                              point.purchaseAmount &&
-                                              point.purchaseAmount > 0
-                                            ) {
-                                              return (
-                                                sum + point.purchaseAmount / 100
-                                              );
-                                            }
-                                            if (
-                                              point.transactionAmount &&
-                                              point.transactionAmount > 0
-                                            ) {
-                                              return (
-                                                sum +
-                                                point.transactionAmount / 100
-                                              );
-                                            }
-                                            // Last resort: calculate from points (1 point = 1 baht spent)
-                                            return sum + (point.amount || 0);
-                                          },
-                                          0
+                                      const totalFromTransactions =
+                                        calculateTotalSpentFromTransactions(
+                                          customer
                                         );
-                                        return total.toLocaleString("en-US", {
+                                      return totalFromTransactions.toLocaleString(
+                                        "en-US",
+                                        {
                                           minimumFractionDigits: 2,
                                           maximumFractionDigits: 2,
-                                        });
-                                      }
-                                      return "0.00";
+                                        }
+                                      );
                                     })()}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  <span className="font-medium text-blue-600">
+                                    {calculateTotalPoints(customer)} pts
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
@@ -2171,6 +2556,9 @@ export default function AdminPage() {
                                           customer.isActive !== undefined
                                             ? customer.isActive
                                             : true,
+                                        dateOfBirth: customer.dateOfBirth || "",
+                                        customPoints:
+                                          customer.customPoints || 0,
                                       });
                                       setMemberIdError("");
                                       setEditingCustomer(customer);
@@ -3218,6 +3606,33 @@ export default function AdminPage() {
                                                                               2
                                                                             )}
                                                                           </span>
+                                                                          {product.memberPrice && (
+                                                                            <span className="flex items-center font-medium text-orange-600">
+                                                                              <svg
+                                                                                className="w-3 h-3 mr-1"
+                                                                                fill="none"
+                                                                                stroke="currentColor"
+                                                                                viewBox="0 0 24 24"
+                                                                              >
+                                                                                <path
+                                                                                  strokeLinecap="round"
+                                                                                  strokeLinejoin="round"
+                                                                                  strokeWidth={
+                                                                                    2
+                                                                                  }
+                                                                                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                                                                />
+                                                                              </svg>
+                                                                              Member:
+                                                                              ฿
+                                                                              {(
+                                                                                product.memberPrice ||
+                                                                                0
+                                                                              ).toFixed(
+                                                                                2
+                                                                              )}
+                                                                            </span>
+                                                                          )}
                                                                         </>
                                                                       )}
                                                                     </div>
@@ -3633,6 +4048,9 @@ export default function AdminPage() {
                               Price (฿)
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Member Price (฿)
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                               Status
                             </th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -3708,6 +4126,17 @@ export default function AdminPage() {
                                     ) : (
                                       <span>
                                         ฿{(product.price || 0).toFixed(2)}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    {product.hasVariants ? (
+                                      <span className="text-blue-600">
+                                        Variable
+                                      </span>
+                                    ) : (
+                                      <span className="text-orange-600">
+                                        ฿{(product.memberPrice || 0).toFixed(2)}
                                       </span>
                                     )}
                                   </td>
@@ -4483,6 +4912,45 @@ export default function AdminPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={customerForm.dateOfBirth}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            dateOfBirth: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Points
+                        <span className="text-gray-500 text-xs ml-1">
+                          (Additional bonus points)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={customerForm.customPoints}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            customPoints: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="0"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Member ID
                         <span className="text-gray-500 text-xs ml-1">
                           (Optional - auto-generated if empty)
@@ -4796,6 +5264,45 @@ export default function AdminPage() {
                           })
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date of Birth
+                      </label>
+                      <input
+                        type="date"
+                        value={customerForm.dateOfBirth}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            dateOfBirth: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Custom Points
+                        <span className="text-gray-500 text-xs ml-1">
+                          (Additional bonus points)
+                        </span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={customerForm.customPoints}
+                        onChange={(e) =>
+                          setCustomerForm({
+                            ...customerForm,
+                            customPoints: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="0"
                       />
                     </div>
                   </div>
@@ -6627,7 +7134,7 @@ export default function AdminPage() {
                     {/* Subcategory */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Subcategory
+                        Subcategory (Optional)
                       </label>
                       <select
                         value={newProduct.subcategoryId}
@@ -7415,7 +7922,7 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Subcategory
+                        Subcategory (Optional)
                       </label>
                       <select
                         value={productForm.subcategoryId}
@@ -8480,10 +8987,12 @@ export default function AdminPage() {
                     </p>
                     <p className="text-2xl font-bold text-blue-900">
                       {selectedCustomerForPoints.currentPoints ||
-                        selectedCustomerForPoints.points?.reduce(
-                          (total, point) => total + (point.amount || 0),
-                          0
-                        ) ||
+                        (Array.isArray(selectedCustomerForPoints.points)
+                          ? selectedCustomerForPoints.points.reduce(
+                              (total, point) => total + (point.amount || 0),
+                              0
+                            )
+                          : 0) ||
                         0}
                     </p>
                   </div>
@@ -8493,10 +9002,12 @@ export default function AdminPage() {
                     </p>
                     <p className="text-2xl font-bold text-green-900">
                       {selectedCustomerForPoints.totalEarned ||
-                        selectedCustomerForPoints.points?.reduce(
-                          (total, point) => total + (point.amount || 0),
-                          0
-                        ) ||
+                        (Array.isArray(selectedCustomerForPoints.points)
+                          ? selectedCustomerForPoints.points.reduce(
+                              (total, point) => total + (point.amount || 0),
+                              0
+                            )
+                          : 0) ||
                         0}
                     </p>
                   </div>
@@ -8512,12 +9023,13 @@ export default function AdminPage() {
                           selectedCustomerForPoints.totalSpent &&
                           selectedCustomerForPoints.totalSpent > 0
                         ) {
-                          return (
-                            selectedCustomerForPoints.totalSpent / 100
-                          ).toLocaleString("en-US", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          });
+                          return selectedCustomerForPoints.totalSpent.toLocaleString(
+                            "en-US",
+                            {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            }
+                          );
                         }
                         // Otherwise, calculate from points array
                         if (
@@ -8526,22 +9038,22 @@ export default function AdminPage() {
                         ) {
                           const total = selectedCustomerForPoints.points.reduce(
                             (sum, point) => {
-                              // If point has totalSpent and it's > 0, use it (convert from cents to baht)
+                              // If point has totalSpent and it's > 0, use it (already in baht)
                               if (point.totalSpent && point.totalSpent > 0) {
-                                return sum + point.totalSpent / 100;
+                                return sum + point.totalSpent;
                               }
                               // Check other possible amount fields
                               if (
                                 point.purchaseAmount &&
                                 point.purchaseAmount > 0
                               ) {
-                                return sum + point.purchaseAmount / 100;
+                                return sum + point.purchaseAmount;
                               }
                               if (
                                 point.transactionAmount &&
                                 point.transactionAmount > 0
                               ) {
-                                return sum + point.transactionAmount / 100;
+                                return sum + point.transactionAmount;
                               }
                               // Last resort: calculate from points (1 point = 1 baht spent)
                               return sum + (point.amount || 0);
@@ -8561,10 +9073,26 @@ export default function AdminPage() {
 
                 {/* Points History Table */}
                 <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                     <h4 className="text-lg font-semibold text-gray-900">
                       Transaction History
                     </h4>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => openPointAdjustmentModal("add")}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+                      >
+                        <span className="mr-1">+</span>
+                        Add Points
+                      </button>
+                      <button
+                        onClick={() => openPointAdjustmentModal("reduce")}
+                        className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center"
+                      >
+                        <span className="mr-1">-</span>
+                        Reduce Points
+                      </button>
+                    </div>
                   </div>
                   <div className="overflow-x-auto max-h-96">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -8583,6 +9111,9 @@ export default function AdminPage() {
                             Points
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Point Details
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Source
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -8592,6 +9123,7 @@ export default function AdminPage() {
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {selectedCustomerForPoints.points &&
+                        Array.isArray(selectedCustomerForPoints.points) &&
                         selectedCustomerForPoints.points.length > 0 ? (
                           selectedCustomerForPoints.points.map(
                             (point, index) => (
@@ -8629,17 +9161,18 @@ export default function AdminPage() {
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                   ฿
                                   {(() => {
-                                    // If totalSpent is available, use it (convert from cents to baht)
+                                    // If totalSpent is available, use it (already in baht)
                                     if (
                                       point.totalSpent &&
                                       point.totalSpent > 0
                                     ) {
-                                      return (
-                                        point.totalSpent / 100
-                                      ).toLocaleString("en-US", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      });
+                                      return point.totalSpent.toLocaleString(
+                                        "en-US",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      );
                                     }
                                     // If totalSpent is 0, try to find the shopping amount from other fields
                                     // Check if there's a purchaseAmount, transactionAmount, or similar field
@@ -8647,23 +9180,25 @@ export default function AdminPage() {
                                       point.purchaseAmount &&
                                       point.purchaseAmount > 0
                                     ) {
-                                      return (
-                                        point.purchaseAmount / 100
-                                      ).toLocaleString("en-US", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      });
+                                      return point.purchaseAmount.toLocaleString(
+                                        "en-US",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      );
                                     }
                                     if (
                                       point.transactionAmount &&
                                       point.transactionAmount > 0
                                     ) {
-                                      return (
-                                        point.transactionAmount / 100
-                                      ).toLocaleString("en-US", {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      });
+                                      return point.transactionAmount.toLocaleString(
+                                        "en-US",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      );
                                     }
                                     // Last resort: calculate from points (assuming 1 point = 1 baht spent)
                                     if (point.amount && point.amount > 0) {
@@ -8677,12 +9212,75 @@ export default function AdminPage() {
                                     return "0.00";
                                   })()}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
-                                  +{point.amount || 0}
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <span
+                                    className={
+                                      point.type === "minus"
+                                        ? "text-red-600"
+                                        : "text-green-600"
+                                    }
+                                  >
+                                    {point.type === "minus" ? "-" : "+"}
+                                    {point.amount || 0}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-sm text-gray-900">
+                                  {point.pointBreakdown &&
+                                  point.pointBreakdown.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {point.pointBreakdown.map(
+                                        (item, itemIndex) => (
+                                          <div
+                                            key={itemIndex}
+                                            className="text-xs bg-gray-50 p-2 rounded"
+                                          >
+                                            <div className="font-medium">
+                                              {item.productName}
+                                            </div>
+                                            <div className="text-gray-600">
+                                              {item.quantity}x ฿{item.price} = ฿
+                                              {item.total}
+                                            </div>
+                                            <div className="text-green-600">
+                                              {item.cashbackPercentage}% ={" "}
+                                              {item.pointsEarned} pts
+                                            </div>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
+                                  ) : point.reason ? (
+                                    <div className="text-xs text-gray-600">
+                                      {point.reason}
+                                      {point.details && (
+                                        <div className="text-gray-500">
+                                          {point.details}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-400">
+                                      No details
+                                    </span>
+                                  )}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                                    {point.source || "purchase"}
+                                  <span
+                                    className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                      point.isManualAdjustment
+                                        ? point.type === "minus"
+                                          ? "bg-red-100 text-red-800"
+                                          : "bg-blue-100 text-blue-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
+                                    {point.isManualAdjustment
+                                      ? `Manual ${
+                                          point.type === "minus"
+                                            ? "Reduction"
+                                            : "Addition"
+                                        }`
+                                      : point.source || "purchase"}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -8720,7 +9318,7 @@ export default function AdminPage() {
                         ) : (
                           <tr>
                             <td
-                              colSpan="6"
+                              colSpan="7"
                               className="px-6 py-4 text-center text-gray-500"
                             >
                               No transaction history available
@@ -9060,6 +9658,103 @@ export default function AdminPage() {
                     Close
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Point Adjustment Modal */}
+        {showPointAdjustmentModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {pointAdjustmentType === "add"
+                    ? "Add Points"
+                    : "Reduce Points"}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {pointAdjustmentType === "add"
+                    ? "Add points to"
+                    : "Reduce points from"}{" "}
+                  {selectedCustomerForPoints?.name}
+                </p>
+              </div>
+
+              <div className="px-6 py-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Points Amount
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={pointAdjustmentAmount}
+                    onChange={(e) => setPointAdjustmentAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter amount"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason
+                  </label>
+                  <textarea
+                    value={pointAdjustmentReason}
+                    onChange={(e) => setPointAdjustmentReason(e.target.value)}
+                    rows="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter reason for point adjustment"
+                  />
+                </div>
+
+                {pointAdjustmentType === "reduce" && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Current Points:</strong>{" "}
+                      {selectedCustomerForPoints?.currentPoints ||
+                        (Array.isArray(selectedCustomerForPoints?.points)
+                          ? selectedCustomerForPoints.points.reduce(
+                              (total, point) => total + (point.amount || 0),
+                              0
+                            )
+                          : 0)}
+                    </p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Make sure the customer has enough points before reducing.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={closePointAdjustmentModal}
+                  disabled={isProcessingPointAdjustment}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={processPointAdjustment}
+                  disabled={
+                    isProcessingPointAdjustment ||
+                    !pointAdjustmentAmount ||
+                    !pointAdjustmentReason.trim()
+                  }
+                  className={`px-4 py-2 text-white rounded-md disabled:opacity-50 ${
+                    pointAdjustmentType === "add"
+                      ? "bg-green-500 hover:bg-green-600"
+                      : "bg-red-500 hover:bg-red-600"
+                  }`}
+                >
+                  {isProcessingPointAdjustment
+                    ? "Processing..."
+                    : pointAdjustmentType === "add"
+                    ? "Add Points"
+                    : "Reduce Points"}
+                </button>
               </div>
             </div>
           </div>

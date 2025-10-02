@@ -353,12 +353,23 @@ export default function MenuPage() {
 
     try {
       const transactionData = {
+        customerId: customer?.id || null,
+        customerName: customer
+          ? `${customer.name} ${customer.lastName || ""}`.trim()
+          : "",
         items: cart,
         total: getTotalPrice(),
         paymentMethod: paymentMethod,
-        customer: customer,
         cashbackEarned: cashbackPoints,
         timestamp: new Date(),
+        // Add point details
+        pointsEarned: cashbackPoints,
+        pointDetails: window.menuCashbackDetails || [],
+        pointCalculation: {
+          totalPointsEarned: cashbackPoints,
+          calculationMethod: "category-based",
+          items: window.menuCashbackDetails || [],
+        },
       };
 
       console.log("🔍 Processing payment with data:", transactionData);
@@ -378,7 +389,26 @@ export default function MenuPage() {
       // Update customer points if customer exists
       if (customer && cashbackPoints > 0) {
         try {
-          await CustomerService.addPoints(customer.id, cashbackPoints);
+          const pointTransactionDetails = {
+            transactionId: result.transactionId,
+            orderId: result.transactionId,
+            reason: "Purchase Cashback",
+            details: `Earned ${cashbackPoints} points from kiosk purchase`,
+            items: window.menuCashbackDetails || [],
+            pointCalculation: {
+              totalPointsEarned: cashbackPoints,
+              calculationMethod: "category-based",
+              breakdown: window.menuCashbackDetails || [],
+            },
+            purchaseAmount: getTotalPrice(),
+            paymentMethod: paymentMethod,
+          };
+
+          await CustomerService.addPoints(
+            customer.id,
+            cashbackPoints,
+            pointTransactionDetails
+          );
           console.log(
             `Added ${cashbackPoints} points to customer ${customer.name}`
           );
@@ -445,6 +475,7 @@ export default function MenuPage() {
 
     try {
       let totalCashback = 0;
+      const itemCashbackDetails = [];
 
       console.log("Calculating cashback for customer:", customer?.id);
       console.log("Cart items:", cart);
@@ -473,6 +504,18 @@ export default function MenuPage() {
             (itemTotal * cashbackPercentage) / 100
           );
 
+          // Store detailed cashback info for this item
+          itemCashbackDetails.push({
+            productId: item.productId || item.id,
+            name: item.name,
+            quantity: item.quantity || 1,
+            price: item.price,
+            itemTotal: itemTotal,
+            cashbackPercentage: cashbackPercentage,
+            pointsEarned: itemCashback,
+            categoryId: item.categoryId,
+          });
+
           console.log("Item total:", itemTotal, "Item cashback:", itemCashback);
           totalCashback += itemCashback;
         } else {
@@ -482,9 +525,13 @@ export default function MenuPage() {
 
       console.log("Total cashback calculated:", totalCashback);
       setCashbackPoints(totalCashback);
+
+      // Store detailed cashback info for later use in transaction
+      window.menuCashbackDetails = itemCashbackDetails;
     } catch (error) {
       console.error("Error calculating cashback:", error);
       setCashbackPoints(0);
+      window.menuCashbackDetails = [];
     }
   }, [customer, cart]);
 

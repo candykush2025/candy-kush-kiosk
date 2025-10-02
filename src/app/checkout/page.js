@@ -72,6 +72,7 @@ export default function CheckoutPage() {
 
     try {
       let totalCashback = 0;
+      const itemCashbackDetails = [];
 
       // Get cashback points for each item based on its category
       for (const item of cart) {
@@ -82,14 +83,31 @@ export default function CheckoutPage() {
           const itemCashback = Math.floor(
             (itemTotal * cashbackPercentage) / 100
           );
+
+          // Store detailed cashback info for this item
+          itemCashbackDetails.push({
+            productId: item.productId || item.id,
+            name: item.name,
+            quantity: item.quantity || 1,
+            price: item.price,
+            itemTotal: itemTotal,
+            cashbackPercentage: cashbackPercentage,
+            pointsEarned: itemCashback,
+            categoryId: item.categoryId,
+          });
+
           totalCashback += itemCashback;
         }
       }
 
       setCashbackPoints(totalCashback);
+
+      // Store detailed cashback info for later use in transaction
+      window.lastCashbackDetails = itemCashbackDetails;
     } catch (error) {
       console.error("Error calculating cashback:", error);
       setCashbackPoints(0);
+      window.lastCashbackDetails = [];
     }
   }, [customer, cart]);
 
@@ -117,7 +135,9 @@ export default function CheckoutPage() {
       // Create transaction data for Firebase
       const transactionData = {
         customerId: customer?.id || null,
-        customerName: customer?.name || "Guest",
+        customerName: customer
+          ? `${customer.name} ${customer.lastName || ""}`.trim()
+          : "Guest",
         orderNumber: orderNumber,
         items: cart.map((item) => ({
           productId: item.productId || item.id,
@@ -142,6 +162,14 @@ export default function CheckoutPage() {
         notes: `Cashback points earned: ${cashbackPoints}`,
         refundReason: "",
         originalTransactionId: null,
+        // Add point details
+        pointsEarned: cashbackPoints,
+        pointDetails: window.lastCashbackDetails || [],
+        pointCalculation: {
+          totalPointsEarned: cashbackPoints,
+          calculationMethod: "category-based",
+          items: window.lastCashbackDetails || [],
+        },
       };
 
       // Record transaction to Firebase using TransactionService
@@ -154,7 +182,26 @@ export default function CheckoutPage() {
       // Update customer points if customer exists
       if (customer && cashbackPoints > 0) {
         try {
-          await CustomerService.addPoints(customer.id, cashbackPoints);
+          const pointTransactionDetails = {
+            transactionId: transactionResult.transactionId,
+            orderId: orderNumber,
+            reason: "Purchase Cashback",
+            details: `Earned ${cashbackPoints} points from purchase`,
+            items: window.lastCashbackDetails || [],
+            pointCalculation: {
+              totalPointsEarned: cashbackPoints,
+              calculationMethod: "category-based",
+              breakdown: window.lastCashbackDetails || [],
+            },
+            purchaseAmount: totalAmount,
+            paymentMethod: paymentMethod,
+          };
+
+          await CustomerService.addPoints(
+            customer.id,
+            cashbackPoints,
+            pointTransactionDetails
+          );
           console.log(
             `Added ${cashbackPoints} points to customer ${customer.name}`
           );

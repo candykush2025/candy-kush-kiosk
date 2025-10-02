@@ -60,6 +60,11 @@ export class TransactionService {
         notes: transactionData.notes || "",
         refundReason: transactionData.refundReason || "",
         originalTransactionId: transactionData.originalTransactionId || null,
+        // Add point calculation fields
+        pointsEarned: transactionData.pointsEarned || 0,
+        pointDetails: transactionData.pointDetails || [],
+        pointCalculation: transactionData.pointCalculation || null,
+        cashbackEarned: transactionData.cashbackEarned || 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
