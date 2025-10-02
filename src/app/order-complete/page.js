@@ -18,7 +18,22 @@ export default function OrderCompletePage() {
   }, []);
 
   const handlePrintReceipt = () => {
-    window.print();
+    if (orderData) {
+      // Store receipt data in session storage
+      sessionStorage.setItem("receiptData", JSON.stringify(orderData));
+
+      // Open thermal receipt page in a new window
+      const receiptWindow = window.open(
+        "/thermal-receipt",
+        "thermalReceipt",
+        "width=400,height=600"
+      );
+
+      // Focus the new window
+      if (receiptWindow) {
+        receiptWindow.focus();
+      }
+    }
   };
 
   const startNewOrder = () => {
@@ -28,6 +43,7 @@ export default function OrderCompletePage() {
     sessionStorage.removeItem("customerCode");
     sessionStorage.removeItem("currentCustomer");
     sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("receiptData");
 
     // Reset language to English default for next customer
     localStorage.removeItem("i18nextLng");
@@ -116,7 +132,7 @@ export default function OrderCompletePage() {
                     {Object.entries(item.variants).map(
                       ([variantName, variantValue]) => (
                         <div key={variantName}>
-                          {variantName}: {variantValue}
+                          {variantName}: {variantValue?.name || variantValue}
                         </div>
                       )
                     )}
@@ -167,7 +183,7 @@ export default function OrderCompletePage() {
                   {t("customerLabel")}: {orderData.customer.name}
                 </div>
                 <div>
-                  {t("pointsEarned")}: {orderData.pointsEarned || 0}
+                  {t("pointsEarned")}: {orderData.cashbackPoints || 0}
                 </div>
                 {orderData.cashbackPoints > 0 && (
                   <div>
@@ -238,7 +254,8 @@ export default function OrderCompletePage() {
                         {Object.entries(item.variants).map(
                           ([variantName, variantValue]) => (
                             <div key={variantName}>
-                              {variantName}: {variantValue}
+                              {variantName}:{" "}
+                              {variantValue?.name || variantValue}
                             </div>
                           )
                         )}
@@ -275,9 +292,9 @@ export default function OrderCompletePage() {
               <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
                 <h3 className="font-bold text-lg mb-2">{t("customerLabel")}</h3>
                 <p className="text-gray-700">{orderData.customer.name}</p>
-                {orderData.pointsEarned > 0 && (
+                {(orderData.cashbackPoints || 0) > 0 && (
                   <p className="text-green-600 font-medium">
-                    {t("pointsEarned")}: {orderData.pointsEarned}
+                    {t("pointsEarned")}: {orderData.cashbackPoints || 0}
                   </p>
                 )}
                 {orderData.cashbackPoints > 0 && (
@@ -311,7 +328,7 @@ export default function OrderCompletePage() {
                 onClick={startNewOrder}
                 className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
-                {t("startNewOrder")}
+                Start New Order
               </button>
             </div>
           </div>

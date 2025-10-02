@@ -403,6 +403,25 @@ export default function MenuPage() {
 
       // Set completed order data and show modal
       setCompletedOrder(orderDataForComplete);
+
+      // For KIOSK: After order complete, redirect to home for next customer
+      setTimeout(() => {
+        // Clear all session data for next customer
+        sessionStorage.removeItem("cart");
+        sessionStorage.removeItem("customerCode");
+        sessionStorage.removeItem("currentCustomer");
+        sessionStorage.removeItem("selectedPaymentMethod");
+        sessionStorage.removeItem("lastOrder");
+        sessionStorage.removeItem("receiptData");
+
+        // Reset language to English default for next customer
+        localStorage.removeItem("i18nextLng");
+        i18n.changeLanguage("en");
+
+        // Redirect to home page for next customer
+        router.push("/");
+      }, 3000); // Show success for 3 seconds then redirect
+
       setShowOrderComplete(true);
 
       // Clear cart
@@ -536,6 +555,40 @@ export default function MenuPage() {
     if (e.target === e.currentTarget) {
       closeQuantityPopup();
     }
+  };
+
+  const handlePrintThermalReceipt = () => {
+    // Store receipt data in session storage
+    sessionStorage.setItem("receiptData", JSON.stringify(completedOrder));
+
+    // Open thermal receipt page in a new window
+    const receiptWindow = window.open(
+      "/thermal-receipt",
+      "thermalReceipt",
+      "width=400,height=600"
+    );
+
+    // Focus the new window
+    if (receiptWindow) {
+      receiptWindow.focus();
+    }
+  };
+
+  const handleStartNewOrder = () => {
+    // Clear all session data for next customer
+    sessionStorage.removeItem("lastOrder");
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("customerCode");
+    sessionStorage.removeItem("currentCustomer");
+    sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("receiptData");
+
+    // Reset language to English default for next customer
+    localStorage.removeItem("i18nextLng");
+    i18n.changeLanguage("en");
+
+    // Go back to homepage for next customer
+    router.push("/");
   };
 
   // Get filtered data based on current selection
@@ -1560,7 +1613,7 @@ export default function MenuPage() {
           </div>
 
           {/* Screen Display Modal - Hidden when printing */}
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
+          <div className="print:hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 {/* Header */}
@@ -1665,19 +1718,16 @@ export default function MenuPage() {
                 {/* Action Buttons */}
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => window.print()}
+                    onClick={handlePrintThermalReceipt}
                     className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                   >
                     Print Receipt
                   </button>
                   <button
-                    onClick={() => {
-                      setShowOrderComplete(false);
-                      setCompletedOrder(null);
-                    }}
-                    className="flex-1 bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+                    onClick={handleStartNewOrder}
+                    className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors"
                   >
-                    Continue Shopping
+                    Start New Order
                   </button>
                 </div>
               </div>

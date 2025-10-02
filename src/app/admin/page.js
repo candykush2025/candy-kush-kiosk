@@ -32,24 +32,15 @@ import {
   DollarSign,
   BarChart,
   Star,
-  TrendingUp,
   User,
+  Trash2,
+  TrendingUp,
+  ChevronRight,
   Plus,
   X,
-  Trash2,
-  ChevronRight,
 } from "lucide-react";
 
-export default function AdminDashboard() {
-  // Active tab synced with URL (?tab=) so refresh restores last visited section
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [stats, setStats] = useState({
-    totalCustomers: 0,
-    totalRevenue: 0,
-    todayVisits: 0,
-    totalTransactions: 0,
-    totalProducts: 0,
-  });
+export default function AdminPage() {
   const [customers, setCustomers] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [products, setProducts] = useState([]);
@@ -59,11 +50,26 @@ export default function AdminDashboard() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [stats, setStats] = useState({
+    totalCustomers: 0,
+    totalTransactions: 0,
+    totalProducts: 0,
+    totalRevenue: 0,
+    todayVisits: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
+  // Inline edit state for variant options (editing existing product)
+  const [editingVariantOption, setEditingVariantOption] = useState(null); // { groupIndex, optionIndex }
+  const [editingVariantValues, setEditingVariantValues] = useState({
+    name: "",
+    price: "",
+    memberPrice: "",
+    unit: "",
+  });
   const [editingCashback, setEditingCashback] = useState(null);
   // Category Order tab state
   const [orderList, setOrderList] = useState([]); // array of category ids
@@ -192,6 +198,7 @@ export default function AdminDashboard() {
   }
 
   // Add/Edit states
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -580,6 +587,8 @@ export default function AdminDashboard() {
   // Initialize productForm when editing a product
   useEffect(() => {
     if (editingProduct) {
+      setVariants(editingProduct.variants || []);
+      setHasVariants(editingProduct.hasVariants || false);
       setProductForm({
         name: editingProduct.name || "",
         description: editingProduct.description || "",
@@ -982,7 +991,10 @@ export default function AdminDashboard() {
           subcategoryName: productForm.subcategoryName,
           hasVariants: productForm.hasVariants,
           price: productForm.price || 0,
-          memberPrice: productForm.memberPrice || 0,
+          // Only include memberPrice for products without variants
+          ...(productForm.hasVariants
+            ? {}
+            : { memberPrice: productForm.memberPrice || 0 }),
           variants: processedVariants,
           sku: productForm.sku,
           barcode: productForm.barcode,
@@ -1055,7 +1067,10 @@ export default function AdminDashboard() {
           subcategoryName: newProduct.subcategoryName,
           hasVariants: newProduct.hasVariants,
           price: newProduct.price || 0,
-          memberPrice: newProduct.memberPrice || 0,
+          // Only include memberPrice for products without variants
+          ...(newProduct.hasVariants
+            ? {}
+            : { memberPrice: newProduct.memberPrice || 0 }),
           variants: processedVariants, // Use already processed variants
           sku: newProduct.sku,
           barcode: newProduct.barcode,
@@ -3434,6 +3449,8 @@ export default function AdminDashboard() {
                                                                                             option.cost ||
                                                                                             option.amount ||
                                                                                             0;
+                                                                                          const optionMemberPrice =
+                                                                                            option.memberPrice;
                                                                                           const optionImage =
                                                                                             option.image ||
                                                                                             option.imageUrl ||
@@ -3467,14 +3484,27 @@ export default function AdminDashboard() {
                                                                                                         optionName
                                                                                                       }
                                                                                                     </h6>
-                                                                                                    <span className="text-sm font-medium text-blue-600">
-                                                                                                      {(
-                                                                                                        optionPrice ||
-                                                                                                        0
-                                                                                                      ).toFixed(
-                                                                                                        2
+                                                                                                    <div className="text-right">
+                                                                                                      <div className="text-sm font-medium text-blue-600">
+                                                                                                        ฿
+                                                                                                        {(
+                                                                                                          optionPrice ||
+                                                                                                          0
+                                                                                                        ).toFixed(
+                                                                                                          2
+                                                                                                        )}
+                                                                                                      </div>
+                                                                                                      {optionMemberPrice !==
+                                                                                                        undefined && (
+                                                                                                        <div className="text-xs text-green-600">
+                                                                                                          Member:
+                                                                                                          ฿
+                                                                                                          {optionMemberPrice.toFixed(
+                                                                                                            2
+                                                                                                          )}
+                                                                                                        </div>
                                                                                                       )}
-                                                                                                    </span>
+                                                                                                    </div>
                                                                                                   </div>
                                                                                                 </div>
                                                                                               </div>
@@ -3704,6 +3734,10 @@ export default function AdminDashboard() {
                                     <button
                                       onClick={() => {
                                         setEditingProduct(product);
+                                        setVariants(product.variants || []);
+                                        setHasVariants(
+                                          product.hasVariants || false
+                                        );
                                         setProductForm({
                                           name: product.name || "",
                                           description:
@@ -6776,6 +6810,10 @@ export default function AdminDashboard() {
                                         )}
                                         <span className="text-sm">
                                           {option.name} - ฿{option.price}
+                                          {typeof option.memberPrice ===
+                                          "number"
+                                            ? ` /M ฿${option.memberPrice}`
+                                            : ""}
                                           {option.unit && ` (${option.unit})`}
                                         </span>
                                       </div>
@@ -6836,7 +6874,7 @@ export default function AdminDashboard() {
                           <div className="border border-gray-200 rounded-lg p-3 bg-white">
                             <div className="grid grid-cols-1 gap-3">
                               {/* Option Details Row */}
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className="grid grid-cols-4 gap-2">
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 mb-1">
                                     Option Name
@@ -6859,6 +6897,19 @@ export default function AdminDashboard() {
                                     placeholder="0.00"
                                     className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
                                     id="option-price-input"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Member Price (฿)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    id="option-member-price-input"
                                   />
                                 </div>
                                 <div>
@@ -6941,6 +6992,14 @@ export default function AdminDashboard() {
                                           "option-price-input"
                                         ).value
                                       ) || 0;
+                                    const memberPriceRaw =
+                                      document.getElementById(
+                                        "option-member-price-input"
+                                      ).value;
+                                    const optionMemberPrice =
+                                      memberPriceRaw.trim() === ""
+                                        ? null
+                                        : parseFloat(memberPriceRaw) || 0;
                                     const optionUnit = document
                                       .getElementById("option-unit-input")
                                       .value.trim();
@@ -6972,10 +7031,14 @@ export default function AdminDashboard() {
                                         ? `<img src="${optionImageData.url}" alt="${optionName}" class="w-8 h-8 object-cover rounded mr-2" />`
                                         : '<div class="w-8 h-8 bg-gray-200 rounded mr-2 flex items-center justify-center"><svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
 
+                                      const memberSegment =
+                                        optionMemberPrice !== null
+                                          ? ` /M ฿${optionMemberPrice}`
+                                          : "";
                                       optionDiv.innerHTML = `
                                         <div class="flex items-center">
                                           ${imagePreview}
-                                          <span class="text-sm">${optionName} - ฿${optionPrice}${
+                                          <span class="text-sm">${optionName} - ฿${optionPrice}${memberSegment}${
                                         optionUnit ? ` (${optionUnit})` : ""
                                       }</span>
                                         </div>
@@ -6998,6 +7061,9 @@ export default function AdminDashboard() {
                                       ).value = "";
                                       document.getElementById(
                                         "option-unit-input"
+                                      ).value = "";
+                                      document.getElementById(
+                                        "option-member-price-input"
                                       ).value = "";
                                       setOptionImageFile(null);
                                     } else {
@@ -7048,13 +7114,29 @@ export default function AdminDashboard() {
                                   ).textContent;
                                 const parts = optionText.split(" - ฿");
                                 const name = parts[0];
-                                const priceAndUnit = parts[1];
-                                const priceParts = priceAndUnit.split(" (");
-                                const price = parseFloat(priceParts[0]) || 0;
-                                const unit =
-                                  priceParts.length > 1
-                                    ? priceParts[1].replace(")", "")
-                                    : "";
+                                const remainder = parts[1] || "0";
+                                // Pattern may be: price (/M ฿member)? (unit?)
+                                let price = 0;
+                                let memberPrice = undefined;
+                                let unit = "";
+                                // Extract unit if present in parentheses at end
+                                const unitMatch =
+                                  remainder.match(/\(([^)]+)\)$/);
+                                if (unitMatch) {
+                                  unit = unitMatch[1];
+                                }
+                                const remainderNoUnit = unitMatch
+                                  ? remainder.replace(unitMatch[0], "").trim()
+                                  : remainder.trim();
+                                const memberMatch =
+                                  remainderNoUnit.match(/(.*) \/M ฿(.*)/);
+                                if (memberMatch) {
+                                  price = parseFloat(memberMatch[1]) || 0;
+                                  const mp = parseFloat(memberMatch[2]);
+                                  if (!isNaN(mp)) memberPrice = mp;
+                                } else {
+                                  price = parseFloat(remainderNoUnit) || 0;
+                                }
 
                                 // Get image data if exists
                                 const imageData =
@@ -7064,6 +7146,9 @@ export default function AdminDashboard() {
                                   id: Date.now().toString() + i,
                                   name: name,
                                   price: price,
+                                  ...(memberPrice !== undefined
+                                    ? { memberPrice }
+                                    : {}),
                                   unit: unit,
                                   image: imageData ? imageData.file : null,
                                   imageUrl: imageData ? imageData.url : "",
@@ -7599,32 +7684,279 @@ export default function AdminDashboard() {
                                             )}
                                             <span className="text-sm">
                                               {option.name} - ฿{option.price}
+                                              {typeof option.memberPrice ===
+                                              "number"
+                                                ? ` /M ฿${option.memberPrice}`
+                                                : ""}
                                               {option.unit &&
                                                 ` (${option.unit})`}
                                             </span>
                                           </div>
-                                          <button
-                                            type="button"
-                                            onClick={() => {
-                                              const updatedVariants = [
-                                                ...productForm.variants,
-                                              ];
-                                              updatedVariants[
-                                                groupIndex
-                                              ].options = updatedVariants[
-                                                groupIndex
-                                              ].options.filter(
-                                                (_, i) => i !== optionIndex
-                                              );
-                                              setProductForm({
-                                                ...productForm,
-                                                variants: updatedVariants,
-                                              });
-                                            }}
-                                            className="text-red-600 hover:text-red-800 text-xs"
-                                          >
-                                            Remove
-                                          </button>
+                                          <div className="flex items-center gap-3">
+                                            {editingVariantOption &&
+                                            editingVariantOption.groupIndex ===
+                                              groupIndex &&
+                                            editingVariantOption.optionIndex ===
+                                              optionIndex ? (
+                                              <div
+                                                className="flex items-center gap-2"
+                                                role="group"
+                                                aria-label="Edit variant option inline form"
+                                              >
+                                                <input
+                                                  aria-label="Option name"
+                                                  title="Option name"
+                                                  className="w-24 px-1 py-0.5 text-xs border rounded"
+                                                  value={
+                                                    editingVariantValues.name
+                                                  }
+                                                  onChange={(e) =>
+                                                    setEditingVariantValues(
+                                                      (v) => ({
+                                                        ...v,
+                                                        name: e.target.value,
+                                                      })
+                                                    )
+                                                  }
+                                                  required
+                                                />
+                                                <div className="flex flex-col">
+                                                  <input
+                                                    aria-label="Standard price"
+                                                    title="Standard price"
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="w-16 px-1 py-0.5 text-xs border rounded"
+                                                    value={
+                                                      editingVariantValues.price
+                                                    }
+                                                    onChange={(e) =>
+                                                      setEditingVariantValues(
+                                                        (v) => ({
+                                                          ...v,
+                                                          price: e.target.value,
+                                                        })
+                                                      )
+                                                    }
+                                                    required
+                                                  />
+                                                  <span className="text-[10px] text-gray-400">
+                                                    Price
+                                                  </span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                  <input
+                                                    aria-label="Member price"
+                                                    title="Member price (leave blank if none)"
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="w-16 px-1 py-0.5 text-xs border rounded"
+                                                    value={
+                                                      editingVariantValues.memberPrice
+                                                    }
+                                                    onChange={(e) =>
+                                                      setEditingVariantValues(
+                                                        (v) => ({
+                                                          ...v,
+                                                          memberPrice:
+                                                            e.target.value,
+                                                        })
+                                                      )
+                                                    }
+                                                    placeholder=""
+                                                  />
+                                                  <span className="text-[10px] text-gray-400">
+                                                    Member
+                                                  </span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                  <input
+                                                    aria-label="Unit"
+                                                    title="Measurement unit (optional)"
+                                                    className="w-14 px-1 py-0.5 text-xs border rounded"
+                                                    value={
+                                                      editingVariantValues.unit
+                                                    }
+                                                    onChange={(e) =>
+                                                      setEditingVariantValues(
+                                                        (v) => ({
+                                                          ...v,
+                                                          unit: e.target.value,
+                                                        })
+                                                      )
+                                                    }
+                                                    placeholder="unit"
+                                                  />
+                                                  <span className="text-[10px] text-gray-400">
+                                                    Unit
+                                                  </span>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={async () => {
+                                                    const updated = [
+                                                      ...productForm.variants,
+                                                    ];
+                                                    updated[groupIndex].options[
+                                                      optionIndex
+                                                    ] = {
+                                                      ...updated[groupIndex]
+                                                        .options[optionIndex],
+                                                      name: editingVariantValues.name.trim(),
+                                                      price:
+                                                        parseFloat(
+                                                          editingVariantValues.price
+                                                        ) || 0,
+                                                      memberPrice:
+                                                        editingVariantValues.memberPrice ===
+                                                        ""
+                                                          ? undefined
+                                                          : parseFloat(
+                                                              editingVariantValues.memberPrice
+                                                            ) || 0,
+                                                      unit: editingVariantValues.unit.trim(),
+                                                    };
+                                                    const updatedProductForm = {
+                                                      ...productForm,
+                                                      variants: updated,
+                                                    };
+                                                    setProductForm(
+                                                      updatedProductForm
+                                                    );
+                                                    setEditingVariantOption(
+                                                      null
+                                                    );
+
+                                                    // Auto-save to Firestore
+                                                    try {
+                                                      setIsProductSaving(true);
+                                                      const cleanProductData = {
+                                                        name: updatedProductForm.name,
+                                                        description:
+                                                          updatedProductForm.description,
+                                                        categoryId:
+                                                          updatedProductForm.categoryId,
+                                                        categoryName:
+                                                          updatedProductForm.categoryName,
+                                                        subcategoryId:
+                                                          updatedProductForm.subcategoryId,
+                                                        subcategoryName:
+                                                          updatedProductForm.subcategoryName,
+                                                        hasVariants:
+                                                          updatedProductForm.hasVariants,
+                                                        price:
+                                                          updatedProductForm.price ||
+                                                          0,
+                                                        variants: updated,
+                                                        sku: updatedProductForm.sku,
+                                                        barcode:
+                                                          updatedProductForm.barcode,
+                                                        supplier:
+                                                          updatedProductForm.supplier,
+                                                        isActive:
+                                                          updatedProductForm.isActive,
+                                                        isFeatured:
+                                                          updatedProductForm.isFeatured,
+                                                        tags:
+                                                          updatedProductForm.tags ||
+                                                          [],
+                                                        notes:
+                                                          updatedProductForm.notes,
+                                                        textColor:
+                                                          updatedProductForm.textColor,
+                                                        backgroundImage:
+                                                          updatedProductForm.backgroundImage,
+                                                        backgroundFit:
+                                                          updatedProductForm.backgroundFit,
+                                                      };
+                                                      await ProductService.updateProduct(
+                                                        editingProduct.id,
+                                                        cleanProductData
+                                                      );
+                                                      await loadDashboardData();
+                                                    } catch (error) {
+                                                      console.error(
+                                                        "Error saving variant option:",
+                                                        error
+                                                      );
+                                                      alert(
+                                                        "Error saving changes. Please try again."
+                                                      );
+                                                    } finally {
+                                                      setIsProductSaving(false);
+                                                    }
+                                                  }}
+                                                  className="text-green-600 hover:text-green-800 text-xs"
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  className="text-gray-500 hover:text-gray-700 text-xs"
+                                                  onClick={() =>
+                                                    setEditingVariantOption(
+                                                      null
+                                                    )
+                                                  }
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            ) : (
+                                              <>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setEditingVariantOption({
+                                                      groupIndex,
+                                                      optionIndex,
+                                                    });
+                                                    setEditingVariantValues({
+                                                      name: option.name || "",
+                                                      price: (
+                                                        option.price ?? 0
+                                                      ).toString(),
+                                                      // Show blank if memberPrice not explicitly set
+                                                      memberPrice:
+                                                        option.memberPrice ===
+                                                          undefined ||
+                                                        option.memberPrice ===
+                                                          null
+                                                          ? ""
+                                                          : option.memberPrice.toString(),
+                                                      unit: option.unit || "",
+                                                    });
+                                                  }}
+                                                  className="text-blue-600 hover:text-blue-800 text-xs"
+                                                >
+                                                  Edit
+                                                </button>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const updatedVariants = [
+                                                      ...productForm.variants,
+                                                    ];
+                                                    updatedVariants[
+                                                      groupIndex
+                                                    ].options = updatedVariants[
+                                                      groupIndex
+                                                    ].options.filter(
+                                                      (_, i) =>
+                                                        i !== optionIndex
+                                                    );
+                                                    setProductForm({
+                                                      ...productForm,
+                                                      variants: updatedVariants,
+                                                    });
+                                                  }}
+                                                  className="text-red-600 hover:text-red-800 text-xs"
+                                                >
+                                                  Remove
+                                                </button>
+                                              </>
+                                            )}
+                                          </div>
                                         </div>
                                       )
                                     )}
@@ -7659,7 +7991,7 @@ export default function AdminDashboard() {
                         <div className="border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="grid grid-cols-1 gap-3">
                             {/* Option Details Row */}
-                            <div className="grid grid-cols-3 gap-2">
+                            <div className="grid grid-cols-4 gap-2">
                               <div>
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
                                   Option Name
@@ -7682,6 +8014,19 @@ export default function AdminDashboard() {
                                   placeholder="0.00"
                                   className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
                                   id="edit-option-price-input"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Member Price (฿)
+                                </label>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="0.00"
+                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                  id="edit-option-member-price-input"
                                 />
                               </div>
                               <div>
@@ -7720,6 +8065,9 @@ export default function AdminDashboard() {
                                 const priceEl = document.getElementById(
                                   "edit-option-price-input"
                                 );
+                                const memberPriceEl = document.getElementById(
+                                  "edit-option-member-price-input"
+                                );
                                 const unitEl = document.getElementById(
                                   "edit-option-unit-input"
                                 );
@@ -7730,6 +8078,8 @@ export default function AdminDashboard() {
                                 const optionName = nameEl.value.trim();
                                 const optionPrice =
                                   parseFloat(priceEl.value) || 0;
+                                const optionMemberPrice =
+                                  parseFloat(memberPriceEl.value) || 0;
                                 const optionUnit = unitEl.value.trim();
                                 const optionImageFile = imageEl.files[0];
 
@@ -7758,6 +8108,7 @@ export default function AdminDashboard() {
                                 const newOption = {
                                   name: optionName,
                                   price: optionPrice,
+                                  memberPrice: optionMemberPrice,
                                   unit: optionUnit,
                                   imageUrl: optionImageUrl,
                                   imageFile: optionImageFile,
@@ -7791,6 +8142,7 @@ export default function AdminDashboard() {
 
                                 nameEl.value = "";
                                 priceEl.value = "";
+                                memberPriceEl.value = "";
                                 unitEl.value = "";
                                 imageEl.value = "";
                               }}

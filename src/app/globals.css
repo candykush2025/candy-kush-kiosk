@@ -34,6 +34,31 @@ body {
   background: linear-gradient(180deg, #4f46e5, #7c3aed);
 }
 
+/* Hidden scrollbar styles - maintains scroll functionality but hides visual scrollbar */
+.hidden-scrollbar {
+  /* Firefox */
+  scrollbar-width: none;
+  /* Internet Explorer and Edge */
+  -ms-overflow-style: none;
+}
+
+.hidden-scrollbar::-webkit-scrollbar {
+  /* Safari and Chrome */
+  display: none;
+}
+
+/* Force popup positioning to be relative to viewport */
+.popup-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
 /* Kiosk specific styles */
 .kiosk-container {
   max-width: 1080px;
