@@ -3100,59 +3100,8 @@ export default function AdminPage() {
                                 {/* Subcategories Level */}
                                 {isExpanded && (
                                   <div className="border-t border-gray-200/60 bg-gradient-to-r from-gray-50/50 to-indigo-50/30">
-                                    {categorySubcategories.length === 0 ? (
-                                      <div className="p-8 text-center">
-                                        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-full flex items-center justify-center mb-4">
-                                          <svg
-                                            className="w-8 h-8 text-purple-600"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                                            />
-                                          </svg>
-                                        </div>
-                                        <h5 className="text-lg font-semibold text-gray-900 mb-2">
-                                          No subcategories yet
-                                        </h5>
-                                        <p className="text-gray-600 mb-6">
-                                          Create your first subcategory in this
-                                          category
-                                        </p>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setNewSubcategory((prev) => ({
-                                              ...prev,
-                                              categoryId: category.id,
-                                              categoryName: category.name,
-                                            }));
-                                            setShowAddSubcategory(true);
-                                          }}
-                                          className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-medium rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                                        >
-                                          <svg
-                                            className="w-4 h-4 mr-2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                          >
-                                            <path
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                              strokeWidth={2}
-                                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                            />
-                                          </svg>
-                                          Add Subcategory
-                                        </button>
-                                      </div>
-                                    ) : (
+                                    {/* Subcategories Section */}
+                                    {categorySubcategories.length > 0 && (
                                       <div className="p-4 space-y-3">
                                         {categorySubcategories.map(
                                           (subcategory) => {
@@ -3986,6 +3935,438 @@ export default function AdminPage() {
                                         )}
                                       </div>
                                     )}
+
+                                    {/* Products without subcategory section - Independent of subcategories */}
+                                    {(() => {
+                                      const productsWithoutSubcategory =
+                                        products.filter((prod) => {
+                                          const hasCategory =
+                                            prod.categoryId === category.id;
+                                          const hasNoSubcategory =
+                                            !prod.subcategoryId ||
+                                            prod.subcategoryId === "" ||
+                                            prod.subcategoryId === null ||
+                                            prod.subcategoryId === undefined ||
+                                            (typeof prod.subcategoryId ===
+                                              "string" &&
+                                              prod.subcategoryId.trim() === "");
+
+                                          console.log(`Product ${prod.name}:`, {
+                                            categoryId: prod.categoryId,
+                                            targetCategoryId: category.id,
+                                            hasCategory,
+                                            subcategoryId: prod.subcategoryId,
+                                            hasNoSubcategory,
+                                            shouldInclude:
+                                              hasCategory && hasNoSubcategory,
+                                          });
+
+                                          return (
+                                            hasCategory && hasNoSubcategory
+                                          );
+                                        });
+
+                                      console.log(
+                                        `=== SUMMARY for Category ${category.name} ===`
+                                      );
+                                      console.log(
+                                        `Products without subcategory:`,
+                                        productsWithoutSubcategory.length,
+                                        productsWithoutSubcategory
+                                      );
+                                      console.log(
+                                        `All products in category:`,
+                                        products.filter(
+                                          (p) => p.categoryId === category.id
+                                        )
+                                      );
+                                      console.log(
+                                        `================================`
+                                      );
+
+                                      if (
+                                        productsWithoutSubcategory.length === 0
+                                      ) {
+                                        console.log(
+                                          `No products without subcategory found for ${category.name}`
+                                        );
+                                        return null;
+                                      }
+
+                                      return (
+                                        <div className="bg-white rounded-lg border border-gray-200/80 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ml-8 mt-3">
+                                          {/* Direct Category Products Header */}
+                                          <div className="flex items-center space-x-4 p-5 bg-gradient-to-r from-green-50/50 to-emerald-50/50">
+                                            <div className="flex items-center space-x-3">
+                                              <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-emerald-200 rounded-lg flex items-center justify-center">
+                                                <svg
+                                                  className="w-4 h-4 text-green-600"
+                                                  fill="none"
+                                                  stroke="currentColor"
+                                                  viewBox="0 0 24 24"
+                                                >
+                                                  <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth={2}
+                                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                                  />
+                                                </svg>
+                                              </div>
+                                              <div>
+                                                <h6 className="text-base font-semibold text-gray-900">
+                                                  Direct Products
+                                                </h6>
+                                                <p className="text-sm text-gray-600 flex items-center">
+                                                  <svg
+                                                    className="w-3 h-3 mr-1"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                  >
+                                                    <path
+                                                      strokeLinecap="round"
+                                                      strokeLinejoin="round"
+                                                      strokeWidth={2}
+                                                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                                    />
+                                                  </svg>
+                                                  {
+                                                    productsWithoutSubcategory.length
+                                                  }{" "}
+                                                  products (no subcategory)
+                                                </p>
+                                              </div>
+                                            </div>
+                                          </div>
+
+                                          {/* Direct Products List */}
+                                          <div className="border-t border-gray-200/50 bg-gradient-to-r from-green-50/30 to-emerald-50/30">
+                                            <div className="p-3 space-y-2 ml-4">
+                                              {productsWithoutSubcategory.map(
+                                                (product) => {
+                                                  console.log("Product data:", {
+                                                    id: product.id,
+                                                    name: product.name,
+                                                    mainImage:
+                                                      product.mainImage,
+                                                    images: product.images,
+                                                    image: product.image,
+                                                    allKeys:
+                                                      Object.keys(product),
+                                                  });
+
+                                                  const isProductExpanded =
+                                                    expandedProducts.has(
+                                                      product.id
+                                                    );
+                                                  const isVariantExpanded =
+                                                    expandedVariants.has(
+                                                      product.id
+                                                    );
+
+                                                  return (
+                                                    <div
+                                                      key={product.id}
+                                                      className="bg-white rounded-lg border border-gray-200/70 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                                                    >
+                                                      {/* Product Level */}
+                                                      <div
+                                                        className={`flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30 ${
+                                                          product.hasVariants
+                                                            ? "cursor-pointer"
+                                                            : ""
+                                                        }`}
+                                                        onClick={(e) => {
+                                                          if (
+                                                            product.hasVariants
+                                                          ) {
+                                                            e.stopPropagation();
+                                                            toggleVariantExpansion(
+                                                              product.id
+                                                            );
+                                                          }
+                                                        }}
+                                                      >
+                                                        {/* Expansion Arrow for Products with Variants */}
+                                                        {product.hasVariants && (
+                                                          <div
+                                                            className={`transform transition-transform duration-200 ${
+                                                              isVariantExpanded
+                                                                ? "rotate-90"
+                                                                : ""
+                                                            }`}
+                                                          >
+                                                            <svg
+                                                              className="w-4 h-4 text-gray-500"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              viewBox="0 0 24 24"
+                                                            >
+                                                              <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M9 5l7 7-7 7"
+                                                              />
+                                                            </svg>
+                                                          </div>
+                                                        )}
+                                                        <div className="flex items-center space-x-3">
+                                                          <div className="relative">
+                                                            {product.mainImage ||
+                                                            product
+                                                              .images?.[0] ||
+                                                            product.image ? (
+                                                              <img
+                                                                src={
+                                                                  product.mainImage ||
+                                                                  product
+                                                                    .images?.[0] ||
+                                                                  product.image
+                                                                }
+                                                                alt={
+                                                                  product.name
+                                                                }
+                                                                className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
+                                                                onError={(
+                                                                  e
+                                                                ) => {
+                                                                  console.log(
+                                                                    "Image failed to load:",
+                                                                    e.target.src
+                                                                  );
+                                                                  e.target.style.display =
+                                                                    "none";
+                                                                  e.target.nextSibling.style.display =
+                                                                    "flex";
+                                                                }}
+                                                                onLoad={() =>
+                                                                  console.log(
+                                                                    "Image loaded successfully:",
+                                                                    product.mainImage ||
+                                                                      product
+                                                                        .images?.[0] ||
+                                                                      product.image
+                                                                  )
+                                                                }
+                                                              />
+                                                            ) : null}
+                                                            {!(
+                                                              product.mainImage ||
+                                                              product
+                                                                .images?.[0] ||
+                                                              product.image
+                                                            ) && (
+                                                              <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center border-2 border-gray-200">
+                                                                <svg
+                                                                  className="w-6 h-6 text-green-600"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  viewBox="0 0 24 24"
+                                                                >
+                                                                  <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                      2
+                                                                    }
+                                                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                                                  />
+                                                                </svg>
+                                                              </div>
+                                                            )}
+                                                            <div className="hidden w-12 h-12 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg items-center justify-center border-2 border-gray-200">
+                                                              <svg
+                                                                className="w-6 h-6 text-green-600"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                              >
+                                                                <path
+                                                                  strokeLinecap="round"
+                                                                  strokeLinejoin="round"
+                                                                  strokeWidth={
+                                                                    2
+                                                                  }
+                                                                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                                                />
+                                                              </svg>
+                                                            </div>
+                                                            {product.hasVariants && (
+                                                              <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                                                                <svg
+                                                                  className="w-2.5 h-2.5 text-white"
+                                                                  fill="none"
+                                                                  stroke="currentColor"
+                                                                  viewBox="0 0 24 24"
+                                                                >
+                                                                  <path
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    strokeWidth={
+                                                                      3
+                                                                    }
+                                                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                                                  />
+                                                                </svg>
+                                                              </div>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                          <h6 className="font-semibold text-gray-900 text-base truncate mb-1">
+                                                            {product.name}
+                                                          </h6>
+                                                          {product.description && (
+                                                            <p className="text-xs text-gray-600 mb-2 leading-relaxed truncate">
+                                                              {
+                                                                product.description
+                                                              }
+                                                            </p>
+                                                          )}
+                                                          <div className="flex items-center space-x-3 text-sm text-gray-600">
+                                                            {product.hasVariants ? (
+                                                              <>
+                                                                <span className="flex items-center">
+                                                                  <svg
+                                                                    className="w-3 h-3 mr-1"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                  >
+                                                                    <path
+                                                                      strokeLinecap="round"
+                                                                      strokeLinejoin="round"
+                                                                      strokeWidth={
+                                                                        2
+                                                                      }
+                                                                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                                                    />
+                                                                  </svg>
+                                                                  Variable
+                                                                  Product
+                                                                </span>
+                                                                <span className="text-indigo-600 font-medium">
+                                                                  {product
+                                                                    .variants
+                                                                    ?.length ||
+                                                                    0}{" "}
+                                                                  variants
+                                                                </span>
+                                                              </>
+                                                            ) : (
+                                                              <>
+                                                                <span className="flex items-center font-medium text-green-600">
+                                                                  <svg
+                                                                    className="w-3 h-3 mr-1"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    viewBox="0 0 24 24"
+                                                                  >
+                                                                    <path
+                                                                      strokeLinecap="round"
+                                                                      strokeLinejoin="round"
+                                                                      strokeWidth={
+                                                                        2
+                                                                      }
+                                                                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
+                                                                    />
+                                                                  </svg>
+                                                                  ฿
+                                                                  {(
+                                                                    product.price ||
+                                                                    0
+                                                                  ).toFixed(2)}
+                                                                </span>
+                                                                {product.memberPrice && (
+                                                                  <span className="flex items-center font-medium text-orange-600">
+                                                                    <svg
+                                                                      className="w-3 h-3 mr-1"
+                                                                      fill="none"
+                                                                      stroke="currentColor"
+                                                                      viewBox="0 0 24 24"
+                                                                    >
+                                                                      <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        strokeWidth={
+                                                                          2
+                                                                        }
+                                                                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                                                      />
+                                                                    </svg>
+                                                                    Member: ฿
+                                                                    {(
+                                                                      product.memberPrice ||
+                                                                      0
+                                                                    ).toFixed(
+                                                                      2
+                                                                    )}
+                                                                  </span>
+                                                                )}
+                                                              </>
+                                                            )}
+                                                          </div>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                          <button
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              setEditingProduct(
+                                                                product
+                                                              );
+                                                            }}
+                                                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                                                          >
+                                                            <svg
+                                                              className="w-4 h-4"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              viewBox="0 0 24 24"
+                                                            >
+                                                              <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                                              />
+                                                            </svg>
+                                                          </button>
+                                                          <button
+                                                            onClick={(e) => {
+                                                              e.stopPropagation();
+                                                              handleDeleteProduct(
+                                                                product.id
+                                                              );
+                                                            }}
+                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                          >
+                                                            <svg
+                                                              className="w-4 h-4"
+                                                              fill="none"
+                                                              stroke="currentColor"
+                                                              viewBox="0 0 24 24"
+                                                            >
+                                                              <path
+                                                                strokeLinecap="round"
+                                                                strokeLinejoin="round"
+                                                                strokeWidth={2}
+                                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                                              />
+                                                            </svg>
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                }
+                                              )}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 )}
                               </div>
@@ -8473,7 +8854,6 @@ export default function AdminPage() {
                             )}
                           </div>
                         )}
-
                       {/* Add New Variant Group */}
                       <div className="border border-gray-300 rounded-md p-4 bg-gray-50">
                         <h4 className="font-medium text-gray-700 mb-3">
