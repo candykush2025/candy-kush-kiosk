@@ -716,7 +716,7 @@ export default function MenuPage() {
           >
             <div
               id="kiosk-left-list"
-              className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4"
+              className="flex-1 overflow-y-auto hidden-scrollbar px-2 py-4"
             >
               {categories.map((category, index) => (
                 <div key={category.id}>
@@ -724,7 +724,7 @@ export default function MenuPage() {
                     onClick={() => handleCategorySelect(category)}
                     className={`cursor-pointer p-4 transition-all duration-300 hover:bg-gray-50 ${
                       selectedCategory === category.id
-                        ? "bg-green-50 border-2 border-green-500 border-b-8 border-b-green-600 shadow-xl transform -translate-x-3 scale-110"
+                        ? "bg-green-50 border-2 border-green-500 border-b-8 border-b-green-600 shadow-xl transform scale-100"
                         : "hover:bg-gray-50 hover:shadow-md"
                     }`}
                     style={{
@@ -811,11 +811,23 @@ export default function MenuPage() {
                             .map((product) => (
                               <div
                                 key={product.id}
-                                className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
+                                className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
                                   selectedProduct?.id === product.id
                                     ? "transform scale-105 shadow-lg border-green-500"
                                     : "border-gray-100"
                                 } `}
+                                style={{
+                                  backgroundImage: product.backgroundImage
+                                    ? `url(${product.backgroundImage})`
+                                    : "none",
+                                  backgroundSize:
+                                    product.backgroundFit || "cover",
+                                  backgroundPosition: "center",
+                                  backgroundRepeat: "no-repeat",
+                                  backgroundColor: product.backgroundImage
+                                    ? "transparent"
+                                    : "white",
+                                }}
                                 onClick={() => handleProductSelect(product)}
                               >
                                 {product.mainImage && (
@@ -834,7 +846,12 @@ export default function MenuPage() {
                                   </div>
                                 )}
                                 <div className="text-center space-y-1">
-                                  <div className="text-xs font-medium text-gray-500 truncate">
+                                  <div
+                                    className="text-xs font-medium truncate"
+                                    style={{
+                                      color: product.textColor || "#6b7280",
+                                    }}
+                                  >
                                     {product.name}
                                   </div>
                                   <div className="text-sm font-semibold text-green-600">
@@ -952,6 +969,19 @@ export default function MenuPage() {
           {/* end right pane */}
         </div>
         {/* end main content flex */}
+
+        {/* Cancel Button under both lists */}
+        <div className="px-6 pb-6">
+          <button
+            onClick={() => {
+              setCart([]);
+              router.push("/");
+            }}
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-xl font-semibold text-lg transition-colors"
+          >
+            Cancel Order
+          </button>
+        </div>
       </div>
       {/* overlays outside container to avoid clipping */}
       {/* Quantity/Variant Popup */}
@@ -1241,6 +1271,14 @@ export default function MenuPage() {
                           <div className="text-green-600 font-semibold">
                             ฿{item.price} {item.unit || "each"}
                           </div>
+                          {/* Points Information */}
+                          <div className="text-sm text-blue-600 mt-1">
+                            +{Math.floor(item.price * 0.01)} points (
+                            {(((item.price * 0.01) / item.price) * 100).toFixed(
+                              1
+                            )}
+                            %)
+                          </div>
                         </div>
                       </div>
 
@@ -1292,6 +1330,13 @@ export default function MenuPage() {
                         <div className="text-right min-w-[100px]">
                           <div className="text-xl font-bold text-green-600">
                             ฿{item.price * (item.quantity || 1)}
+                          </div>
+                          <div className="text-sm text-blue-600">
+                            +
+                            {Math.floor(
+                              item.price * (item.quantity || 1) * 0.01
+                            )}{" "}
+                            pts total
                           </div>
                         </div>
 
