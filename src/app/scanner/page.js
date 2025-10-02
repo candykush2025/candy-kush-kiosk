@@ -54,7 +54,7 @@ export default function QRScanner() {
         );
 
         setTimeout(() => {
-          router.push("/shop");
+          router.push("/menu");
         }, 600);
       } else {
         setError(t("customerNotFound"));

@@ -592,6 +592,7 @@ export class ProductService {
 
         // For products without variants
         price: productData.price || 0,
+        memberPrice: productData.memberPrice || 0,
 
         // Images
         mainImage: mainImage,
@@ -755,6 +756,7 @@ export class ProductService {
         hasVariants: productData.hasVariants || false,
         variants: productData.variants || [],
         price: productData.price || 0,
+        memberPrice: productData.memberPrice || 0,
         sku: productData.sku || "",
         backgroundImage: productData.backgroundImage || "",
         backgroundFit: productData.backgroundFit || "contain",
@@ -878,18 +880,31 @@ export class CashbackService {
   // Get cashback rule by category ID
   static async getCashbackRuleByCategory(categoryId) {
     try {
+      console.log(
+        "🔍 getCashbackRuleByCategory searching for categoryId:",
+        categoryId
+      );
       const q = query(
         collection(db, this.COLLECTION_NAME),
         where("categoryId", "==", categoryId),
         where("isActive", "==", true)
       );
       const querySnapshot = await getDocs(q);
+      console.log(
+        "📊 Query result - number of docs found:",
+        querySnapshot.size
+      );
+
       if (!querySnapshot.empty) {
         const doc = querySnapshot.docs[0];
-        return {
+        const ruleData = {
           id: doc.id,
           ...doc.data(),
         };
+        console.log("✅ Found cashback rule:", ruleData);
+        return ruleData;
+      } else {
+        console.log("❌ No cashback rule found for categoryId:", categoryId);
       }
       return null;
     } catch (error) {
@@ -977,9 +992,25 @@ export class CashbackService {
   // Get cashback percentage for a category
   static async getCashbackPercentage(categoryId) {
     try {
+      console.log(
+        "🔍 CashbackService.getCashbackPercentage called with categoryId:",
+        categoryId
+      );
       const rule = await this.getCashbackRuleByCategory(categoryId);
+      console.log("📋 Retrieved cashback rule:", rule);
+
       if (rule && rule.isActive) {
+        console.log(
+          "✅ Rule is active, returning percentage:",
+          rule.percentage
+        );
         return rule.percentage;
+      } else {
+        console.log("❌ No active rule found, details:", {
+          ruleExists: !!rule,
+          isActive: rule?.isActive,
+          percentage: rule?.percentage,
+        });
       }
       return 0;
     } catch (error) {

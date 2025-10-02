@@ -84,6 +84,7 @@ export default function AdminDashboard() {
   const [expandedCategories, setExpandedCategories] = useState(new Set());
   const [expandedSubcategories, setExpandedSubcategories] = useState(new Set());
   const [expandedProducts, setExpandedProducts] = useState(new Set());
+  const [expandedVariants, setExpandedVariants] = useState(new Set());
 
   // Product form states for comprehensive management
   const [prefilledCategory, setPrefilledCategory] = useState(null);
@@ -121,6 +122,7 @@ export default function AdminDashboard() {
     hasVariants: false,
     // For products without variants
     price: 0,
+    memberPrice: 0,
     // For products with variants
     variants: [],
     // Common fields
@@ -146,8 +148,10 @@ export default function AdminDashboard() {
     nickname: "",
     email: "",
     cell: "",
+    memberId: "",
     isActive: true,
   });
+  const [memberIdError, setMemberIdError] = useState("");
 
   const [newCategory, setNewCategory] = useState({
     name: "",
@@ -179,6 +183,7 @@ export default function AdminDashboard() {
     subcategoryName: "",
     hasVariants: false,
     price: 0,
+    memberPrice: 0,
     variants: [],
     sku: "",
     barcode: "",
@@ -442,6 +447,7 @@ export default function AdminDashboard() {
         categoryId: editingProduct.categoryId || "",
         subcategoryId: editingProduct.subcategoryId || "",
         price: editingProduct.price || 0,
+        memberPrice: editingProduct.memberPrice || 0,
         hasVariants: editingProduct.hasVariants || false,
         variants: editingProduct.variants || [],
         mainImage: editingProduct.mainImage || "",
@@ -528,8 +534,62 @@ export default function AdminDashboard() {
       nickname: "",
       email: "",
       cell: "",
+      memberId: "",
       isActive: true,
     });
+    setMemberIdError("");
+  };
+
+  // Check if member ID already exists
+  const checkMemberIdExists = async (memberId, excludeCustomerId = null) => {
+    try {
+      if (!memberId.trim()) return false;
+
+      const existingCustomer = await CustomerService.getCustomerByMemberId(
+        memberId
+      );
+
+      // If editing, exclude the current customer from the check
+      if (
+        existingCustomer &&
+        excludeCustomerId &&
+        existingCustomer.id === excludeCustomerId
+      ) {
+        return false;
+      }
+
+      return !!existingCustomer;
+    } catch (error) {
+      console.error("Error checking member ID:", error);
+      return false;
+    }
+  };
+
+  // Handle member ID change with validation
+  const handleMemberIdChange = async (event) => {
+    const newMemberId = typeof event === "string" ? event : event.target.value;
+
+    setCustomerForm({
+      ...customerForm,
+      memberId: newMemberId,
+    });
+
+    if (newMemberId.trim()) {
+      const exists = await checkMemberIdExists(
+        newMemberId,
+        editingCustomer?.id
+      );
+
+      if (exists) {
+        setMemberIdError(
+          "This Member ID already exists. Please choose a different one."
+        );
+      } else {
+        setMemberIdError("");
+      }
+    } else {
+      setMemberIdError("");
+    }
   };
 
   const handleSaveCustomer = async (e) => {
@@ -540,16 +600,43 @@ export default function AdminDashboard() {
       return;
     }
 
+    // Check if there's a member ID error
+    if (memberIdError) {
+      alert("Please fix the Member ID error before saving.");
+      return;
+    }
+
     try {
       setIsCustomerSaving(true);
-      if (editingCustomer) {
-        // Validate required fields for editing too
-        if (!customerForm.name.trim() || !customerForm.nationality.trim()) {
-          alert("Please fill in all required fields (Name and Nationality)");
+
+      // Validate required fields
+      if (!customerForm.name.trim() || !customerForm.nationality.trim()) {
+        alert("Please fill in all required fields (Name and Nationality)");
+        return;
+      }
+
+      // If member ID is provided, check for duplicates one final time
+      if (customerForm.memberId.trim()) {
+        const exists = await checkMemberIdExists(
+          customerForm.memberId,
+          editingCustomer?.id
+        );
+
+        if (exists) {
+          alert(
+            "This Member ID already exists. Please choose a different one."
+          );
           return;
         }
+      }
 
-        await CustomerService.updateCustomer(editingCustomer.id, customerForm);
+      if (editingCustomer) {
+        // Create customer data with memberId as customerId
+        const customerData = {
+          ...customerForm,
+          customerId: customerForm.memberId || customerForm.customerId,
+        };
+        await CustomerService.updateCustomer(editingCustomer.id, customerData);
         setEditingCustomer(null);
         // Reset form after editing
         setCustomerForm({
@@ -559,16 +646,17 @@ export default function AdminDashboard() {
           nickname: "",
           email: "",
           cell: "",
+          memberId: "",
           isActive: true,
         });
+        setMemberIdError("");
       } else {
-        // Validate required fields
-        if (!customerForm.name.trim() || !customerForm.nationality.trim()) {
-          alert("Please fill in all required fields (Name and Nationality)");
-          return;
-        }
-
-        await CustomerService.createCustomer(customerForm);
+        // Create customer data with memberId as customerId
+        const customerData = {
+          ...customerForm,
+          customerId: customerForm.memberId,
+        };
+        await CustomerService.createCustomer(customerData);
         handleCancelAddCustomer();
       }
       await loadDashboardData();
@@ -661,25 +749,117 @@ export default function AdminDashboard() {
     });
   };
 
+  const toggleVariantExpansion = (productId) => {
+    setExpandedVariants((prev) => {
+      const next = new Set(prev);
+      if (next.has(productId)) {
+        next.delete(productId);
+      } else {
+        next.add(productId);
+      }
+      return next;
+    });
+  };
+
   // Product handlers
   const handleSaveProduct = async (e) => {
     e.preventDefault(); // Prevent form reload
     try {
       setIsProductSaving(true);
 
+      // Helper function to upload variant option images
+      const uploadVariantImages = async (variants, productId) => {
+        const updatedVariants = [];
+
+        for (const variant of variants) {
+          const updatedOptions = [];
+
+          for (const option of variant.options) {
+            let imageUrl = option.imageUrl;
+
+            // Check if imageUrl is a blob URL that needs to be uploaded
+            if (imageUrl && imageUrl.startsWith("blob:")) {
+              try {
+                // Convert blob URL to File object
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                const file = new File(
+                  [blob],
+                  `${option.name || "option"}_${option.id}.jpg`,
+                  { type: "image/jpeg" }
+                );
+
+                // Upload to Firebase Storage
+                const imagePath = `products/${productId}/variants/${variant.id}/${file.name}`;
+                imageUrl = await CategoryService.uploadImage(file, imagePath);
+                console.log(
+                  `Uploaded variant image: ${imagePath} -> ${imageUrl}`
+                );
+              } catch (uploadError) {
+                console.error("Error uploading variant image:", uploadError);
+                // Keep the blob URL as fallback
+              }
+            }
+
+            updatedOptions.push({
+              ...option,
+              imageUrl: imageUrl,
+              image: null, // Remove File objects
+            });
+          }
+
+          updatedVariants.push({
+            ...variant,
+            options: updatedOptions,
+          });
+        }
+
+        return updatedVariants;
+      };
+
       if (editingProduct) {
         // Handle editing existing product
+        let processedVariants = [];
+
         if (productForm.hasVariants && variants.length > 0) {
           productForm.hasVariants = true;
-          productForm.variants = variants;
+          // Upload variant images before saving
+          processedVariants = await uploadVariantImages(
+            variants,
+            editingProduct.productId
+          );
+          productForm.variants = processedVariants;
         } else {
           productForm.hasVariants = false;
           productForm.variants = [];
         }
 
+        const cleanProductData = {
+          name: productForm.name,
+          description: productForm.description,
+          categoryId: productForm.categoryId,
+          categoryName: productForm.categoryName,
+          subcategoryId: productForm.subcategoryId,
+          subcategoryName: productForm.subcategoryName,
+          hasVariants: productForm.hasVariants,
+          price: productForm.price || 0,
+          memberPrice: productForm.memberPrice || 0,
+          variants: processedVariants,
+          sku: productForm.sku,
+          barcode: productForm.barcode,
+          supplier: productForm.supplier,
+          isActive: productForm.isActive,
+          isFeatured: productForm.isFeatured,
+          tags: productForm.tags || [],
+          notes: productForm.notes,
+          textColor: productForm.textColor,
+          backgroundImage: productForm.backgroundImage,
+          backgroundFit: productForm.backgroundFit,
+        };
+
         await ProductService.updateProduct(
           editingProduct.id,
-          productForm,
+          cleanProductData,
           productBackgroundImageFile
         );
         setEditingProduct(null);
@@ -693,6 +873,7 @@ export default function AdminDashboard() {
           subcategoryName: "",
           hasVariants: false,
           price: 0,
+          memberPrice: 0,
           variants: [],
           sku: "",
           barcode: "",
@@ -708,18 +889,49 @@ export default function AdminDashboard() {
           textColor: "#000000",
         });
       } else {
-        // Handle adding new product
+        // Handle adding new product - generate temporary product ID for image uploads
+        const tempProductId = `PRD-${Date.now()}`;
+        let processedVariants = [];
+
         if (hasVariants && variants.length > 0) {
           newProduct.hasVariants = true;
-          newProduct.variants = variants;
+          // Upload variant images before saving
+          processedVariants = await uploadVariantImages(
+            variants,
+            tempProductId
+          );
+          newProduct.variants = processedVariants;
         } else {
           newProduct.hasVariants = false;
           newProduct.variants = [];
         }
 
+        // Create a clean product data object without File objects
+        const cleanProductData = {
+          name: newProduct.name,
+          description: newProduct.description,
+          categoryId: newProduct.categoryId,
+          categoryName: newProduct.categoryName,
+          subcategoryId: newProduct.subcategoryId,
+          subcategoryName: newProduct.subcategoryName,
+          hasVariants: newProduct.hasVariants,
+          price: newProduct.price || 0,
+          memberPrice: newProduct.memberPrice || 0,
+          variants: processedVariants, // Use already processed variants
+          sku: newProduct.sku,
+          barcode: newProduct.barcode,
+          supplier: newProduct.supplier,
+          isActive: newProduct.isActive,
+          isFeatured: newProduct.isFeatured,
+          tags: newProduct.tags || [],
+          notes: newProduct.notes,
+          textColor: newProduct.textColor,
+          backgroundFit: newProduct.backgroundFit,
+        };
+
         const imageFiles = productImageFile ? [productImageFile] : [];
         await ProductService.createProduct(
-          newProduct,
+          cleanProductData,
           imageFiles,
           productBackgroundImageFile || null
         );
@@ -732,6 +944,7 @@ export default function AdminDashboard() {
           subcategoryName: "",
           hasVariants: false,
           price: 0,
+          memberPrice: 0,
           variants: [],
           barcode: "",
           supplier: "",
@@ -1784,11 +1997,16 @@ export default function AdminDashboard() {
                                         nickname: customer.nickname || "",
                                         email: customer.email || "",
                                         cell: customer.cell || "",
+                                        memberId:
+                                          customer.memberId ||
+                                          customer.customerId ||
+                                          "",
                                         isActive:
                                           customer.isActive !== undefined
                                             ? customer.isActive
                                             : true,
                                       });
+                                      setMemberIdError("");
                                       setEditingCustomer(customer);
                                     }}
                                     className="text-green-600 hover:text-green-900"
@@ -2657,6 +2875,10 @@ export default function AdminDashboard() {
                                                               expandedProducts.has(
                                                                 product.id
                                                               );
+                                                            const isVariantExpanded =
+                                                              expandedVariants.has(
+                                                                product.id
+                                                              );
 
                                                             return (
                                                               <div
@@ -2664,7 +2886,51 @@ export default function AdminDashboard() {
                                                                 className="bg-white rounded-lg border border-gray-200/70 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
                                                               >
                                                                 {/* Product Level */}
-                                                                <div className="flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30">
+                                                                <div
+                                                                  className={`flex items-center space-x-3 p-4 hover:bg-gradient-to-r hover:from-gray-50 hover:to-green-50/30 ${
+                                                                    product.hasVariants
+                                                                      ? "cursor-pointer"
+                                                                      : ""
+                                                                  }`}
+                                                                  onClick={(
+                                                                    e
+                                                                  ) => {
+                                                                    if (
+                                                                      product.hasVariants
+                                                                    ) {
+                                                                      e.stopPropagation();
+                                                                      toggleVariantExpansion(
+                                                                        product.id
+                                                                      );
+                                                                    }
+                                                                  }}
+                                                                >
+                                                                  {/* Expansion Arrow for Products with Variants */}
+                                                                  {product.hasVariants && (
+                                                                    <div
+                                                                      className={`transform transition-transform duration-200 ${
+                                                                        isVariantExpanded
+                                                                          ? "rotate-90"
+                                                                          : ""
+                                                                      }`}
+                                                                    >
+                                                                      <svg
+                                                                        className="w-4 h-4 text-gray-500"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        viewBox="0 0 24 24"
+                                                                      >
+                                                                        <path
+                                                                          strokeLinecap="round"
+                                                                          strokeLinejoin="round"
+                                                                          strokeWidth={
+                                                                            2
+                                                                          }
+                                                                          d="M9 5l7 7-7 7"
+                                                                        />
+                                                                      </svg>
+                                                                    </div>
+                                                                  )}
                                                                   <div className="flex items-center space-x-3">
                                                                     <div className="relative">
                                                                       {product.mainImage ? (
@@ -2909,6 +3175,207 @@ export default function AdminDashboard() {
                                                                     </button>
                                                                   </div>
                                                                 </div>
+
+                                                                {/* Variant Expansion Section */}
+                                                                {product.hasVariants &&
+                                                                  isVariantExpanded &&
+                                                                  product.variants &&
+                                                                  product
+                                                                    .variants
+                                                                    .length >
+                                                                    0 && (
+                                                                    <div className="border-t border-gray-100 bg-gray-50/50 p-4 ml-8">
+                                                                      <div className="space-y-3">
+                                                                        <div className="flex items-center space-x-2 mb-3">
+                                                                          <svg
+                                                                            className="w-4 h-4 text-blue-600"
+                                                                            fill="none"
+                                                                            stroke="currentColor"
+                                                                            viewBox="0 0 24 24"
+                                                                          >
+                                                                            <path
+                                                                              strokeLinecap="round"
+                                                                              strokeLinejoin="round"
+                                                                              strokeWidth={
+                                                                                2
+                                                                              }
+                                                                              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                                                                            />
+                                                                          </svg>
+                                                                          <span className="text-sm font-medium text-gray-700">
+                                                                            Product
+                                                                            Variants
+                                                                            (
+                                                                            {
+                                                                              product
+                                                                                .variants
+                                                                                .length
+                                                                            }
+                                                                            )
+                                                                          </span>
+                                                                        </div>
+
+                                                                        <div className="space-y-4">
+                                                                          {product.variants.map(
+                                                                            (
+                                                                              variant,
+                                                                              variantIndex
+                                                                            ) => {
+                                                                              // Debug the variant structure
+                                                                              console.log(
+                                                                                "Variant data:",
+                                                                                variant
+                                                                              );
+
+                                                                              // Handle different possible data structures for variant name
+                                                                              const variantName =
+                                                                                variant.name ||
+                                                                                variant.title ||
+                                                                                variant.variantName ||
+                                                                                `Variant ${
+                                                                                  variantIndex +
+                                                                                  1
+                                                                                }`;
+
+                                                                              return (
+                                                                                <div
+                                                                                  key={
+                                                                                    variantIndex
+                                                                                  }
+                                                                                  className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                                                                                >
+                                                                                  {/* Variant Header */}
+                                                                                  <div className="mb-3">
+                                                                                    <h6 className="text-sm font-semibold text-gray-800 mb-1">
+                                                                                      {
+                                                                                        variantName
+                                                                                      }
+                                                                                    </h6>
+                                                                                  </div>
+
+                                                                                  {/* Variant Options Grid */}
+                                                                                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                                                                                    {variant.options &&
+                                                                                    variant
+                                                                                      .options
+                                                                                      .length >
+                                                                                      0 ? (
+                                                                                      variant.options.map(
+                                                                                        (
+                                                                                          option,
+                                                                                          optionIndex
+                                                                                        ) => {
+                                                                                          console.log(
+                                                                                            "Option data:",
+                                                                                            option
+                                                                                          );
+
+                                                                                          const optionName =
+                                                                                            option.name ||
+                                                                                            option.title ||
+                                                                                            option.size ||
+                                                                                            `Option ${
+                                                                                              optionIndex +
+                                                                                              1
+                                                                                            }`;
+                                                                                          const optionPrice =
+                                                                                            option.price ||
+                                                                                            option.cost ||
+                                                                                            option.amount ||
+                                                                                            0;
+                                                                                          const optionImage =
+                                                                                            option.image ||
+                                                                                            option.imageUrl ||
+                                                                                            option.img ||
+                                                                                            option.photo;
+
+                                                                                          return (
+                                                                                            <div
+                                                                                              key={
+                                                                                                optionIndex
+                                                                                              }
+                                                                                              className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm hover:shadow-md transition-all duration-200"
+                                                                                            >
+                                                                                              <div className="flex items-center space-x-3">
+                                                                                                {optionImage && (
+                                                                                                  <img
+                                                                                                    src={
+                                                                                                      optionImage
+                                                                                                    }
+                                                                                                    alt={
+                                                                                                      optionName
+                                                                                                    }
+                                                                                                    className="w-10 h-10 object-cover rounded-md border border-gray-200"
+                                                                                                  />
+                                                                                                )}
+
+                                                                                                <div className="flex-1 min-w-0">
+                                                                                                  <div className="flex items-center justify-between">
+                                                                                                    <h6 className="text-sm font-medium text-gray-900 truncate">
+                                                                                                      {
+                                                                                                        optionName
+                                                                                                      }
+                                                                                                    </h6>
+                                                                                                    <span className="text-sm font-medium text-blue-600">
+                                                                                                      {(
+                                                                                                        optionPrice ||
+                                                                                                        0
+                                                                                                      ).toFixed(
+                                                                                                        2
+                                                                                                      )}
+                                                                                                    </span>
+                                                                                                  </div>
+                                                                                                </div>
+                                                                                              </div>
+                                                                                            </div>
+                                                                                          );
+                                                                                        }
+                                                                                      )
+                                                                                    ) : (
+                                                                                      // Fallback: show variant itself if no options
+                                                                                      <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                                                                                        <div className="flex items-center space-x-3">
+                                                                                          {variant.image && (
+                                                                                            <img
+                                                                                              src={
+                                                                                                variant.image
+                                                                                              }
+                                                                                              alt={
+                                                                                                variantName
+                                                                                              }
+                                                                                              className="w-10 h-10 object-cover rounded-md border border-gray-200"
+                                                                                            />
+                                                                                          )}
+
+                                                                                          <div className="flex-1 min-w-0">
+                                                                                            <div className="flex items-center justify-between">
+                                                                                              <h6 className="text-sm font-medium text-gray-900 truncate">
+                                                                                                {
+                                                                                                  variantName
+                                                                                                }
+                                                                                              </h6>
+                                                                                              <span className="text-sm font-medium text-blue-600">
+                                                                                                {(
+                                                                                                  variant.price ||
+                                                                                                  0
+                                                                                                ).toFixed(
+                                                                                                  2
+                                                                                                )}
+                                                                                              </span>
+                                                                                            </div>
+                                                                                          </div>
+                                                                                        </div>
+                                                                                      </div>
+                                                                                    )}
+                                                                                  </div>
+                                                                                </div>
+                                                                              );
+                                                                            }
+                                                                          )}
+                                                                        </div>
+                                                                      </div>
+                                                                    </div>
+                                                                  )}
                                                               </div>
                                                             );
                                                           }
@@ -3651,6 +4118,28 @@ export default function AdminDashboard() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Member ID *
+                      </label>
+                      <input
+                        type="text"
+                        value={customerForm.memberId}
+                        onChange={handleMemberIdChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          memberIdError
+                            ? "border-red-300 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-green-500"
+                        }`}
+                        required
+                      />
+                      {memberIdError && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {memberIdError}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
                         Name *
                       </label>
                       <input
@@ -3733,6 +4222,31 @@ export default function AdminDashboard() {
                         }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                       />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Member ID
+                        <span className="text-gray-500 text-xs ml-1">
+                          (Optional - auto-generated if empty)
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={customerForm.memberId}
+                        onChange={(e) => handleMemberIdChange(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          memberIdError
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-green-500"
+                        }`}
+                        placeholder="e.g., CK-0001 or leave empty for auto-generation"
+                      />
+                      {memberIdError && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {memberIdError}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -3817,7 +4331,9 @@ export default function AdminDashboard() {
                         email: "",
                         cell: "",
                         isActive: true,
+                        memberId: "",
                       });
+                      setMemberIdError("");
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -3916,6 +4432,28 @@ export default function AdminDashboard() {
                           </>
                         )}
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Member ID *
+                      </label>
+                      <input
+                        type="text"
+                        value={customerForm.memberId}
+                        onChange={handleMemberIdChange}
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                          memberIdError
+                            ? "border-red-300 focus:ring-red-500"
+                            : "border-gray-300 focus:ring-green-500"
+                        }`}
+                        required
+                      />
+                      {memberIdError && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {memberIdError}
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -4020,7 +4558,9 @@ export default function AdminDashboard() {
                           email: "",
                           cell: "",
                           isActive: true,
+                          memberId: "",
                         });
+                        setMemberIdError("");
                       }}
                       disabled={isCustomerSaving}
                       className={`px-4 py-2 text-sm font-medium text-gray-700 rounded-md ${
@@ -5915,10 +6455,10 @@ export default function AdminDashboard() {
 
                   {/* Simple Product Fields */}
                   {!hasVariants && (
-                    <div>
+                    <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Price (฿) *
+                          Regular Price (฿) *
                         </label>
                         <input
                           type="number"
@@ -5929,6 +6469,25 @@ export default function AdminDashboard() {
                             setNewProduct({
                               ...newProduct,
                               price: parseFloat(e.target.value) || "",
+                            })
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Member Price (฿) *
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={newProduct.memberPrice}
+                          onChange={(e) =>
+                            setNewProduct({
+                              ...newProduct,
+                              memberPrice: parseFloat(e.target.value) || "",
                             })
                           }
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -6633,25 +7192,47 @@ export default function AdminDashboard() {
 
                   {/* Simple Product Price */}
                   {!productForm.hasVariants && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Price (฿) *
-                      </label>
-                      <input
-                        type="number"
-                        value={productForm.price || ""}
-                        onChange={(e) =>
-                          setProductForm({
-                            ...productForm,
-                            price: parseFloat(e.target.value) || 0,
-                          })
-                        }
-                        step="0.01"
-                        min="0"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                        placeholder="0.00"
-                        required
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Regular Price (฿) *
+                        </label>
+                        <input
+                          type="number"
+                          value={productForm.price || ""}
+                          onChange={(e) =>
+                            setProductForm({
+                              ...productForm,
+                              price: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="0.00"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Member Price (฿) *
+                        </label>
+                        <input
+                          type="number"
+                          value={productForm.memberPrice || ""}
+                          onChange={(e) =>
+                            setProductForm({
+                              ...productForm,
+                              memberPrice: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                          step="0.01"
+                          min="0"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          placeholder="0.00"
+                          required
+                        />
+                      </div>
                     </div>
                   )}
 

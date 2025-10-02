@@ -110,26 +110,16 @@ export class CustomerService {
     }
   }
 
-  // Get customer by member ID or customer ID
+  // Get customer by member ID (stored as customerId)
   static async getCustomerByMemberId(memberId) {
     try {
-      // First try to find by memberId field
-      let q = query(
+      // Search by customerId field only (Member ID is stored as customerId)
+      const q = query(
         collection(db, CUSTOMERS_COLLECTION),
-        where("memberId", "==", memberId),
+        where("customerId", "==", memberId),
         limit(1)
       );
-      let querySnapshot = await getDocs(q);
-
-      // If not found, try by customerId field
-      if (querySnapshot.empty) {
-        q = query(
-          collection(db, CUSTOMERS_COLLECTION),
-          where("customerId", "==", memberId),
-          limit(1)
-        );
-        querySnapshot = await getDocs(q);
-      }
+      const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         const doc = querySnapshot.docs[0];
