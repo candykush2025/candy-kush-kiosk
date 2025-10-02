@@ -25,6 +25,7 @@ import { db, storage } from "./firebase";
 const CATEGORIES_COLLECTION = "categories";
 const SUBCATEGORIES_COLLECTION = "subcategories";
 const PRODUCTS_COLLECTION = "products";
+const CATEGORY_ORDER_COLLECTION = "CategoryOrder"; // holds single doc 'current' with array field 'order'
 
 // Category Service
 export class CategoryService {
@@ -136,11 +137,63 @@ export class CategoryService {
           updatedAt: data.updatedAt?.toDate(),
         });
       });
-
+      // Apply CategoryOrder if exists
+      try {
+        const orderIds = await this.getCategoryOrder();
+        if (orderIds.length) {
+          const position = new Map(orderIds.map((id, idx) => [id, idx]));
+          categories.sort((a, b) => {
+            const pa = position.has(a.id)
+              ? position.get(a.id)
+              : Number.MAX_SAFE_INTEGER;
+            const pb = position.has(b.id)
+              ? position.get(b.id)
+              : Number.MAX_SAFE_INTEGER;
+            if (pa !== pb) return pa - pb;
+            return (a.name || "").localeCompare(b.name || "");
+          });
+        }
+      } catch (orderErr) {
+        console.warn("CategoryOrder not applied:", orderErr?.message);
+      }
       return categories;
     } catch (error) {
       console.error("Error fetching categories:", error);
       throw error;
+    }
+  }
+
+  // Get saved category order (array of category document ids)
+  static async getCategoryOrder() {
+    try {
+      const orderDoc = await getDoc(
+        doc(db, CATEGORY_ORDER_COLLECTION, "current")
+      );
+      if (!orderDoc.exists()) return [];
+      const data = orderDoc.data();
+      return Array.isArray(data.order) ? data.order : [];
+    } catch (e) {
+      console.error("Failed to get category order", e);
+      return [];
+    }
+  }
+
+  // Save category order
+  static async saveCategoryOrder(orderIds = []) {
+    try {
+      const refDoc = doc(db, CATEGORY_ORDER_COLLECTION, "current");
+      // Upsert document using setDoc (import add if needed) - reuse updateDoc fallback
+      // Prefer setDoc to ensure creation
+      const { setDoc } = await import("firebase/firestore");
+      await setDoc(
+        refDoc,
+        { order: orderIds, updatedAt: serverTimestamp() },
+        { merge: true }
+      );
+      return true;
+    } catch (e) {
+      console.error("Failed to save category order", e);
+      throw e;
     }
   }
 

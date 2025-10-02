@@ -1,5 +1,19 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import AdminAuthGuard from "../../components/AdminAuthGuard";
 import { CustomerService } from "../../lib/customerService";
@@ -51,6 +65,131 @@ export default function AdminDashboard() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [editingCashback, setEditingCashback] = useState(null);
+  // Category Order tab state
+  const [orderList, setOrderList] = useState([]); // array of category ids
+  const [orderDirty, setOrderDirty] = useState(false);
+  const [savingCategoryOrder, setSavingCategoryOrder] = useState(false);
+  const [orderingCategories, setOrderingCategories] = useState(false);
+
+  // Initialize order list when categories loaded
+  useEffect(() => {
+    if (categories.length && !orderDirty && !orderList.length) {
+      setOrderList(categories.map((c) => c.id));
+    }
+  }, [categories]);
+
+  // DnD Sortable item
+  function SortableCategoryItem({ id, cat, index }) {
+    const {
+      attributes,
+      listeners,
+      setNodeRef,
+      transform,
+      transition,
+      isDragging,
+    } = useSortable({ id });
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+    };
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`group flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm hover:shadow-md transition ${
+          isDragging ? "ring-2 ring-indigo-400 opacity-90" : ""
+        }`}
+      >
+        <button
+          {...listeners}
+          {...attributes}
+          className="cursor-grab active:cursor-grabbing p-2 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition"
+          title="Drag to reorder"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M10 6h.01M14 6h.01M10 12h.01M14 12h.01M10 18h.01M14 18h.01"
+            />
+          </svg>
+        </button>
+        {cat?.image && (
+          <img
+            src={cat.image}
+            alt={cat.name}
+            className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+          />
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 truncate">
+            {cat?.name || id}
+          </p>
+          <p className="text-xs text-gray-400">{cat?.categoryId}</p>
+        </div>
+        <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
+          {index + 1}
+        </span>
+      </div>
+    );
+  }
+
+  function CategoryOrderList({
+    categories,
+    orderList,
+    setOrderList,
+    setOrderDirty,
+    ordering,
+  }) {
+    const sensors = useSensors(
+      useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+    );
+    if (ordering)
+      return <div className="text-sm text-gray-500">Loading categories...</div>;
+    if (!orderList.length)
+      return <div className="text-sm text-gray-500">No categories.</div>;
+    const catMap = new Map(categories.map((c) => [c.id, c]));
+    function handleDragEnd(event) {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      setOrderList((prev) => {
+        const oldIndex = prev.indexOf(active.id);
+        const newIndex = prev.indexOf(over.id);
+        const reordered = arrayMove(prev, oldIndex, newIndex);
+        setOrderDirty(true);
+        return reordered;
+      });
+    }
+    return (
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={orderList}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-3">
+            {orderList.map((id, idx) => (
+              <SortableCategoryItem
+                key={id}
+                id={id}
+                cat={catMap.get(id)}
+                index={idx}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    );
+  }
 
   // Add/Edit states
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -1491,6 +1630,18 @@ export default function AdminDashboard() {
               >
                 <Star className="w-5 h-5 mr-3" />
                 Cashback
+              </button>
+
+              <button
+                onClick={() => setActiveTab("categoryOrder")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "categoryOrder"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <BarChart className="w-5 h-5 mr-3" />
+                Category Order
               </button>
 
               <button
@@ -3971,6 +4122,78 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Category Order Tab */}
+              {activeTab === "categoryOrder" && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Category Order
+                      </h3>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={async () => {
+                            setOrderingCategories(true);
+                            try {
+                              const latest =
+                                await CategoryService.getAllCategories();
+                              setOrderList(latest.map((c) => c.id));
+                              setOrderDirty(false);
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setOrderingCategories(false);
+                            }
+                          }}
+                          className="px-3 py-1.5 text-sm rounded-md border border-gray-300 hover:bg-gray-50"
+                        >
+                          Reset
+                        </button>
+                        <button
+                          disabled={savingCategoryOrder || !orderDirty}
+                          onClick={async () => {
+                            try {
+                              setSavingCategoryOrder(true);
+                              await CategoryService.saveCategoryOrder(
+                                orderList
+                              );
+                              setOrderDirty(false);
+                            } catch (e) {
+                              console.error(e);
+                            } finally {
+                              setSavingCategoryOrder(false);
+                            }
+                          }}
+                          className={`px-4 py-1.5 text-sm rounded-md font-medium text-white transition ${
+                            savingCategoryOrder || !orderDirty
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-indigo-600 hover:bg-indigo-700"
+                          }`}
+                        >
+                          {savingCategoryOrder ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Drag with the ▲ ▼ buttons to reorder categories. Click
+                      Save to persist.
+                    </p>
+                    <CategoryOrderList
+                      categories={categories}
+                      orderList={orderList}
+                      setOrderList={setOrderList}
+                      setOrderDirty={setOrderDirty}
+                      ordering={orderingCategories}
+                    />
+                    {orderDirty && (
+                      <p className="mt-2 text-xs text-amber-600">
+                        Unsaved changes
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
