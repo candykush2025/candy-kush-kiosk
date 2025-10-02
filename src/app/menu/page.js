@@ -616,6 +616,8 @@ export default function MenuPage() {
     }
   };
 
+  // Removed scroll buttons per request; panes will use native scroll.
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -630,169 +632,191 @@ export default function MenuPage() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-gray-50 font-['Poppins']"
-      style={{
-        backgroundImage: "url(/background.jpg)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-      }}
-    >
-      {/* Header */}
-      <KioskHeader
-        onBack={handleBack}
-        onCart={handleCart}
-        cart={cart}
-        showCart={true}
-        showBack={true}
-      />
+    <>
+      <div
+        className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
+        style={{
+          backgroundImage: "url(/background.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* Header */}
+        <KioskHeader
+          onBack={handleBack}
+          onCart={handleCart}
+          cart={cart}
+          showCart={true}
+          showBack={true}
+        />
 
-      {/* Customer Section */}
-      <CustomerSection customer={customer} />
+        {/* Customer Section */}
+        <CustomerSection customer={customer} />
 
-      {/* Main Content - Two Floating Windows */}
-      <div className="p-6 flex gap-6 overflow-visible">
-        {/* First Floating Window - Categories (20% width) */}
-        <div
-          ref={firstWindowRef}
-          className="w-1/5 bg-white rounded-3xl shadow-lg"
-          style={{ height: "fit-content", overflow: "visible" }}
-        >
-          <div className="relative" style={{ overflow: "visible" }}>
-            {categories.map((category, index) => (
-              <div key={category.id}>
-                <div
-                  onClick={() => handleCategorySelect(category)}
-                  className={`cursor-pointer p-4 transition-all duration-300 hover:bg-gray-50 ${
-                    selectedCategory === category.id
-                      ? "bg-green-50 border-2 border-green-500 border-b-8 border-b-green-600 shadow-xl transform -translate-x-3 scale-110"
-                      : "hover:bg-gray-50 hover:shadow-md"
-                  }`}
-                  style={{
-                    transformOrigin: "left center",
-                    zIndex: selectedCategory === category.id ? 50 : 1,
-                    position: "relative",
-                    borderRadius:
-                      selectedCategory === category.id ? "12px" : "8px",
-                  }}
-                >
-                  {/* Category Image - Smaller size */}
-                  {category.image && (
-                    <div
-                      className={`mb-3 relative ${
-                        selectedCategory === category.id
-                          ? "w-full aspect-[4/3]"
-                          : "w-3/4 mx-auto aspect-square"
-                      }`}
-                    >
-                      <Image
-                        src={category.image}
-                        alt={category.name}
-                        fill
-                        className={`rounded-lg transition-all duration-300 ${
+        {/* Main Content - Two Floating Windows (fill remaining height) */}
+        <div className="flex-1 min-h-0 p-6 flex gap-6 overflow-hidden">
+          {/* Left Pane: Categories */}
+          <div
+            ref={firstWindowRef}
+            className="w-1/5 h-full bg-white rounded-3xl shadow-lg flex flex-col"
+          >
+            <div
+              id="kiosk-left-list"
+              className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4"
+            >
+              {categories.map((category, index) => (
+                <div key={category.id}>
+                  <div
+                    onClick={() => handleCategorySelect(category)}
+                    className={`cursor-pointer p-4 transition-all duration-300 hover:bg-gray-50 ${
+                      selectedCategory === category.id
+                        ? "bg-green-50 border-2 border-green-500 border-b-8 border-b-green-600 shadow-xl transform -translate-x-3 scale-110"
+                        : "hover:bg-gray-50 hover:shadow-md"
+                    }`}
+                    style={{
+                      transformOrigin: "left center",
+                      zIndex: selectedCategory === category.id ? 50 : 1,
+                      position: "relative",
+                      borderRadius:
+                        selectedCategory === category.id ? "12px" : "8px",
+                    }}
+                  >
+                    {/* Category Image - Smaller size */}
+                    {category.image && (
+                      <div
+                        className={`mb-3 relative ${
                           selectedCategory === category.id
-                            ? "object-contain"
-                            : "object-contain"
+                            ? "w-full aspect-[4/3]"
+                            : "w-3/4 mx-auto aspect-square"
+                        }`}
+                      >
+                        <Image
+                          src={category.image}
+                          alt={category.name}
+                          fill
+                          className={`rounded-lg transition-all duration-300 ${
+                            selectedCategory === category.id
+                              ? "object-contain"
+                              : "object-contain"
+                          }`}
+                          style={{
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Category Name */}
+                    <div className="text-center">
+                      <h4
+                        className={`font-semibold transition-all duration-300 ${
+                          selectedCategory === category.id
+                            ? "text-base font-bold"
+                            : "text-sm"
                         }`}
                         style={{
-                          objectFit: "contain",
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  {/* Category Name */}
-                  <div className="text-center">
-                    <h4
-                      className={`font-semibold transition-all duration-300 ${
-                        selectedCategory === category.id
-                          ? "text-base font-bold"
-                          : "text-sm"
-                      }`}
-                      style={{
-                        color:
-                          selectedCategory === category.id
-                            ? "#22c55e"
-                            : "#959595",
-                      }}
-                    >
-                      {translateCategoryName(category.name)}
-                    </h4>
-                  </div>
-                </div>
-                {/* Separator */}
-                {index < categories.length - 1 && (
-                  <div className="border-b border-gray-200"></div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Second Floating Window - Subcategories and Products */}
-        <div
-          className="bg-white rounded-3xl shadow-lg overflow-hidden"
-          style={{
-            height: firstWindowHeight
-              ? `${firstWindowHeight}px`
-              : "fit-content",
-            width: "calc(75% - 1.5rem)",
-          }}
-        >
-          {selectedCategory ? (
-            <div className="p-6 overflow-y-auto">
-              {/* Subcategories */}
-              {getFilteredSubcategories().length > 0 && (
-                <div className="mb-6">
-                  <div className="space-y-4 mb-8">
-                    {getFilteredSubcategories().map((subcategory) => (
-                      <div
-                        key={subcategory.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => {
-                          // Do nothing - subcategories don't navigate
+                          color:
+                            selectedCategory === category.id
+                              ? "#22c55e"
+                              : "#959595",
                         }}
                       >
-                        {/* Subcategory image hidden for now */}
+                        {translateCategoryName(category.name)}
+                      </h4>
+                    </div>
+                  </div>
+                  {/* Separator */}
+                  {index < categories.length - 1 && (
+                    <div className="border-b border-dashed border-gray-200"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Right Pane: Subcategories + Products */}
+          <div className="flex-1 h-full bg-white rounded-3xl shadow-lg flex flex-col">
+            {selectedCategory ? (
+              <div
+                id="kiosk-right-list"
+                className="p-6 overflow-y-auto flex-1 custom-scrollbar"
+              >
+                {/* Subcategories */}
+                {getFilteredSubcategories().length > 0 && (
+                  <div className="mb-8 space-y-4">
+                    {getFilteredSubcategories().map((subcategory) => (
+                      <div key={subcategory.id} className="pb-2">
                         <h5
-                          className="font-medium text-lg text-start"
+                          className="font-medium text-lg text-start mb-2"
                           style={{ color: "#959595" }}
                         >
                           {subcategory.name}
                         </h5>
+                        <div className="grid grid-cols-4 gap-4">
+                          {getFilteredProducts()
+                            .filter((p) => p.subcategoryId === subcategory.id)
+                            .map((product) => (
+                              <div
+                                key={product.id}
+                                className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
+                                  selectedProduct?.id === product.id
+                                    ? "transform scale-105 shadow-lg border-green-500"
+                                    : "border-gray-100"
+                                } `}
+                                onClick={() => handleProductSelect(product)}
+                              >
+                                {product.mainImage && (
+                                  <div className="w-full aspect-[3/4] mb-2 relative">
+                                    <Image
+                                      src={product.mainImage}
+                                      alt={product.name}
+                                      fill
+                                      className="object-contain rounded-lg"
+                                    />
+                                    {getProductCartQuantity(product) > 0 && (
+                                      <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                                        {getProductCartQuantity(product)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="text-center space-y-1">
+                                  <div className="text-xs font-medium text-gray-500 truncate">
+                                    {product.name}
+                                  </div>
+                                  <div className="text-sm font-semibold text-green-600">
+                                    {getProductPriceDisplay(product)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-
-              {/* Products */}
-              {getFilteredProducts().length > 0 && (
-                <div>
-                  <div className="grid grid-cols-3 gap-6">
-                    {getFilteredProducts().map((product) => (
+                )}
+                {/* Products without subcategory */}
+                <div className="grid grid-cols-4 gap-4">
+                  {getFilteredProducts()
+                    .filter((p) => !p.subcategoryId)
+                    .map((product) => (
                       <div
                         key={product.id}
-                        className={`cursor-pointer hover:shadow-md transition-all duration-300 ${
+                        className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
                           selectedProduct?.id === product.id
-                            ? "transform scale-105 shadow-lg border-2 border-green-500"
-                            : ""
-                        }`}
+                            ? "transform scale-105 shadow-lg border-green-500"
+                            : "border-gray-100"
+                        } `}
                         onClick={() => handleProductSelect(product)}
-                        style={{
-                          borderRadius: "0px",
-                        }}
                       >
                         {product.mainImage && (
-                          <div className="w-4/5 mx-auto aspect-[3/4] mb-2 relative">
+                          <div className="w-full aspect-[3/4] mb-2 relative">
                             <Image
                               src={product.mainImage}
                               alt={product.name}
                               fill
-                              className="object-contain rounded-2xl"
+                              className="object-contain rounded-lg"
                             />
-                            {/* Cart Quantity Badge */}
                             {getProductCartQuantity(product) > 0 && (
                               <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold shadow-lg">
                                 {getProductCartQuantity(product)}
@@ -800,90 +824,83 @@ export default function MenuPage() {
                             )}
                           </div>
                         )}
-                        <div className="text-center">
-                          <h6
-                            className="font-medium text-sm mb-1"
-                            style={{ color: "#959595" }}
-                          >
+                        <div className="text-center space-y-1">
+                          <div className="text-xs font-medium text-gray-500 truncate">
                             {product.name}
-                          </h6>
-                          <p className="text-sm text-green-600 font-semibold">
+                          </div>
+                          <div className="text-sm font-semibold text-green-600">
                             {getProductPriceDisplay(product)}
-                          </p>
+                          </div>
                         </div>
                       </div>
                     ))}
-                  </div>
                 </div>
-              )}
-
-              {/* Empty state for subcategories */}
-              {getFilteredSubcategories().length === 0 &&
-                getFilteredProducts().length === 0 && (
-                  <div className="text-center py-12">
-                    <div className="text-gray-400 mb-4">
-                      <svg
-                        className="w-16 h-16 mx-auto"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1}
-                          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                        />
-                      </svg>
+                {/* Empty state */}
+                {getFilteredSubcategories().length === 0 &&
+                  getFilteredProducts().length === 0 && (
+                    <div className="text-center py-12">
+                      <div className="text-gray-400 mb-4">
+                        <svg
+                          className="w-16 h-16 mx-auto"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1}
+                            d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M7 7h10"
+                          />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-500 mb-2">
+                        No items found
+                      </h3>
+                      <p className="text-gray-400">
+                        This category doesn't have any subcategories or products
+                        yet
+                      </p>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-500 mb-2">
-                      No items found
-                    </h3>
-                    <p className="text-gray-400">
-                      This category doesn't have any subcategories or products
-                      yet
-                    </p>
-                  </div>
-                )}
-            </div>
-          ) : (
-            <div
-              className="p-6 flex items-center justify-center"
-              style={{
-                height: firstWindowHeight
-                  ? `${firstWindowHeight - 48}px`
-                  : "300px",
-              }}
-            >
-              <div className="text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg
-                    className="w-20 h-20 mx-auto"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-medium text-gray-500 mb-2">
-                  Choose a Category
-                </h3>
-                <p className="text-gray-400">
-                  Select a category from the left to view subcategories and
-                  products
-                </p>
+                  )}
               </div>
-            </div>
-          )}
+            ) : (
+              <div
+                className="p-6 flex items-center justify-center flex-1"
+                style={{ minHeight: "300px" }}
+              >
+                <div className="text-center">
+                  <div className="text-gray-400 mb-4">
+                    <svg
+                      className="w-20 h-20 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1}
+                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M7 7h10"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-500 mb-2">
+                    Choose a Category
+                  </h3>
+                  <p className="text-gray-400">
+                    Select a category from the left to view subcategories and
+                    products
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          {/* end right pane */}
         </div>
+        {/* end main content flex */}
       </div>
-
+      {/* overlays outside container to avoid clipping */}
       {/* Quantity/Variant Popup */}
       {showQuantityPopup && selectedProduct && (
         <div
@@ -1668,6 +1685,6 @@ export default function MenuPage() {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }
