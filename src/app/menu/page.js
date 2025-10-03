@@ -63,6 +63,10 @@ export default function MenuPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showBackModal, setShowBackModal] = useState(false);
 
+  // Add to cart animation states
+  const [showCartAnimation, setShowCartAnimation] = useState(false);
+  const [animationProduct, setAnimationProduct] = useState(null);
+
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -441,6 +445,18 @@ export default function MenuPage() {
       .map((option) => option.name)
       .join(", ");
 
+    // Trigger animation first
+    setAnimationProduct({
+      name: `${selectedProduct.name} (${variantDescription})`,
+      image: selectedProduct.mainImage,
+      quantity: 1,
+    });
+    setShowCartAnimation(true);
+    console.log(
+      "🎬 Add to cart animation triggered for variant:",
+      selectedProduct.name
+    );
+
     const cartItem = {
       id: `${selectedProduct.productId}_${Date.now()}`, // Unique ID for variant combinations
       name: `${selectedProduct.name} (${variantDescription})`,
@@ -457,8 +473,16 @@ export default function MenuPage() {
     setCart(newCart);
     sessionStorage.setItem("cart", JSON.stringify(newCart));
 
-    // Close popup
-    closeQuantityPopup();
+    // Close popup after animation starts
+    setTimeout(() => {
+      closeQuantityPopup();
+    }, 200);
+
+    // Hide animation after it completes
+    setTimeout(() => {
+      setShowCartAnimation(false);
+      setAnimationProduct(null);
+    }, 1000);
   };
 
   // Cart management functions from checkout page
@@ -901,6 +925,18 @@ export default function MenuPage() {
   const handleAddToCart = () => {
     resetSessionTimer(); // Reset session timer on user interaction
     if (selectedProduct) {
+      // Trigger animation first
+      setAnimationProduct({
+        name: selectedProduct.name,
+        image: selectedProduct.mainImage,
+        quantity: quantity,
+      });
+      setShowCartAnimation(true);
+      console.log(
+        "🎬 Add to cart animation triggered for:",
+        selectedProduct.name
+      );
+
       // Determine the correct price based on customer status
       let productPrice = selectedProduct.price;
       if (customer && !customer.isNoMember && selectedProduct.memberPrice) {
@@ -932,10 +968,18 @@ export default function MenuPage() {
       setCart(newCart);
       sessionStorage.setItem("cart", JSON.stringify(newCart));
 
-      // Close popup
-      setShowQuantityPopup(false);
-      setSelectedProduct(null);
-      setQuantity(1);
+      // Close popup after animation starts
+      setTimeout(() => {
+        setShowQuantityPopup(false);
+        setSelectedProduct(null);
+        setQuantity(1);
+      }, 200);
+
+      // Hide animation after it completes
+      setTimeout(() => {
+        setShowCartAnimation(false);
+        setAnimationProduct(null);
+      }, 1000);
     }
   };
 
@@ -2650,6 +2694,161 @@ export default function MenuPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add to Cart Animation */}
+      {showCartAnimation && animationProduct && (
+        <div className="fixed inset-0 pointer-events-none z-50">
+          {/* Main product item */}
+          <div
+            className="absolute"
+            style={{
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              animation:
+                "whooshToCart 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards",
+            }}
+          >
+            <div className="flex items-center bg-white rounded-lg shadow-lg border border-gray-200 p-2 min-w-[120px]">
+              {animationProduct.image && (
+                <div className="w-8 h-8 relative">
+                  <Image
+                    src={animationProduct.image}
+                    alt={animationProduct.name}
+                    fill
+                    className="object-contain rounded"
+                  />
+                </div>
+              )}
+              <div className="ml-2 text-xs font-semibold text-gray-800">
+                +{animationProduct.quantity}
+              </div>
+            </div>
+          </div>
+
+          {/* Whoosh trail effect */}
+          <div
+            className="absolute"
+            style={{
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              animation:
+                "whooshTrail 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards",
+            }}
+          >
+            <div className="flex space-x-1">
+              <div
+                className="w-2 h-2 bg-green-500 rounded-full"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="w-2 h-2 bg-green-400 rounded-full"
+                style={{ animationDelay: "0.15s" }}
+              ></div>
+              <div
+                className="w-1 h-1 bg-green-300 rounded-full"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+              <div
+                className="w-1 h-1 bg-green-200 rounded-full"
+                style={{ animationDelay: "0.25s" }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Speed lines */}
+          <div
+            className="absolute"
+            style={{
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              animation: "speedLines 0.8s ease-out forwards",
+            }}
+          >
+            <div className="space-y-1">
+              <div
+                className="h-px bg-gradient-to-r from-transparent via-green-500 to-transparent w-20"
+                style={{ animationDelay: "0.1s" }}
+              ></div>
+              <div
+                className="h-px bg-gradient-to-r from-transparent via-green-400 to-transparent w-16"
+                style={{ animationDelay: "0.2s" }}
+              ></div>
+              <div
+                className="h-px bg-gradient-to-r from-transparent via-green-300 to-transparent w-12"
+                style={{ animationDelay: "0.3s" }}
+              ></div>
+            </div>
+          </div>
+
+          <style jsx>{`
+            @keyframes whooshToCart {
+              0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+              }
+              20% {
+                transform: translate(-30%, -60%) scale(0.9);
+                opacity: 1;
+              }
+              60% {
+                transform: translate(calc(45vw - 50%), calc(-45vh - 50%))
+                  scale(0.6);
+                opacity: 0.8;
+              }
+              100% {
+                transform: translate(calc(47vw - 50%), calc(-47vh - 50%))
+                  scale(0.2);
+                opacity: 0;
+              }
+            }
+
+            @keyframes whooshTrail {
+              0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.8;
+              }
+              30% {
+                transform: translate(-25%, -65%) scale(0.8);
+                opacity: 0.6;
+              }
+              70% {
+                transform: translate(calc(44vw - 50%), calc(-46vh - 50%))
+                  scale(0.5);
+                opacity: 0.3;
+              }
+              100% {
+                transform: translate(calc(46vw - 50%), calc(-48vh - 50%))
+                  scale(0.1);
+                opacity: 0;
+              }
+            }
+
+            @keyframes speedLines {
+              0% {
+                transform: translate(-50%, -50%) scaleX(0);
+                opacity: 0;
+              }
+              20% {
+                transform: translate(-35%, -60%) scaleX(1);
+                opacity: 0.8;
+              }
+              60% {
+                transform: translate(calc(40vw - 50%), calc(-45vh - 50%))
+                  scaleX(1.5);
+                opacity: 0.6;
+              }
+              100% {
+                transform: translate(calc(45vw - 50%), calc(-47vh - 50%))
+                  scaleX(0.5);
+                opacity: 0;
+              }
+            }
+          `}</style>
         </div>
       )}
     </>
