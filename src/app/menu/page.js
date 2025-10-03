@@ -52,6 +52,8 @@ export default function MenuPage() {
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
   const [cartTimer, setCartTimer] = useState(60);
   const cartTimerRef = useRef(null);
+  const [sessionTimer, setSessionTimer] = useState(300); // 5 minutes = 300 seconds
+  const sessionTimerRef = useRef(null);
 
   // Language and modal states
   const [selectedLanguage, setSelectedLanguage] = useState(
@@ -86,10 +88,12 @@ export default function MenuPage() {
   };
 
   const toggleLanguageDropdown = () => {
+    resetSessionTimer(); // Reset session timer on user interaction
     setShowLanguageDropdown(!showLanguageDropdown);
   };
 
   const selectLanguage = (lng) => {
+    resetSessionTimer(); // Reset session timer on user interaction
     setSelectedLanguage(lng);
     i18n.changeLanguage(lng);
     localStorage.setItem("i18nextLng", lng);
@@ -280,6 +284,8 @@ export default function MenuPage() {
 
   // Handle category selection
   const handleCategorySelect = (category) => {
+    resetSessionTimer(); // Reset session timer on user interaction
+
     setSelectedCategory(category.id); // Use category.id (database ID) for filtering
 
     // Filter subcategories and products based on selected category database ID
@@ -366,6 +372,7 @@ export default function MenuPage() {
   };
 
   const handleCart = () => {
+    resetSessionTimer(); // Reset session timer on user interaction
     if (cart.length > 0) {
       setShowCart(true);
     }
@@ -373,6 +380,7 @@ export default function MenuPage() {
 
   // Handle product selection for quantity popup
   const handleProductSelect = (product) => {
+    resetSessionTimer(); // Reset session timer on user interaction
     setSelectedProduct(product);
     setQuantity(1);
     setCurrentVariantIndex(0);
@@ -722,11 +730,26 @@ export default function MenuPage() {
               clearTimeout(cartTimerRef.current);
               cartTimerRef.current = null;
             }
-            // Go back to home page
+
+            // Clear all session data
+            sessionStorage.removeItem("cart");
+            sessionStorage.removeItem("customerCode");
+            sessionStorage.removeItem("currentCustomer");
+            sessionStorage.removeItem("selectedPaymentMethod");
+            sessionStorage.removeItem("lastOrder");
+            sessionStorage.removeItem("receiptData");
+
+            // Reset state and schedule navigation
             setShowCart(false);
             setCustomer(null);
             setCart([]);
             setSelectedProduct(null);
+
+            // Use setTimeout to avoid setState during render
+            setTimeout(() => {
+              router.push("/");
+            }, 0);
+
             return 0;
           }
           return prev - 1;
@@ -736,11 +759,21 @@ export default function MenuPage() {
       // Set timeout for 60 seconds
       cartTimerRef.current = setTimeout(() => {
         clearInterval(countdownInterval);
-        // Go back to home page
+
+        // Clear all session data
+        sessionStorage.removeItem("cart");
+        sessionStorage.removeItem("customerCode");
+        sessionStorage.removeItem("currentCustomer");
+        sessionStorage.removeItem("selectedPaymentMethod");
+        sessionStorage.removeItem("lastOrder");
+        sessionStorage.removeItem("receiptData");
+
+        // Reset state and go back to home page
         setShowCart(false);
         setCustomer(null);
         setCart([]);
         setSelectedProduct(null);
+        router.push("/");
       }, 60000);
 
       // Cleanup function
@@ -761,6 +794,101 @@ export default function MenuPage() {
     }
   }, [showCart]);
 
+  // Session timer - 5 minute timeout for main menu
+  useEffect(() => {
+    if (!showCart) {
+      // Start session timer only when not in cart
+      const startSessionTimer = () => {
+        // Clear any existing timer
+        if (sessionTimerRef.current) {
+          clearTimeout(sessionTimerRef.current);
+        }
+
+        // Start countdown
+        setSessionTimer(300); // 5 minutes = 300 seconds
+
+        // Create timer that decrements every second
+        const sessionCountdownInterval = setInterval(() => {
+          setSessionTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(sessionCountdownInterval);
+
+              // Clear all session data
+              sessionStorage.removeItem("cart");
+              sessionStorage.removeItem("customerCode");
+              sessionStorage.removeItem("currentCustomer");
+              sessionStorage.removeItem("selectedPaymentMethod");
+              sessionStorage.removeItem("lastOrder");
+              sessionStorage.removeItem("receiptData");
+
+              // Reset state and go to home
+              setCustomer(null);
+              setCart([]);
+              setSelectedProduct(null);
+
+              // Use setTimeout to avoid setState during render
+              setTimeout(() => {
+                router.push("/");
+              }, 0);
+
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        // Set timeout for 5 minutes
+        sessionTimerRef.current = setTimeout(() => {
+          clearInterval(sessionCountdownInterval);
+
+          // Clear all session data
+          sessionStorage.removeItem("cart");
+          sessionStorage.removeItem("customerCode");
+          sessionStorage.removeItem("currentCustomer");
+          sessionStorage.removeItem("selectedPaymentMethod");
+          sessionStorage.removeItem("lastOrder");
+          sessionStorage.removeItem("receiptData");
+
+          // Reset state and go to home
+          setCustomer(null);
+          setCart([]);
+          setSelectedProduct(null);
+          router.push("/");
+        }, 300000); // 5 minutes
+
+        // Store interval reference for cleanup
+        return sessionCountdownInterval;
+      };
+
+      const sessionCountdownInterval = startSessionTimer();
+
+      // Cleanup function
+      return () => {
+        if (sessionCountdownInterval) {
+          clearInterval(sessionCountdownInterval);
+        }
+        if (sessionTimerRef.current) {
+          clearTimeout(sessionTimerRef.current);
+          sessionTimerRef.current = null;
+        }
+      };
+    } else {
+      // Clear session timer when cart is open
+      if (sessionTimerRef.current) {
+        clearTimeout(sessionTimerRef.current);
+        sessionTimerRef.current = null;
+      }
+      setSessionTimer(0);
+    }
+  }, [showCart, router]);
+
+  // Reset session timer on user interactions
+  const resetSessionTimer = useCallback(() => {
+    if (!showCart && sessionTimerRef.current) {
+      setSessionTimer(300); // Reset to 5 minutes
+    }
+  }, [showCart]);
+
   // Handle quantity change
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
@@ -771,6 +899,7 @@ export default function MenuPage() {
 
   // Handle add to cart
   const handleAddToCart = () => {
+    resetSessionTimer(); // Reset session timer on user interaction
     if (selectedProduct) {
       // Determine the correct price based on customer status
       let productPrice = selectedProduct.price;
@@ -953,8 +1082,20 @@ export default function MenuPage() {
     product.variants.forEach((variant) => {
       if (variant.options && variant.options.length > 0) {
         variant.options.forEach((option) => {
-          if (option.price) {
-            allPrices.push(option.price);
+          let priceToUse = option.price;
+
+          // If customer is a member and member price is available and lower, use member price
+          if (
+            customer &&
+            !customer.isNoMember &&
+            option.memberPrice &&
+            option.memberPrice < option.price
+          ) {
+            priceToUse = option.memberPrice;
+          }
+
+          if (priceToUse) {
+            allPrices.push(priceToUse);
           }
         });
       }
@@ -1004,12 +1145,73 @@ export default function MenuPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500 mx-auto mb-4"></div>
-          <div className="text-xl font-semibold" style={{ color: "#959595" }}>
-            {t("loading")}
+      <div
+        className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
+        style={{
+          backgroundImage: "url(/background.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* Header Skeleton */}
+        <div className="p-4 flex items-center justify-between">
+          <div className="bg-gray-300 rounded-lg w-20 h-20 animate-pulse"></div>
+          <div className="bg-gray-300 rounded-lg w-32 h-32 animate-pulse"></div>
+          <div className="flex items-center space-x-4">
+            <div className="bg-gray-300 rounded-lg w-20 h-20 animate-pulse"></div>
+            <div className="bg-gray-300 rounded-lg w-20 h-20 animate-pulse"></div>
           </div>
+        </div>
+
+        {/* Customer Section Skeleton */}
+        <div className="px-6 py-4">
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <div className="flex items-center space-x-4">
+              <div className="bg-gray-300 rounded-full w-16 h-16 animate-pulse"></div>
+              <div className="flex-1 space-y-2">
+                <div className="bg-gray-300 h-6 w-48 animate-pulse rounded"></div>
+                <div className="bg-gray-300 h-4 w-32 animate-pulse rounded"></div>
+              </div>
+              <div className="bg-gray-300 h-10 w-24 animate-pulse rounded"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Skeleton */}
+        <div className="flex-1 min-h-0 p-6 flex gap-6 overflow-hidden">
+          {/* Left Panel Skeleton */}
+          <div className="w-1/5 h-full bg-white rounded-3xl shadow-lg p-4">
+            <div className="space-y-4">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="bg-gray-300 w-full aspect-square animate-pulse rounded-lg"></div>
+                  <div className="bg-gray-300 h-4 w-3/4 mx-auto animate-pulse rounded"></div>
+                  {index < 5 && (
+                    <div className="border-b border-dashed border-gray-200"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Panel Skeleton */}
+          <div className="flex-1 h-full bg-white rounded-3xl shadow-lg p-6">
+            <div className="grid grid-cols-4 gap-4">
+              {[...Array(12)].map((_, index) => (
+                <div key={index} className="space-y-3">
+                  <div className="bg-gray-300 w-full aspect-[3/4] animate-pulse rounded-lg"></div>
+                  <div className="bg-gray-300 h-4 w-full animate-pulse rounded"></div>
+                  <div className="bg-gray-300 h-4 w-2/3 animate-pulse rounded"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Cancel Button Skeleton */}
+        <div className="px-6 pb-6">
+          <div className="bg-gray-300 w-full h-16 animate-pulse rounded-xl"></div>
         </div>
       </div>
     );
@@ -1048,7 +1250,7 @@ export default function MenuPage() {
           </button>
 
           {/* Logo - Center */}
-          <div className="ml-20">
+          <div className="ml-20 flex flex-col items-center">
             <Image
               alt="Logo"
               width={150}
@@ -1057,6 +1259,52 @@ export default function MenuPage() {
               className="cursor-pointer object-cover"
               style={{ color: "transparent" }}
             />
+            {/* Session Timer Display */}
+            {!showCart && sessionTimer > 0 && (
+              <div className="mt-2">
+                <div
+                  className={`inline-flex items-center rounded-lg px-3 py-1 transition-colors duration-200 ${
+                    sessionTimer <= 60
+                      ? "bg-red-100 border border-red-300"
+                      : sessionTimer <= 180
+                      ? "bg-orange-100 border border-orange-300"
+                      : "bg-blue-100 border border-blue-300"
+                  }`}
+                >
+                  <svg
+                    className={`w-4 h-4 mr-2 ${
+                      sessionTimer <= 60
+                        ? "text-red-600"
+                        : sessionTimer <= 180
+                        ? "text-orange-600"
+                        : "text-blue-600"
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <span
+                    className={`font-medium text-sm ${
+                      sessionTimer <= 60
+                        ? "text-red-800"
+                        : sessionTimer <= 180
+                        ? "text-orange-800"
+                        : "text-blue-800"
+                    }`}
+                  >
+                    Session expires in: {Math.floor(sessionTimer / 60)}:
+                    {(sessionTimer % 60).toString().padStart(2, "0")}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Section: Language + Cart */}
@@ -1294,7 +1542,12 @@ export default function MenuPage() {
                                   >
                                     {product.name}
                                   </div>
-                                  <div className="text-lg font-semibold text-green-600">
+                                  <div
+                                    className="text-lg font-semibold"
+                                    style={{
+                                      color: product.textColor || "#059669",
+                                    }}
+                                  >
                                     {getProductPriceDisplay(product)}
                                   </div>
                                 </div>
@@ -1338,10 +1591,20 @@ export default function MenuPage() {
                             </div>
                           )}
                           <div className="text-center space-y-1">
-                            <div className="text-lg font-medium text-gray-500 truncate">
+                            <div
+                              className="text-lg font-medium truncate"
+                              style={{
+                                color: product.textColor || "#6b7280",
+                              }}
+                            >
                               {product.name}
                             </div>
-                            <div className="text-lg font-semibold text-green-600">
+                            <div
+                              className="text-lg font-semibold"
+                              style={{
+                                color: product.textColor || "#059669",
+                              }}
+                            >
                               {getProductPriceDisplay(product)}
                             </div>
                           </div>
@@ -1524,25 +1787,14 @@ export default function MenuPage() {
                             !customer.isNoMember &&
                             option.memberPrice &&
                             option.memberPrice < option.price ? (
-                              // Member with discount - show member price as main
+                              // Member with discount - show only member price (no promotional text)
                               <>
                                 <span className="text-green-600 font-semibold text-lg">
                                   ฿{option.memberPrice}
                                 </span>
-                                <div className="text-lg text-orange-600 text-center">
-                                  <span className="line-through">
-                                    ฿{option.price}
-                                  </span>
-                                  <span className="ml-1">
-                                    → ฿{option.memberPrice}
-                                  </span>
-                                </div>
-                                <span className="text-base text-orange-600">
-                                  with membership
-                                </span>
                               </>
                             ) : (
-                              // No member or no discount - show regular price
+                              // No member or no discount - show regular price with membership promotion
                               <>
                                 <span className="text-green-600 font-semibold text-lg">
                                   ฿{option.price}
@@ -1660,12 +1912,12 @@ export default function MenuPage() {
         >
           {/* Header */}
           <div className="p-4 flex items-center justify-between">
+            {/* Back Button - Left */}
             <button
               onClick={() => setShowCart(false)}
-              className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
+              className="bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
               aria-label="Back to menu"
             >
-              {/* Changed from cart icon to back arrow per request */}
               <svg
                 className="w-12 h-12"
                 fill="none"
@@ -1680,7 +1932,9 @@ export default function MenuPage() {
                 ></path>
               </svg>
             </button>
-            {!showCart && (
+
+            {/* Logo - Center */}
+            <div className="ml-20">
               <div className="relative">
                 <Image
                   alt="Logo"
@@ -1690,27 +1944,70 @@ export default function MenuPage() {
                   className="cursor-pointer object-cover"
                   style={{ color: "transparent" }}
                 />
-              </div>
-            )}
-            <div className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center">
-              <div className="text-center w-12 h-12" style={{ color: "white" }}>
-                <div className="text-2xl font-bold" style={{ color: "white" }}>
-                  {cart.reduce(
-                    (total, item) => total + (item.quantity || 1),
-                    0
-                  )}
+                {/* Smoke Animation Effect */}
+                <div className="absolute -top-2 -left-2 w-40 h-40 pointer-events-none">
+                  <div
+                    className="absolute top-2 left-2 w-3 h-3 bg-gray-300 rounded-full opacity-60 animate-ping"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="absolute top-4 right-4 w-2 h-2 bg-gray-400 rounded-full opacity-40 animate-ping"
+                    style={{ animationDelay: "0.3s" }}
+                  ></div>
+                  <div
+                    className="absolute bottom-6 left-6 w-2 h-2 bg-gray-200 rounded-full opacity-50 animate-ping"
+                    style={{ animationDelay: "0.5s" }}
+                  ></div>
+                  <div
+                    className="absolute bottom-2 right-2 w-4 h-4 bg-gray-300 rounded-full opacity-30 animate-ping"
+                    style={{ animationDelay: "0.7s" }}
+                  ></div>
+                  <div
+                    className="absolute top-6 left-8 w-2 h-2 bg-gray-400 rounded-full opacity-35 animate-ping"
+                    style={{ animationDelay: "0.9s" }}
+                  ></div>
+                  <div
+                    className="absolute bottom-4 right-6 w-3 h-3 bg-gray-200 rounded-full opacity-45 animate-ping"
+                    style={{ animationDelay: "1.1s" }}
+                  ></div>
                 </div>
-                <div className="text-s" style={{ color: "white" }}>
-                  {t("itemsCount", {
-                    count: cart.reduce(
-                      (total, item) => total + (item.quantity || 1),
-                      0
-                    ),
-                  })
-                    .split(" ")
-                    .pop()}
-                </div>
               </div>
+            </div>
+
+            {/* Right Section: Language + Cart */}
+            <div className="flex items-center space-x-4">
+              {/* Language Selector */}
+              <div className="relative">
+                <button
+                  onClick={toggleLanguageDropdown}
+                  className="flex items-center justify-center px-5 py-5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
+                >
+                  <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+                    <ReactCountryFlag
+                      countryCode={
+                        getLanguageData(selectedLanguage).countryCode
+                      }
+                      svg
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </div>
+                </button>
+              </div>
+
+              {/* Cart Button */}
+              <button className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center">
+                <svg
+                  className="w-12 h-12"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -1721,8 +2018,7 @@ export default function MenuPage() {
               </h2>
               <p className="text-xl text-center text-gray-600 mb-4">
                 {t("reviewBeforePayment")}
-              </p>
-
+              </p>{" "}
               {/* Cart Timer Display */}
               {cartTimer > 0 && (
                 <div className="text-center mb-8">
@@ -1747,7 +2043,6 @@ export default function MenuPage() {
                   </div>
                 </div>
               )}
-
               {/* Cart Items */}
               <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                 <h3 className="text-2xl font-bold mb-6">{t("yourItems")}</h3>
@@ -1886,7 +2181,6 @@ export default function MenuPage() {
                   ))}
                 </div>
               </div>
-
               {/* Grand Total */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl shadow-lg p-8 mb-8 border-2 border-green-200">
                 <div className="text-center">
@@ -1932,7 +2226,6 @@ export default function MenuPage() {
                   )}
                 </div>
               </div>
-
               {/* Payment Methods */}
               <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                 <h3 className="text-2xl font-bold mb-6">
@@ -1980,14 +2273,12 @@ export default function MenuPage() {
                   </button>
                 </div>
               </div>
-
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                   <div className="text-red-700 text-center">{error}</div>
                 </div>
               )}
-
               {/* Add More Items and Cancel Order Buttons */}
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <button
@@ -2003,7 +2294,6 @@ export default function MenuPage() {
                   Cancel Order
                 </button>
               </div>
-
               {/* Action Buttons */}
               <div className="">
                 {/* Complete Order Button */}
@@ -2310,7 +2600,7 @@ export default function MenuPage() {
 
       {/* Back Confirmation Modal */}
       {showBackModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           {console.log("Back modal is rendering!")}
           <div className="bg-white rounded-lg p-6 m-4 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4 text-gray-800">
@@ -2337,7 +2627,7 @@ export default function MenuPage() {
 
       {/* Cancel Order Confirmation Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 m-4 max-w-md w-full">
             <h3 className="text-lg font-semibold mb-4 text-gray-800">
               {t("confirmCancelOrder")}
