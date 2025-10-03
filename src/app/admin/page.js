@@ -225,11 +225,11 @@ export default function AdminPage() {
   const [deletingTransactionIndex, setDeletingTransactionIndex] =
     useState(null);
   const [deletingCustomerId, setDeletingCustomerId] = useState(null);
+  const [deletingTransactionId, setDeletingTransactionId] = useState(null);
 
   // Loading states
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [updatingCustomer, setUpdatingCustomer] = useState(false);
-  const [applyingBirthdayBonuses, setApplyingBirthdayBonuses] = useState(false);
 
   // Point adjustment modal states
   const [showPointAdjustmentModal, setShowPointAdjustmentModal] =
@@ -586,6 +586,73 @@ export default function AdminPage() {
     return true;
   };
 
+  // Helper function to load transactions from the Firebase transactions collection
+  const loadTransactionsCollection = async () => {
+    try {
+      console.log("🔍 Loading from transactions collection...");
+
+      // Import Firestore functions
+      const { collection, getDocs, orderBy, query } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
+
+      // Query the transactions collection directly
+      const q = query(
+        collection(db, "transactions"),
+        orderBy("createdAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+
+      const transactions = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+
+        // Handle Firestore timestamp conversion
+        let createdAt = data.createdAt;
+        if (data.createdAt && data.createdAt.toDate) {
+          createdAt = data.createdAt.toDate();
+        } else if (data.createdAt && data.createdAt.seconds) {
+          createdAt = new Date(data.createdAt.seconds * 1000);
+        }
+
+        let updatedAt = data.updatedAt;
+        if (data.updatedAt && data.updatedAt.toDate) {
+          updatedAt = data.updatedAt.toDate();
+        } else if (data.updatedAt && data.updatedAt.seconds) {
+          updatedAt = new Date(data.updatedAt.seconds * 1000);
+        }
+
+        transactions.push({
+          id: doc.id, // Firestore document ID
+          ...data,
+          createdAt: createdAt,
+          updatedAt: updatedAt,
+          sourceCollection: "transactions",
+          // Ensure we have the key fields from your data structure
+          transactionId: data.transactionId || doc.id,
+          customerName: data.customerName || "Unknown Customer",
+          total: data.total || 0,
+          amount: data.total || data.amount || 0, // Use total as amount for consistency
+          pointsEarned: data.pointsEarned || data.cashbackEarned || 0,
+          items: data.items || [],
+          paymentMethod: data.paymentMethod || "unknown",
+          status: data.status || "completed",
+        });
+      });
+
+      console.log(
+        `📈 Found ${transactions.length} transactions in Firebase transactions collection`
+      );
+      console.log("📄 Sample transaction:", transactions[0]);
+
+      return transactions;
+    } catch (error) {
+      console.error("❌ Error loading transactions collection:", error);
+      return [];
+    }
+  };
+
   const loadDashboardData = useCallback(async () => {
     try {
       const customersData = await CustomerService.getAllCustomers();
@@ -596,39 +663,86 @@ export default function AdminPage() {
       const cashbackRulesData = await CashbackService.getAllCashbackRules();
       const adminsData = await AdminService.getAllAdmins();
 
+      // Load transactions ONLY from the transactions collection
+      const firebaseTransactions = await loadTransactionsCollection();
+
+      console.log("🔍 Debug - Transaction Sources:");
+      console.log("📊 Customer data length:", customersData.length);
+      console.log(
+        "💳 Firebase transactions collection length:",
+        firebaseTransactions.length
+      );
+
       setCustomers(customersData);
       setAdmins(adminsData);
 
-      // Extract transactions from customer points data
-      const extractedTransactions =
-        extractTransactionsFromCustomers(customersData);
-      setTransactions(extractedTransactions);
+      // Use ONLY Firebase transactions collection - no customer points extraction
+      const allTransactions = [...firebaseTransactions];
+
+      // Sort by date (newest first)
+      allTransactions.sort((a, b) => {
+        const dateA =
+          a.createdAt instanceof Date
+            ? a.createdAt
+            : new Date(a.createdAt || 0);
+        const dateB =
+          b.createdAt instanceof Date
+            ? b.createdAt
+            : new Date(b.createdAt || 0);
+        return dateB - dateA;
+      });
+
+      setTransactions(allTransactions);
 
       setProducts(productsData);
       setCategories(categoriesData);
       setSubcategories(subcategoriesData);
       setCashbackRules(cashbackRulesData);
 
-      // Calculate transaction stats from customer points
-      const totalRevenue = extractedTransactions.reduce(
-        (sum, t) => sum + (t.totalSpent || 0),
-        0
-      );
+      // Calculate transaction stats from all transactions
+      const totalRevenue = allTransactions.reduce((sum, t) => {
+        // Use total, amount, or totalSpent (whichever is available)
+        const transactionAmount = t.total || t.amount || t.totalSpent || 0;
+        return sum + transactionAmount;
+      }, 0);
 
       // Get today's visits from the new visit tracking system
       const todayVisits = await VisitService.getTodayVisits();
 
       setStats({
         totalCustomers: customersData.length,
-        totalTransactions: extractedTransactions.length,
+        totalTransactions: allTransactions.length,
         totalProducts: productStats.totalProducts || 0,
         totalRevenue: totalRevenue,
         todayVisits: todayVisits,
       });
 
       console.log("Dashboard data loaded successfully");
-      console.log("Customers:", customersData.length);
-      console.log("Transactions extracted:", extractedTransactions.length);
+      console.log("📊 Final Stats:");
+      console.log("👥 Customers:", customersData.length);
+      console.log(
+        "💳 Total Transactions (from transactions collection ONLY):",
+        allTransactions.length
+      );
+      console.log(
+        "� Firebase transactions collection:",
+        firebaseTransactions.length
+      );
+      console.log(
+        "� From Firebase transactions collection:",
+        firebaseTransactions.length
+      );
+      console.log("💰 Total Revenue:", totalRevenue);
+      console.log(
+        "🔢 Sample transactions:",
+        allTransactions.slice(0, 5).map((t) => ({
+          id: t.transactionId || t.id,
+          customer: t.customerName,
+          amount: t.total || t.amount,
+          source: t.sourceCollection || "unknown",
+          docId: t.id,
+        }))
+      );
       console.log("Products:", productsData.length);
       console.log("Admins:", adminsData.length);
 
@@ -974,71 +1088,6 @@ export default function AdminPage() {
     }
   };
 
-  // Birthday bonus automation
-  const checkAndApplyBirthdayBonuses = async (manual = false) => {
-    try {
-      if (manual) setApplyingBirthdayBonuses(true);
-
-      const today = new Date();
-      const todayString = today.toISOString().split("T")[0]; // YYYY-MM-DD format
-      let bonusesApplied = 0;
-
-      for (const customer of customers) {
-        if (customer.dateOfBirth && customer.isActive) {
-          const customerBirthday = new Date(customer.dateOfBirth);
-          const customerBirthdayThisYear = new Date(
-            today.getFullYear(),
-            customerBirthday.getMonth(),
-            customerBirthday.getDate()
-          );
-          const birthdayString = customerBirthdayThisYear
-            .toISOString()
-            .split("T")[0];
-
-          // Check if today is the customer's birthday (or manual override)
-          if (birthdayString === todayString || manual) {
-            // Check if birthday bonus was already given this year
-            const lastBonusYear = customer.lastBirthdayBonusYear;
-            const currentYear = today.getFullYear();
-
-            if (lastBonusYear !== currentYear) {
-              // Apply birthday bonus (50 points)
-              const birthdayBonus = 50;
-              const updatedCustomer = {
-                ...customer,
-                points: (customer.points || 0) + birthdayBonus,
-                lastBirthdayBonusYear: currentYear,
-              };
-
-              await CustomerService.updateCustomer(
-                customer.id,
-                updatedCustomer
-              );
-              console.log(
-                `Birthday bonus of ${birthdayBonus} points applied to ${customer.name}`
-              );
-              bonusesApplied++;
-            }
-          }
-        }
-      }
-
-      // Reload dashboard to reflect changes
-      await loadDashboardData();
-
-      if (manual) {
-        alert(`Birthday bonuses applied to ${bonusesApplied} customers!`);
-      }
-    } catch (error) {
-      console.error("Error applying birthday bonuses:", error);
-      if (manual) {
-        alert("Error applying birthday bonuses. Please try again.");
-      }
-    } finally {
-      if (manual) setApplyingBirthdayBonuses(false);
-    }
-  };
-
   // Calculate potential points for a transaction (for transactions without point data)
   const calculatePotentialPoints = async (transaction) => {
     try {
@@ -1233,6 +1282,95 @@ export default function AdminPage() {
     return total;
   };
 
+  // Delete transaction function with permission check
+  const deleteTransaction = async (transactionId, transaction) => {
+    // Check admin permissions
+    if (!checkDeletePermission()) {
+      return;
+    }
+
+    if (
+      !confirm(
+        `Are you sure you want to delete transaction ${transactionId}?\n\nThis action cannot be undone and will:\n- Remove the transaction from the customer's history\n- Remove earned points from the customer\n- Update the customer's total spent amount`
+      )
+    ) {
+      return;
+    }
+
+    setDeletingTransactionId(transactionId);
+
+    try {
+      // Find the customer who owns this transaction
+      const customer = customers.find(
+        (c) =>
+          c.name === transaction.customerName ||
+          c.customerName === transaction.customerName ||
+          c.customerId === transaction.customerId
+      );
+
+      if (!customer) {
+        alert("Customer not found for this transaction.");
+        return;
+      }
+
+      // Remove the transaction from customer's points array
+      if (customer.points && Array.isArray(customer.points)) {
+        const transactionIndex = customer.points.findIndex(
+          (p) => p.transactionId === transactionId
+        );
+
+        if (transactionIndex !== -1) {
+          const pointRecord = customer.points[transactionIndex];
+          const pointsToSubtract = pointRecord.amount || 0;
+
+          // Remove the transaction from the points array
+          const updatedPoints = customer.points.filter(
+            (p) => p.transactionId !== transactionId
+          );
+
+          // Update customer data
+          const updatedCustomer = {
+            ...customer,
+            points: updatedPoints,
+            totalEarned: Math.max(
+              0,
+              (customer.totalEarned || 0) - pointsToSubtract
+            ),
+            // Recalculate total points from remaining transactions
+            points: (customer.points || 0) - pointsToSubtract,
+          };
+
+          // Update the customer in the database
+          await CustomerService.updateCustomer(customer.id, updatedCustomer);
+
+          // Also try to delete from TransactionService if it exists there
+          try {
+            await TransactionService.deleteTransaction(transactionId);
+          } catch (transactionServiceError) {
+            console.log(
+              "Transaction not found in TransactionService (this is okay):",
+              transactionServiceError
+            );
+          }
+
+          // Reload dashboard data to reflect changes
+          await loadDashboardData();
+
+          alert("Transaction deleted successfully!");
+        } else {
+          alert("Transaction not found in customer's records.");
+        }
+      } else {
+        alert("No transaction records found for this customer.");
+      }
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      alert(`Error deleting transaction: ${error.message}`);
+    } finally {
+      setDeletingTransactionId(null);
+    }
+  };
+
   // Helper function to calculate total points from customer's points array
   const calculateTotalPoints = (customer) => {
     if (!customer.points || !Array.isArray(customer.points)) {
@@ -1247,13 +1385,6 @@ export default function AdminPage() {
       }
     }, 0);
   };
-
-  // Run birthday bonus check when customers data loads
-  useEffect(() => {
-    if (customers.length > 0) {
-      checkAndApplyBirthdayBonuses();
-    }
-  }, [customers.length]);
 
   // Product hierarchy expansion handlers
   const toggleCategoryExpansion = (categoryId) => {
@@ -2696,88 +2827,6 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Birthday Bonus Action */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Birthday Bonuses
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Apply birthday bonuses to eligible customers
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => checkAndApplyBirthdayBonuses(true)}
-                        disabled={applyingBirthdayBonuses}
-                        className="bg-pink-500 hover:bg-pink-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-                      >
-                        {applyingBirthdayBonuses
-                          ? "Applying..."
-                          : "Apply Birthday Bonuses"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Point Calculation Utility */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Point Calculator
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Calculate potential points for transactions
-                        </p>
-                      </div>
-                      <button
-                        onClick={async () => {
-                          // Find transactions without point data
-                          const transactionsWithoutPoints = transactions.filter(
-                            (t) =>
-                              !t.pointsEarned && t.items && t.items.length > 0
-                          );
-
-                          if (transactionsWithoutPoints.length === 0) {
-                            alert(
-                              "No transactions found that need point calculation."
-                            );
-                            return;
-                          }
-
-                          let results = "Potential Points Analysis:\n\n";
-
-                          for (const transaction of transactionsWithoutPoints.slice(
-                            0,
-                            10
-                          )) {
-                            const pointData = await calculatePotentialPoints(
-                              transaction
-                            );
-                            results += `Transaction: ${transaction.transactionId}\n`;
-                            results += `Total: ฿${transaction.total || 0}\n`;
-                            results += `Potential Points: ${pointData.totalPoints}\n`;
-                            results += `Customer: ${
-                              transaction.customerName || "Guest"
-                            }\n`;
-                            if (pointData.breakdown.length > 0) {
-                              results += "Breakdown:\n";
-                              pointData.breakdown.forEach((item) => {
-                                results += `  - ${item.productName}: ${item.cashbackPercentage}% = ${item.pointsEarned} pts\n`;
-                              });
-                            }
-                            results += "\n";
-                          }
-
-                          alert(results);
-                        }}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors"
-                      >
-                        Calculate Missing Points
-                      </button>
-                    </div>
-                  </div>
-
                   {/* Recent Activity */}
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200">
                     <div className="px-6 py-4 border-b border-gray-200">
@@ -2786,38 +2835,64 @@ export default function AdminPage() {
                       </h3>
                     </div>
                     <div className="p-6">
-                      {transactions.slice(0, 5).length > 0 ? (
+                      {transactions.length > 0 ? (
                         <div className="space-y-4">
                           {transactions.slice(0, 5).map((transaction) => (
                             <div
                               key={transaction.transactionId}
                               onClick={() => {
-                                // Find the full customer data to get transaction details
-                                const customer = customers.find(
-                                  (c) =>
-                                    c.name === transaction.customerName ||
-                                    c.customerName === transaction.customerName
-                                );
+                                // Use the transaction object directly first (it should have items)
+                                let transactionToShow = {
+                                  ...transaction,
+                                  customerName: transaction.customerName,
+                                  customerEmail:
+                                    transaction.customerEmail || "N/A",
+                                  customerId: transaction.customerId,
+                                };
 
-                                if (customer) {
-                                  // Find the specific transaction in customer's points array
-                                  const transactionDetail =
-                                    customer.points?.find(
-                                      (p) =>
-                                        p.transactionId ===
-                                        transaction.transactionId
-                                    );
+                                // If transaction doesn't have items, try to find them in customer's points
+                                if (
+                                  !transaction.items ||
+                                  transaction.items.length === 0
+                                ) {
+                                  const customer = customers.find(
+                                    (c) =>
+                                      c.name === transaction.customerName ||
+                                      c.customerName ===
+                                        transaction.customerName ||
+                                      c.customerId === transaction.customerId
+                                  );
 
-                                  if (transactionDetail) {
-                                    setSelectedTransactionDetails({
-                                      ...transactionDetail,
-                                      customerName: customer.name,
-                                      customerEmail: customer.email,
-                                      customerId: customer.customerId,
-                                    });
-                                    setShowTransactionDetails(true);
+                                  if (customer) {
+                                    const transactionDetail =
+                                      customer.points?.find(
+                                        (p) =>
+                                          p.transactionId ===
+                                          transaction.transactionId
+                                      );
+
+                                    if (transactionDetail) {
+                                      // Merge the data from customer points with the original transaction
+                                      transactionToShow = {
+                                        ...transactionToShow,
+                                        ...transactionDetail,
+                                        customerName: customer.name,
+                                        customerEmail: customer.email || "N/A",
+                                        customerId: customer.customerId,
+                                        // Keep the items from customer points if available
+                                        items:
+                                          transactionDetail.items ||
+                                          transaction.items ||
+                                          [],
+                                      };
+                                    }
                                   }
                                 }
+
+                                setSelectedTransactionDetails(
+                                  transactionToShow
+                                );
+                                setShowTransactionDetails(true);
                               }}
                               className="flex items-center justify-between p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors duration-200"
                             >
@@ -2835,21 +2910,49 @@ export default function AdminPage() {
                                   <p className="font-semibold text-green-600">
                                     ฿
                                     {(() => {
-                                      // Use transaction total if available
-                                      if (
-                                        transaction.total &&
-                                        transaction.total > 0
-                                      ) {
-                                        return transaction.total.toLocaleString(
-                                          "en-US",
-                                          {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          }
-                                        );
+                                      // Try multiple amount fields in order of preference
+                                      const amount =
+                                        transaction.total ||
+                                        transaction.amount ||
+                                        transaction.totalSpent ||
+                                        0;
+
+                                      // If we have an amount, use it
+                                      if (amount > 0) {
+                                        return amount.toLocaleString("en-US", {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        });
                                       }
 
-                                      // Find customer and calculate total from items
+                                      // If no direct amount, try to calculate from items
+                                      if (
+                                        transaction.items &&
+                                        transaction.items.length > 0
+                                      ) {
+                                        const calculatedTotal =
+                                          transaction.items.reduce(
+                                            (sum, item) => {
+                                              const price = item.price || 0;
+                                              const quantity =
+                                                item.quantity || 1;
+                                              return sum + price * quantity;
+                                            },
+                                            0
+                                          );
+
+                                        if (calculatedTotal > 0) {
+                                          return calculatedTotal.toLocaleString(
+                                            "en-US",
+                                            {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            }
+                                          );
+                                        }
+                                      }
+
+                                      // Last resort: look in customer points data
                                       const customer = customers.find(
                                         (c) =>
                                           c.name === transaction.customerName ||
@@ -2869,37 +2972,28 @@ export default function AdminPage() {
                                           transactionDetail &&
                                           transactionDetail.items
                                         ) {
-                                          // Calculate total from items (prices are already in baht)
                                           const total =
                                             transactionDetail.items.reduce(
                                               (sum, item) => {
                                                 return (
                                                   sum +
-                                                  item.price * item.quantity
+                                                  (item.price || 0) *
+                                                    (item.quantity || 1)
                                                 );
                                               },
                                               0
                                             );
 
-                                          return total.toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          });
-                                        }
-                                      }
-
-                                      // Fallback to totalSpent if available
-                                      if (
-                                        transaction.totalSpent &&
-                                        transaction.totalSpent > 0
-                                      ) {
-                                        return transaction.totalSpent.toLocaleString(
-                                          "en-US",
-                                          {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
+                                          if (total > 0) {
+                                            return total.toLocaleString(
+                                              "en-US",
+                                              {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2,
+                                              }
+                                            );
                                           }
-                                        );
+                                        }
                                       }
 
                                       return "0.00";
@@ -2946,9 +3040,16 @@ export default function AdminPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-gray-500 text-center py-4">
-                          No recent transactions
-                        </p>
+                        <div className="text-center py-8">
+                          <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500 text-lg font-medium mb-2">
+                            No transactions yet
+                          </p>
+                          <p className="text-gray-400 text-sm">
+                            Transactions will appear here once customers make
+                            purchases
+                          </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -5608,17 +5709,39 @@ export default function AdminPage() {
                                     : "N/A"}
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base font-medium">
-                                  <button
-                                    onClick={() => {
-                                      setSelectedTransactionDetails(
-                                        transaction
-                                      );
-                                      setShowTransactionDetails(true);
-                                    }}
-                                    className="text-green-600 hover:text-green-900"
-                                  >
-                                    View Details
-                                  </button>
+                                  <div className="flex space-x-3">
+                                    <button
+                                      onClick={() => {
+                                        setSelectedTransactionDetails(
+                                          transaction
+                                        );
+                                        setShowTransactionDetails(true);
+                                      }}
+                                      className="text-green-600 hover:text-green-900 transition-colors"
+                                    >
+                                      View Details
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        deleteTransaction(
+                                          transaction.transactionId,
+                                          transaction
+                                        )
+                                      }
+                                      disabled={
+                                        deletingTransactionId ===
+                                        transaction.transactionId
+                                      }
+                                      className="flex items-center text-red-600 hover:text-red-900 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+                                      title="Delete Transaction"
+                                    >
+                                      <Trash2 className="w-4 h-4 mr-1" />
+                                      {deletingTransactionId ===
+                                      transaction.transactionId
+                                        ? "Deleting..."
+                                        : "Delete"}
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             ))
@@ -10910,21 +11033,56 @@ export default function AdminPage() {
                     <div className="space-y-2">
                       <p>
                         <span className="font-medium">Date:</span>{" "}
-                        {selectedTransactionDetails.createdAt
-                          ? new Date(
-                              selectedTransactionDetails.createdAt
-                            ).toLocaleDateString("en-US", {
+                        {(() => {
+                          if (selectedTransactionDetails.createdAt) {
+                            let date;
+                            if (selectedTransactionDetails.createdAt.seconds) {
+                              // Firestore timestamp
+                              date = new Date(
+                                selectedTransactionDetails.createdAt.seconds *
+                                  1000
+                              );
+                            } else if (
+                              selectedTransactionDetails.createdAt instanceof
+                              Date
+                            ) {
+                              date = selectedTransactionDetails.createdAt;
+                            } else if (
+                              typeof selectedTransactionDetails.createdAt ===
+                              "string"
+                            ) {
+                              date = new Date(
+                                selectedTransactionDetails.createdAt
+                              );
+                            } else if (selectedTransactionDetails.timestamp) {
+                              // Fallback to timestamp
+                              date = new Date(
+                                selectedTransactionDetails.timestamp
+                              );
+                            } else {
+                              return "N/A";
+                            }
+
+                            if (isNaN(date.getTime())) {
+                              return "N/A";
+                            }
+
+                            return date.toLocaleDateString("en-US", {
                               year: "numeric",
                               month: "long",
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            })
-                          : "N/A"}
+                            });
+                          }
+                          return "N/A";
+                        })()}
                       </p>
                       <p>
                         <span className="font-medium">Points Earned:</span>{" "}
-                        {selectedTransactionDetails.pointsEarned || 0}
+                        {selectedTransactionDetails.pointsEarned ||
+                          selectedTransactionDetails.amount ||
+                          0}
                       </p>
                       <p>
                         <span className="font-medium">Phone:</span>{" "}
@@ -10934,13 +11092,19 @@ export default function AdminPage() {
                         <span className="font-medium">Total Amount:</span>
                         <span className="font-bold text-green-600 ml-2">
                           ฿
-                          {selectedTransactionDetails.amount?.toLocaleString(
-                            "en-US",
-                            {
+                          {(() => {
+                            // Try different amount fields
+                            const amount =
+                              selectedTransactionDetails.total ||
+                              selectedTransactionDetails.totalSpent ||
+                              selectedTransactionDetails.amount ||
+                              0;
+
+                            return amount.toLocaleString("en-US", {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
-                            }
-                          ) || "0.00"}
+                            });
+                          })()}
                         </span>
                       </p>
                     </div>
@@ -10949,104 +11113,141 @@ export default function AdminPage() {
 
                 {/* Items List */}
                 {selectedTransactionDetails.items &&
-                  selectedTransactionDetails.items.length > 0 && (
-                    <div className="bg-white border rounded-lg">
-                      <div className="px-6 py-4 border-b border-gray-200">
-                        <h4 className="text-md font-semibold text-gray-900">
-                          Items Purchased
-                        </h4>
-                      </div>
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Product
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Variants
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Price
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Quantity
-                              </th>
-                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Subtotal
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {selectedTransactionDetails.items.map(
-                              (item, index) => (
-                                <tr key={index}>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {item.name}
-                                    </div>
-                                    <div className="text-sm text-gray-500">
-                                      ID: {item.productId}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="text-sm text-gray-900">
-                                      {item.variants &&
-                                        Object.entries(item.variants).map(
-                                          ([key, value]) => (
-                                            <span
-                                              key={key}
-                                              className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs mr-1 mb-1"
-                                            >
-                                              {key}: {value}
-                                            </span>
-                                          )
-                                        )}
-                                    </div>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    ฿
-                                    {(item.price / 100).toLocaleString(
-                                      "en-US",
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      }
+                selectedTransactionDetails.items.length > 0 ? (
+                  <div className="bg-white border rounded-lg">
+                    <div className="px-6 py-4 border-b border-gray-200">
+                      <h4 className="text-md font-semibold text-gray-900">
+                        Items Purchased
+                      </h4>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Product
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Variants
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Price
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Quantity
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Subtotal
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {selectedTransactionDetails.items.map(
+                            (item, index) => (
+                              <tr key={index}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {item.name ||
+                                      item.productName ||
+                                      "Unknown Product"}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    ID: {item.productId || item.id || "N/A"}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {item.variants &&
+                                      Object.entries(item.variants).map(
+                                        ([key, value]) => (
+                                          <span
+                                            key={key}
+                                            className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs mr-1 mb-1"
+                                          >
+                                            {key}: {value}
+                                          </span>
+                                        )
+                                      )}
+                                    {(!item.variants ||
+                                      Object.keys(item.variants).length ===
+                                        0) && (
+                                      <span className="text-gray-400 text-xs">
+                                        No variants
+                                      </span>
                                     )}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {item.quantity}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    ฿
-                                    {(
-                                      (item.price * item.quantity) /
-                                      100
-                                    ).toLocaleString("en-US", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </td>
-                                </tr>
-                              )
-                            )}
-                          </tbody>
-                        </table>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  ฿
+                                  {(item.price || 0).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  {item.quantity || 1}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                  ฿
+                                  {(
+                                    (item.price || 0) * (item.quantity || 1)
+                                  ).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                    <div className="flex items-center">
+                      <ShoppingBag className="w-6 h-6 text-orange-500 mr-3" />
+                      <div>
+                        <h4 className="text-md font-semibold text-orange-900">
+                          No Item Details Available
+                        </h4>
+                        <p className="text-sm text-orange-700 mt-1">
+                          This transaction was processed but detailed item
+                          information is not available. This might be an older
+                          transaction or points adjustment.
+                        </p>
                       </div>
                     </div>
-                  )}
-
-                {/* Transaction Details */}
-                {selectedTransactionDetails.details && (
-                  <div className="bg-yellow-50 rounded-lg p-4 mt-4">
-                    <h4 className="text-md font-semibold text-gray-900 mb-2">
-                      Transaction Details
-                    </h4>
-                    <p className="text-sm text-gray-700">
-                      {selectedTransactionDetails.details}
-                    </p>
                   </div>
                 )}
+
+                {/* Transaction Details */}
+                <div className="bg-yellow-50 rounded-lg p-4 mt-4">
+                  <h4 className="text-md font-semibold text-gray-900 mb-2">
+                    Transaction Details
+                  </h4>
+                  <p className="text-sm text-gray-700">
+                    {selectedTransactionDetails.details ||
+                      selectedTransactionDetails.reason ||
+                      `${
+                        selectedTransactionDetails.type || "purchase"
+                      } transaction - ${
+                        selectedTransactionDetails.source || "kiosk purchase"
+                      }`}
+                  </p>
+                  {selectedTransactionDetails.orderId && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <span className="font-medium">Order ID:</span>{" "}
+                      {selectedTransactionDetails.orderId}
+                    </p>
+                  )}
+                  {selectedTransactionDetails.paymentMethod && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <span className="font-medium">Payment Method:</span>{" "}
+                      {selectedTransactionDetails.paymentMethod}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

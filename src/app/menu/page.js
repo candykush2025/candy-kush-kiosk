@@ -52,7 +52,7 @@ export default function MenuPage() {
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
   const [cartTimer, setCartTimer] = useState(60);
   const cartTimerRef = useRef(null);
-  const [sessionTimer, setSessionTimer] = useState(300); // 5 minutes = 300 seconds
+  const [sessionTimer, setSessionTimer] = useState(60); // 60 seconds = 1 minute
   const sessionTimerRef = useRef(null);
 
   // Language and modal states
@@ -909,7 +909,7 @@ export default function MenuPage() {
   // Reset session timer on user interactions
   const resetSessionTimer = useCallback(() => {
     if (!showCart && sessionTimerRef.current) {
-      setSessionTimer(300); // Reset to 5 minutes
+      setSessionTimer(60); // Reset to 60 seconds
     }
   }, [showCart]);
 
@@ -1680,7 +1680,7 @@ export default function MenuPage() {
                         No items found
                       </h3>
                       <p className="text-gray-400">
-                        This category doesn't have any subcategories or products
+                        This category doesn&apos;t have any subcategories or products
                         yet
                       </p>
                     </div>
