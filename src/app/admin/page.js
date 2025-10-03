@@ -4,8 +4,11 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  KeyboardSensor,
+  TouchSensor,
   useSensor,
   useSensors,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -101,7 +104,14 @@ export default function AdminPage() {
   }, [categories, orderDirty, orderList.length]);
 
   // DnD Sortable item
-  function SortableCategoryItem({ id, cat, index }) {
+  function SortableCategoryItem({
+    id,
+    cat,
+    index,
+    totalItems,
+    moveUp,
+    moveDown,
+  }) {
     const {
       attributes,
       listeners,
@@ -158,6 +168,58 @@ export default function AdminPage() {
         <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100">
           {index + 1}
         </span>
+
+        {/* Up/Down Arrow Buttons */}
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => moveUp(id)}
+            disabled={index === 0}
+            className={`p-1 rounded transition ${
+              index === 0
+                ? "text-gray-300 cursor-not-allowed"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            }`}
+            title="Move up"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+          <button
+            onClick={() => moveDown(id)}
+            disabled={index === totalItems - 1}
+            className={`p-1 rounded transition ${
+              index === totalItems - 1
+                ? "text-gray-300 cursor-not-allowed"
+                : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            }`}
+            title="Move down"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     );
   }
@@ -170,7 +232,15 @@ export default function AdminPage() {
     ordering,
   }) {
     const sensors = useSensors(
-      useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+      useSensor(PointerSensor, {
+        activationConstraint: { distance: 4 },
+      }),
+      useSensor(TouchSensor, {
+        activationConstraint: { delay: 250, tolerance: 8 },
+      }),
+      useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+      })
     );
     if (ordering)
       return <div className="text-sm text-gray-500">Loading categories...</div>;
@@ -186,6 +256,34 @@ export default function AdminPage() {
         const reordered = arrayMove(prev, oldIndex, newIndex);
         setOrderDirty(true);
         return reordered;
+      });
+    }
+
+    function moveItemUp(id) {
+      setOrderList((prev) => {
+        const currentIndex = prev.indexOf(id);
+        if (currentIndex <= 0) return prev; // Already at top
+        const newOrder = [...prev];
+        [newOrder[currentIndex - 1], newOrder[currentIndex]] = [
+          newOrder[currentIndex],
+          newOrder[currentIndex - 1],
+        ];
+        setOrderDirty(true);
+        return newOrder;
+      });
+    }
+
+    function moveItemDown(id) {
+      setOrderList((prev) => {
+        const currentIndex = prev.indexOf(id);
+        if (currentIndex >= prev.length - 1) return prev; // Already at bottom
+        const newOrder = [...prev];
+        [newOrder[currentIndex], newOrder[currentIndex + 1]] = [
+          newOrder[currentIndex + 1],
+          newOrder[currentIndex],
+        ];
+        setOrderDirty(true);
+        return newOrder;
       });
     }
     return (
@@ -205,6 +303,9 @@ export default function AdminPage() {
                 id={id}
                 cat={catMap.get(id)}
                 index={idx}
+                totalItems={orderList.length}
+                moveUp={moveItemUp}
+                moveDown={moveItemDown}
               />
             ))}
           </div>
@@ -2432,7 +2533,7 @@ export default function AdminPage() {
   };
 
   // Filter transactions based on selected criteria
-  const filterTransactions = () => {
+  const filterTransactions = useCallback(() => {
     let filtered = [...transactions];
 
     // Filter by date range
@@ -2520,7 +2621,7 @@ export default function AdminPage() {
     }
 
     setFilteredTransactions(filtered);
-  };
+  }, [transactions, transactionFilters]);
 
   // Apply filters whenever filters change or transactions are updated
   useEffect(() => {

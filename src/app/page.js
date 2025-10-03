@@ -130,7 +130,7 @@ export default function Home() {
         // Same navigation delay as scanner page
         setTimeout(() => {
           console.log("🚀 Homepage: Navigating to categories page...");
-          router.push("/categories");
+          router.push("/menu");
         }, 600);
       } else {
         console.log(

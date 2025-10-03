@@ -121,6 +121,15 @@ const resources = {
       vape: "Vape",
       concentrates: "Concentrates",
       accessories: "Accessories",
+      // Order summary translations
+      cashbackPoints: "Cashback Points",
+      points: "points",
+      earnPointsWithPurchase: "You will earn these points with this purchase",
+      signInToEarnPoints: "Sign in to earn points!",
+      registerToEarnCashback: "Register as a member to earn cashback points",
+      addMoreItems: "Add More Items",
+      cancelOrder: "Cancel Order",
+      completeOrder: "Complete Order ฿{{total}}",
     },
   },
   th: {
@@ -224,6 +233,15 @@ const resources = {
       vape: "บุหรี่ไฟฟ้า",
       concentrates: "สารสกัด",
       accessories: "อุปกรณ์เสริม",
+      // Order summary translations
+      cashbackPoints: "คะแนนคืน",
+      points: "คะแนน",
+      earnPointsWithPurchase: "คุณจะได้รับคะแนนจากการซื้อครั้งนี้",
+      signInToEarnPoints: "เข้าสู่ระบบเพื่อรับคะแนน!",
+      registerToEarnCashback: "ลงทะเบียนเป็นสมาชิกเพื่อรับคะแนนคืน",
+      addMoreItems: "เพิ่มสินค้า",
+      cancelOrder: "ยกเลิกคำสั่งซื้อ",
+      completeOrder: "ชำระเงิน ฿{{total}}",
     },
   },
   es: {
@@ -329,6 +347,16 @@ const resources = {
       vape: "Vaporizador",
       concentrates: "Concentrados",
       accessories: "Accesorios",
+      // Order summary translations
+      cashbackPoints: "Puntos de Reembolso",
+      points: "puntos",
+      earnPointsWithPurchase: "Ganarás estos puntos con esta compra",
+      signInToEarnPoints: "¡Inicia sesión para ganar puntos!",
+      registerToEarnCashback:
+        "Regístrate como miembro para ganar puntos de reembolso",
+      addMoreItems: "Agregar Más Artículos",
+      cancelOrder: "Cancelar Pedido",
+      completeOrder: "Completar Pedido ฿{{total}}",
     },
   },
   fr: {
@@ -435,6 +463,16 @@ const resources = {
       vape: "Vapoteuse",
       concentrates: "Concentrés",
       accessories: "Accessoires",
+      // Order summary translations
+      cashbackPoints: "Points de Remboursement",
+      points: "points",
+      earnPointsWithPurchase: "Vous gagnerez ces points avec cet achat",
+      signInToEarnPoints: "Connectez-vous pour gagner des points!",
+      registerToEarnCashback:
+        "Inscrivez-vous comme membre pour gagner des points de remboursement",
+      addMoreItems: "Ajouter Plus d'Articles",
+      cancelOrder: "Annuler la Commande",
+      completeOrder: "Finaliser la Commande ฿{{total}}",
     },
   },
   de: {
@@ -542,6 +580,17 @@ const resources = {
       vape: "Vaporizer",
       concentrates: "Konzentrate",
       accessories: "Zubehör",
+      // Order summary translations
+      cashbackPoints: "Cashback-Punkte",
+      points: "Punkte",
+      earnPointsWithPurchase:
+        "Sie werden diese Punkte mit diesem Kauf verdienen",
+      signInToEarnPoints: "Anmelden, um Punkte zu verdienen!",
+      registerToEarnCashback:
+        "Als Mitglied registrieren, um Cashback-Punkte zu verdienen",
+      addMoreItems: "Weitere Artikel hinzufügen",
+      cancelOrder: "Bestellung stornieren",
+      completeOrder: "Bestellung abschließen ฿{{total}}",
     },
   },
   it: {
