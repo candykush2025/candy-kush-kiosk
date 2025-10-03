@@ -18,7 +18,7 @@ import CustomerSection from "../../components/CustomerSection";
 import KioskHeader from "../../components/KioskHeader";
 import { VisitService } from "../../lib/visitService";
 import { useTranslation } from "react-i18next";
-import i18n from "../../i18n";
+import i18n from "../../i18n/index";
 
 export default function MenuPage() {
   const [customer, setCustomer] = useState(null);
@@ -81,6 +81,8 @@ export default function MenuPage() {
       try {
         // Get customer info from session storage
         const customerCode = sessionStorage.getItem("customerCode");
+        const noMember = sessionStorage.getItem("noMember");
+
         if (customerCode) {
           const customerData = await CustomerService.getCustomerByMemberId(
             customerCode
@@ -96,8 +98,18 @@ export default function MenuPage() {
             );
             setCustomer(customerData);
           }
+        } else if (noMember === "true") {
+          // Set "No Member" customer state
+          setCustomer({
+            name: "No Member",
+            memberId: null,
+            tier: null,
+            points: 0,
+            totalPoints: 0,
+            isNoMember: true,
+          });
         } else {
-          // No customer data, redirect to scanner
+          // No customer data and no "No Member" flag, redirect to scanner
           router.push("/scanner");
           return;
         }
@@ -126,24 +138,30 @@ export default function MenuPage() {
 
         setSubcategories(subcategoriesData);
 
-        // Map products to include categoryId from subcategory
+        // Map products to include categoryId from subcategory or direct categoryId
         const productsWithCategoryId = productsData.map((product) => {
           const subcategory = subcategoriesData.find(
             (sub) => sub.id === product.subcategoryId
           );
+
+          // Use categoryId from subcategory if exists, otherwise use direct categoryId from product
           const mappedProduct = {
             ...product,
-            categoryId: subcategory ? subcategory.categoryId : null,
+            categoryId: subcategory
+              ? subcategory.categoryId
+              : product.categoryId,
           };
 
           // Debug log to see if categoryId is being mapped correctly
           if (
             product.name === "Testing Product" ||
-            product.name.includes("Product 1")
+            product.name.includes("Product 1") ||
+            product.name === "Product Without Subcategory"
           ) {
             console.log("🔍 Product mapping debug:", {
               productName: product.name,
               subcategoryId: product.subcategoryId,
+              directCategoryId: product.categoryId,
               foundSubcategory: subcategory,
               mappedCategoryId: mappedProduct.categoryId,
             });
@@ -355,20 +373,24 @@ export default function MenuPage() {
       const transactionData = {
         customerId: customer?.id || null,
         customerName: customer
-          ? `${customer.name} ${customer.lastName || ""}`.trim()
+          ? customer.isNoMember
+            ? "No Member"
+            : `${customer.name} ${customer.lastName || ""}`.trim()
           : "",
         items: cart,
         total: getTotalPrice(),
         paymentMethod: paymentMethod,
-        cashbackEarned: cashbackPoints,
+        cashbackEarned: customer?.isNoMember ? 0 : cashbackPoints,
         timestamp: new Date(),
         // Add point details
-        pointsEarned: cashbackPoints,
-        pointDetails: window.menuCashbackDetails || [],
+        pointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
+        pointDetails: customer?.isNoMember
+          ? []
+          : window.menuCashbackDetails || [],
         pointCalculation: {
-          totalPointsEarned: cashbackPoints,
-          calculationMethod: "category-based",
-          items: window.menuCashbackDetails || [],
+          totalPointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
+          calculationMethod: customer?.isNoMember ? "none" : "category-based",
+          items: customer?.isNoMember ? [] : window.menuCashbackDetails || [],
         },
       };
 
@@ -386,8 +408,8 @@ export default function MenuPage() {
         result.transactionId
       );
 
-      // Update customer points if customer exists
-      if (customer && cashbackPoints > 0) {
+      // Update customer points if customer exists and is not "No Member"
+      if (customer && !customer.isNoMember && cashbackPoints > 0) {
         try {
           const pointTransactionDetails = {
             transactionId: result.transactionId,
@@ -425,7 +447,7 @@ export default function MenuPage() {
         items: cart,
         total: getTotalPrice(),
         customer: customer,
-        cashbackPoints: customer ? cashbackPoints : 0,
+        cashbackPoints: customer?.isNoMember ? 0 : cashbackPoints,
         transactionId: result.id,
         paymentMethod: paymentMethod,
         timestamp: new Date().toISOString(),
@@ -468,7 +490,7 @@ export default function MenuPage() {
 
   // Calculate cashback points
   const calculateCashbackPoints = useCallback(async () => {
-    if (!customer || cart.length === 0) {
+    if (!customer || cart.length === 0 || customer.isNoMember) {
       setCashbackPoints(0);
       return;
     }
@@ -551,10 +573,16 @@ export default function MenuPage() {
   // Handle add to cart
   const handleAddToCart = () => {
     if (selectedProduct) {
+      // Determine the correct price based on customer status
+      let productPrice = selectedProduct.price;
+      if (customer && !customer.isNoMember && selectedProduct.memberPrice) {
+        productPrice = selectedProduct.memberPrice;
+      }
+
       const cartItem = {
         id: selectedProduct.productId,
         name: selectedProduct.name,
-        price: selectedProduct.price,
+        price: productPrice,
         quantity: quantity,
         image: selectedProduct.mainImage,
         productId: selectedProduct.productId,
@@ -684,10 +712,34 @@ export default function MenuPage() {
       !product.variants ||
       product.variants.length === 0
     ) {
-      // Simple product - show member price if customer exists, otherwise regular price
-      const price =
-        customer && product.memberPrice ? product.memberPrice : product.price;
-      return `฿${price}`;
+      // Simple product - handle different pricing scenarios
+      if (customer && customer.isNoMember) {
+        // No member - show regular price with member price information if available
+        if (product.memberPrice && product.memberPrice !== product.price) {
+          return (
+            <div className="flex flex-col items-center">
+              <span className="text-green-600 font-semibold text-lg">
+                ฿{product.price}
+              </span>
+              <div className="text-lg text-orange-600 text-center">
+                <span className="line-through">฿{product.price}</span>
+                <span className="ml-1">→ ฿{product.memberPrice}</span>
+              </div>
+              <span className="text-base text-orange-600">with membership</span>
+            </div>
+          );
+        } else {
+          // No member price available, just show regular price
+          return `฿${product.price}`;
+        }
+      } else if (customer && !customer.isNoMember) {
+        // Regular member - show member price if available, otherwise regular price
+        const price = product.memberPrice ? product.memberPrice : product.price;
+        return `฿${price}`;
+      } else {
+        // Fallback - show regular price
+        return `฿${product.price}`;
+      }
     }
 
     // Variant product - calculate price range
@@ -886,7 +938,7 @@ export default function MenuPage() {
                                       className="object-contain rounded-lg"
                                     />
                                     {getProductCartQuantity(product) > 0 && (
-                                      <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold shadow-lg">
+                                      <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
                                         {getProductCartQuantity(product)}
                                       </div>
                                     )}
@@ -894,14 +946,14 @@ export default function MenuPage() {
                                 )}
                                 <div className="text-center space-y-1">
                                   <div
-                                    className="text-xs font-medium truncate"
+                                    className="text-lg font-medium truncate"
                                     style={{
                                       color: product.textColor || "#6b7280",
                                     }}
                                   >
                                     {product.name}
                                   </div>
-                                  <div className="text-sm font-semibold text-green-600">
+                                  <div className="text-lg font-semibold text-green-600">
                                     {getProductPriceDisplay(product)}
                                   </div>
                                 </div>
@@ -912,46 +964,51 @@ export default function MenuPage() {
                     ))}
                   </div>
                 )}
+
                 {/* Products without subcategory */}
-                <div className="grid grid-cols-4 gap-4">
-                  {getFilteredProducts()
-                    .filter((p) => !p.subcategoryId)
-                    .map((product) => (
-                      <div
-                        key={product.id}
-                        className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
-                          selectedProduct?.id === product.id
-                            ? "transform scale-105 shadow-lg border-green-500"
-                            : "border-gray-100"
-                        } `}
-                        onClick={() => handleProductSelect(product)}
-                      >
-                        {product.mainImage && (
-                          <div className="w-full aspect-[3/4] mb-2 relative">
-                            <Image
-                              src={product.mainImage}
-                              alt={product.name}
-                              fill
-                              className="object-contain rounded-lg"
-                            />
-                            {getProductCartQuantity(product) > 0 && (
-                              <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-xs font-bold shadow-lg">
-                                {getProductCartQuantity(product)}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                        <div className="text-center space-y-1">
-                          <div className="text-xs font-medium text-gray-500 truncate">
-                            {product.name}
-                          </div>
-                          <div className="text-sm font-semibold text-green-600">
-                            {getProductPriceDisplay(product)}
+                {getFilteredProducts().filter((p) => !p.subcategoryId).length >
+                  0 && (
+                  <div className="grid grid-cols-4 gap-4">
+                    {getFilteredProducts()
+                      .filter((p) => !p.subcategoryId)
+                      .map((product) => (
+                        <div
+                          key={product.id}
+                          className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
+                            selectedProduct?.id === product.id
+                              ? "transform scale-105 shadow-lg border-green-500"
+                              : "border-gray-100"
+                          } `}
+                          onClick={() => handleProductSelect(product)}
+                        >
+                          {product.mainImage && (
+                            <div className="w-full aspect-[3/4] mb-2 relative">
+                              <Image
+                                src={product.mainImage}
+                                alt={product.name}
+                                fill
+                                className="object-contain rounded-lg"
+                              />
+                              {getProductCartQuantity(product) > 0 && (
+                                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
+                                  {getProductCartQuantity(product)}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="text-center space-y-1">
+                            <div className="text-lg font-medium text-gray-500 truncate">
+                              {product.name}
+                            </div>
+                            <div className="text-lg font-semibold text-green-600">
+                              {getProductPriceDisplay(product)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                </div>
+                      ))}
+                  </div>
+                )}
+
                 {/* Empty state */}
                 {getFilteredSubcategories().length === 0 &&
                   getFilteredProducts().length === 0 && (

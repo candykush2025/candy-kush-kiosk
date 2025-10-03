@@ -5,6 +5,7 @@ import { CustomerService } from "../../lib/customerService";
 import { VisitService } from "../../lib/visitService";
 import { useTranslation } from "react-i18next";
 import KioskHeader from "../../components/KioskHeader";
+import i18n from "../../i18n/index";
 
 export default function QRScanner() {
   const [scannedCode, setScannedCode] = useState("");
@@ -180,6 +181,24 @@ export default function QRScanner() {
               <div className="p-4 bg-red-500/90 border border-red-400 rounded-lg">
                 <p className="text-white text-center font-medium">{error}</p>
               </div>
+            </div>
+          )}
+
+          {/* Continue Without Member Button */}
+          {!isProcessing && (
+            <div className="mb-8">
+              <button
+                onClick={() => {
+                  // Clear any customer data and set "No Member" state
+                  sessionStorage.removeItem("customerCode");
+                  sessionStorage.removeItem("currentCustomer");
+                  sessionStorage.setItem("noMember", "true");
+                  router.push("/menu");
+                }}
+                className="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-colors duration-200 text-xl"
+              >
+                {t("continueWithoutMember")}
+              </button>
             </div>
           )}
 

@@ -2,12 +2,27 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import PointsHistory from "./PointsHistory";
+import i18n from "../i18n/index";
 
 export default function CustomerSection({ customer }) {
   const [showPointsHistory, setShowPointsHistory] = useState(false);
   const { t } = useTranslation();
 
   if (!customer) return null;
+
+  // Handle "No Member" case
+  if (customer.isNoMember) {
+    return (
+      <div className="bg-gradient-to-r from-gray-600 to-gray-500 text-white p-6 m-4 rounded-lg shadow-lg">
+        <div className="flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-1">{t("noMember")}</h2>
+            <p className="text-gray-200 text-sm">{t("continueAsGuest")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -98,7 +98,11 @@ const resources = {
       idShouldStartWith: "ID should start with CK-",
       customerNotFound: "Customer not found. Please check your member ID.",
       errorValidatingCustomer: "Error validating customer. Please try again.",
+      continueWithoutMember: "Continue Without Member",
+      noMember: "No Member",
+      continueAsGuest: "Continue as Guest",
       presentMemberQr: "Present Member QR",
+      withMembership: "with membership",
       // Category names
       indoor: "Indoor",
       outdoor: "Outdoor",
@@ -188,6 +192,10 @@ const resources = {
       customerNotFound: "ไม่พบลูกค้า กรุณาตรวจสอบรหัสสมาชิกของคุณ",
       errorValidatingCustomer:
         "เกิดข้อผิดพลาดในการตรวจสอบลูกค้า กรุณาลองอีกครั้ง",
+      continueWithoutMember: "ดำเนินการโดยไม่มีสมาชิก",
+      noMember: "ไม่มีสมาชิก",
+      continueAsGuest: "ดำเนินการในฐานะผู้เยี่ยมชม",
+      withMembership: "หากมีสมาชิก",
       presentMemberQr: "แสดงรหัส QR สมาชิก",
       // Category names
       indoor: "ในร่ม",
