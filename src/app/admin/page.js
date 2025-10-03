@@ -98,7 +98,7 @@ export default function AdminPage() {
     if (categories.length && !orderDirty && !orderList.length) {
       setOrderList(categories.map((c) => c.id));
     }
-  }, [categories]);
+  }, [categories, orderDirty, orderList.length]);
 
   // DnD Sortable item
   function SortableCategoryItem({ id, cat, index }) {
@@ -2525,7 +2525,7 @@ export default function AdminPage() {
   // Apply filters whenever filters change or transactions are updated
   useEffect(() => {
     filterTransactions();
-  }, [transactions, transactionFilters]);
+  }, [transactions, transactionFilters, filterTransactions]);
 
   // Reset filters function
   const resetTransactionFilters = () => {

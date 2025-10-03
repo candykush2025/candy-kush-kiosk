@@ -204,7 +204,7 @@ export default function Home() {
       window.removeEventListener("keydown", handleBarcodeKey);
       clearTimeout(processTimer);
     };
-  }, [router]);
+  }, [router, processBarcodeScn]);
 
   const handleOrderNow = async () => {
     // Record order start

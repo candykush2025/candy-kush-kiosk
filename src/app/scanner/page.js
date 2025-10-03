@@ -115,7 +115,7 @@ export default function QRScanner() {
       window.removeEventListener("keydown", handleKey);
       clearTimeout(processTimer);
     };
-  }, [isProcessing, isDev]);
+  }, [isProcessing, isDev, processScan]);
 
   const handleBack = () => {
     router.push("/");

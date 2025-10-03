@@ -829,7 +829,7 @@ export default function MenuPage() {
         }
 
         // Start countdown
-        setSessionTimer(300); // 5 minutes = 300 seconds
+        setSessionTimer(60); // 5 minutes = 300 seconds
 
         // Create timer that decrements every second
         const sessionCountdownInterval = setInterval(() => {
@@ -878,7 +878,7 @@ export default function MenuPage() {
           setCart([]);
           setSelectedProduct(null);
           router.push("/");
-        }, 300000); // 5 minutes
+        }, 60000); // 5 minutes
 
         // Store interval reference for cleanup
         return sessionCountdownInterval;
@@ -1680,8 +1680,8 @@ export default function MenuPage() {
                         No items found
                       </h3>
                       <p className="text-gray-400">
-                        This category doesn&apos;t have any subcategories or products
-                        yet
+                        This category doesn&apos;t have any subcategories or
+                        products yet
                       </p>
                     </div>
                   )}
