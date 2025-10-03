@@ -14,11 +14,13 @@ import {
   CashbackService,
 } from "../../lib/productService";
 import { TransactionService } from "../../lib/transactionService";
+import { PendingPointsService } from "../../lib/pendingPointsService";
 import CustomerSection from "../../components/CustomerSection";
 import KioskHeader from "../../components/KioskHeader";
 import { VisitService } from "../../lib/visitService";
 import { useTranslation } from "react-i18next";
-import i18n from "../../i18n/index";
+import i18n, { supportedLanguages } from "../../i18n/index";
+import ReactCountryFlag from "react-country-flag";
 
 export default function MenuPage() {
   const [customer, setCustomer] = useState(null);
@@ -42,6 +44,7 @@ export default function MenuPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [cashbackPoints, setCashbackPoints] = useState(0);
+  const [itemCashbackDetails, setItemCashbackDetails] = useState([]);
   const [visitRecorded, setVisitRecorded] = useState(false);
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
@@ -49,8 +52,50 @@ export default function MenuPage() {
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
   const [cartTimer, setCartTimer] = useState(60);
   const cartTimerRef = useRef(null);
+
+  // Language and modal states
+  const [selectedLanguage, setSelectedLanguage] = useState(
+    i18n.language || "en"
+  );
+  const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showBackModal, setShowBackModal] = useState(false);
+
   const router = useRouter();
   const { t } = useTranslation();
+
+  // Language helper functions
+  const getLanguageData = (lng) => {
+    const map = {
+      en: { countryCode: "GB", name: "English" },
+      th: { countryCode: "TH", name: "Thai" },
+      es: { countryCode: "ES", name: "Spanish" },
+      fr: { countryCode: "FR", name: "French" },
+      de: { countryCode: "DE", name: "German" },
+      it: { countryCode: "IT", name: "Italian" },
+      ja: { countryCode: "JP", name: "Japanese" },
+      zh: { countryCode: "CN", name: "Chinese" },
+      ru: { countryCode: "RU", name: "Russian" },
+      pt: { countryCode: "PT", name: "Portuguese" },
+      hi: { countryCode: "IN", name: "Hindi" },
+      ko: { countryCode: "KR", name: "Korean" },
+      nl: { countryCode: "NL", name: "Dutch" },
+      tr: { countryCode: "TR", name: "Turkish" },
+    };
+    return map[lng] || { countryCode: "UN", name: "Unknown" };
+  };
+
+  const toggleLanguageDropdown = () => {
+    setShowLanguageDropdown(!showLanguageDropdown);
+  };
+
+  const selectLanguage = (lng) => {
+    setSelectedLanguage(lng);
+    i18n.changeLanguage(lng);
+    localStorage.setItem("i18nextLng", lng);
+    setShowLanguageDropdown(false);
+    console.log(`Menu page: Language changed to ${lng}`);
+  };
 
   // Ensure language is loaded from localStorage on page mount
   useEffect(() => {
@@ -254,7 +299,70 @@ export default function MenuPage() {
   };
 
   const handleBack = () => {
+    console.log("handleBack called, cart length:", cart.length);
+    // Temporarily always show modal for testing
+    console.log("Showing back modal (test mode)");
+    setShowBackModal(true);
+    console.log("showBackModal state after setting:", showBackModal);
+
+    // Original logic:
+    // if (cart.length > 0) {
+    //   console.log("Showing back modal");
+    //   setShowBackModal(true);
+    //   console.log("showBackModal state after setting:", showBackModal);
+    // } else {
+    //   console.log("Going to scanner page");
+    //   router.push("/scanner");
+    // }
+  };
+
+  const confirmBack = () => {
+    // Clear cart timer
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+      cartTimerRef.current = null;
+    }
+    setCartTimer(0);
+
+    // Clear session data
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("customerCode");
+    sessionStorage.removeItem("currentCustomer");
+    sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("lastOrder");
+    sessionStorage.removeItem("receiptData");
+
+    setShowBackModal(false);
     router.push("/scanner");
+  };
+
+  const handleCancelOrder = () => {
+    if (cart.length > 0) {
+      setShowCancelModal(true);
+    } else {
+      router.push("/");
+    }
+  };
+
+  const confirmCancelOrder = () => {
+    // Clear cart timer
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+      cartTimerRef.current = null;
+    }
+    setCartTimer(0);
+
+    // Clear all data
+    setCart([]);
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("customerCode");
+    sessionStorage.removeItem("currentCustomer");
+    sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("lastOrder");
+    sessionStorage.removeItem("receiptData");
+
+    setShowCancelModal(false);
+    router.push("/");
   };
 
   const handleCart = () => {
@@ -427,7 +535,12 @@ export default function MenuPage() {
       // Update customer points if customer exists and is not "No Member"
       if (customer && !customer.isNoMember && cashbackPoints > 0) {
         try {
-          const pointTransactionDetails = {
+          // Create pending points instead of directly adding to customer
+          const pendingPointData = {
+            customerId: customer.id,
+            customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
+            customerCode: customer.customerCode || "",
+            pointsAmount: cashbackPoints,
             transactionId: result.transactionId,
             orderId: result.transactionId,
             reason: "Purchase Cashback",
@@ -440,19 +553,16 @@ export default function MenuPage() {
             },
             purchaseAmount: getTotalPrice(),
             paymentMethod: paymentMethod,
+            source: "kiosk",
           };
 
-          await CustomerService.addPoints(
-            customer.id,
-            cashbackPoints,
-            pointTransactionDetails
-          );
+          await PendingPointsService.createPendingPoints(pendingPointData);
           console.log(
-            `Added ${cashbackPoints} points to customer ${customer.name}`
+            `Created pending points (${cashbackPoints}) for customer ${customer.name} - requires admin approval`
           );
         } catch (pointsError) {
-          console.error("Error adding points to customer:", pointsError);
-          // Don't fail the transaction if points update fails
+          console.error("Error creating pending points:", pointsError);
+          // Don't fail the transaction if pending points creation fails
         }
       }
 
@@ -574,12 +684,14 @@ export default function MenuPage() {
 
       console.log("Total cashback calculated:", totalCashback);
       setCashbackPoints(totalCashback);
+      setItemCashbackDetails(itemCashbackDetails);
 
       // Store detailed cashback info for later use in transaction
       window.menuCashbackDetails = itemCashbackDetails;
     } catch (error) {
       console.error("Error calculating cashback:", error);
       setCashbackPoints(0);
+      setItemCashbackDetails([]);
       window.menuCashbackDetails = [];
     }
   }, [customer, cart]);
@@ -862,6 +974,32 @@ export default function MenuPage() {
     }
   };
 
+  // Helper function to get cashback details for a specific cart item
+  const getItemCashbackInfo = (cartItem) => {
+    const cashbackDetail = itemCashbackDetails.find(
+      (detail) =>
+        detail.productId === cartItem.productId ||
+        detail.productId === cartItem.id
+    );
+
+    if (cashbackDetail) {
+      return {
+        pointsPerUnit: Math.floor(
+          (cartItem.price * cashbackDetail.cashbackPercentage) / 100
+        ),
+        totalPoints: cashbackDetail.pointsEarned,
+        percentage: cashbackDetail.cashbackPercentage,
+      };
+    }
+
+    // Fallback to 0 if no cashback data found
+    return {
+      pointsPerUnit: 0,
+      totalPoints: 0,
+      percentage: 0,
+    };
+  };
+
   // Removed scroll buttons per request; panes will use native scroll.
 
   if (loading) {
@@ -876,7 +1014,6 @@ export default function MenuPage() {
       </div>
     );
   }
-
   return (
     <>
       <div
@@ -888,14 +1025,124 @@ export default function MenuPage() {
           backgroundRepeat: "no-repeat",
         }}
       >
-        {/* Header */}
-        <KioskHeader
-          onBack={handleBack}
-          onCart={handleCart}
-          cart={cart}
-          showCart={true}
-          showBack={true}
-        />
+        {/* Custom Header with Language Selector */}
+        <div className="p-4 flex items-center justify-between">
+          {/* Back Button - Left */}
+          <button
+            onClick={handleBack}
+            className="bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
+          >
+            <svg
+              className="w-12 h-12"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 19l-7-7 7-7"
+              ></path>
+            </svg>
+          </button>
+
+          {/* Logo - Center */}
+          <div className="ml-20">
+            <Image
+              alt="Logo"
+              width={150}
+              height={150}
+              src="/logo.png"
+              className="cursor-pointer object-cover"
+              style={{ color: "transparent" }}
+            />
+          </div>
+
+          {/* Right Section: Language + Cart */}
+          <div className="flex items-center space-x-4">
+            {/* Language Selector */}
+            <div className="relative">
+              <button
+                onClick={toggleLanguageDropdown}
+                className="flex items-center justify-center px-5 py-5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+                  <ReactCountryFlag
+                    countryCode={getLanguageData(selectedLanguage).countryCode}
+                    svg
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              </button>
+
+              {/* Language Dropdown */}
+              {showLanguageDropdown && (
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-4 min-w-[400px] z-50">
+                  <div className="grid grid-cols-2 gap-2 px-3">
+                    {supportedLanguages.map((lng) => {
+                      const langData = getLanguageData(lng);
+                      return (
+                        <button
+                          key={lng}
+                          onClick={() => selectLanguage(lng)}
+                          className={`flex items-center px-3 py-3 hover:bg-gray-50 text-left space-x-3 rounded-md transition-colors ${
+                            selectedLanguage === lng
+                              ? "bg-green-50 border border-green-200"
+                              : ""
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
+                            <ReactCountryFlag
+                              countryCode={langData.countryCode}
+                              svg
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 flex-1">
+                            {langData.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cart Button (cart icon restored) */}
+            <button
+              onClick={handleCart}
+              className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
+            >
+              <svg
+                className="w-12 h-12"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
+              </svg>
+
+              {/* Notification Badge */}
+              {cart.length > 0 && (
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {cart.reduce(
+                    (total, item) => total + (item.quantity || 1),
+                    0
+                  )}
+                </div>
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Customer Section */}
         <CustomerSection customer={customer} />
@@ -1171,10 +1418,7 @@ export default function MenuPage() {
         {/* Cancel Button under both lists */}
         <div className="px-6 pb-6">
           <button
-            onClick={() => {
-              setCart([]);
-              router.push("/");
-            }}
+            onClick={handleCancelOrder}
             className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-xl font-semibold text-lg transition-colors"
           >
             Cancel Order
@@ -1419,7 +1663,9 @@ export default function MenuPage() {
             <button
               onClick={() => setShowCart(false)}
               className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
+              aria-label="Back to menu"
             >
+              {/* Changed from cart icon to back arrow per request */}
               <svg
                 className="w-12 h-12"
                 fill="none"
@@ -1429,9 +1675,9 @@ export default function MenuPage() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  strokeWidth={2}
+                  strokeWidth="2"
                   d="M15 19l-7-7 7-7"
-                />
+                ></path>
               </svg>
             </button>
             {!showCart && (
@@ -1543,16 +1789,18 @@ export default function MenuPage() {
                             ฿{item.price} {item.unit || "each"}
                           </div>
                           {/* Points Information - only show if points > 0 */}
-                          {Math.floor(item.price * 0.01) > 0 && (
-                            <div className="text-sm text-blue-600 mt-1">
-                              +{Math.floor(item.price * 0.01)} points (
-                              {(
-                                ((item.price * 0.01) / item.price) *
-                                100
-                              ).toFixed(1)}
-                              %)
-                            </div>
-                          )}
+                          {customer &&
+                            !customer.isNoMember &&
+                            getItemCashbackInfo(item).pointsPerUnit > 0 && (
+                              <div className="text-sm text-blue-600 mt-1">
+                                +{getItemCashbackInfo(item).pointsPerUnit}{" "}
+                                points (
+                                {getItemCashbackInfo(item).percentage.toFixed(
+                                  1
+                                )}
+                                %)
+                              </div>
+                            )}
                         </div>
                       </div>
 
@@ -1606,17 +1854,14 @@ export default function MenuPage() {
                             ฿{item.price * (item.quantity || 1)}
                           </div>
                           {/* Total points - only show if points > 0 */}
-                          {Math.floor(
-                            item.price * (item.quantity || 1) * 0.01
-                          ) > 0 && (
-                            <div className="text-sm text-blue-600">
-                              +
-                              {Math.floor(
-                                item.price * (item.quantity || 1) * 0.01
-                              )}{" "}
-                              pts total
-                            </div>
-                          )}
+                          {customer &&
+                            !customer.isNoMember &&
+                            getItemCashbackInfo(item).totalPoints > 0 && (
+                              <div className="text-sm text-blue-600">
+                                +{getItemCashbackInfo(item).totalPoints} pts
+                                total
+                              </div>
+                            )}
                         </div>
 
                         {/* Remove Button */}
@@ -1752,11 +1997,7 @@ export default function MenuPage() {
                   Add More Items
                 </button>
                 <button
-                  onClick={() => {
-                    setCart([]);
-                    sessionStorage.removeItem("cart");
-                    setShowCart(false);
-                  }}
+                  onClick={handleCancelOrder}
                   className="py-6 text-xl font-semibold bg-red-600 hover:bg-red-700 text-white rounded-2xl transition-colors"
                 >
                   Cancel Order
@@ -2065,6 +2306,61 @@ export default function MenuPage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Back Confirmation Modal */}
+      {showBackModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          {console.log("Back modal is rendering!")}
+          <div className="bg-white rounded-lg p-6 m-4 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">
+              {t("confirmBack")}
+            </h3>
+            <p className="text-gray-600 mb-6">{t("confirmBackMessage")}</p>
+            <div className="flex space-x-4">
+              <button
+                onClick={confirmBack}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+              >
+                {t("yes")}
+              </button>
+              <button
+                onClick={() => setShowBackModal(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg font-medium transition-colors"
+              >
+                {t("no")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel Order Confirmation Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 m-4 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4 text-gray-800">
+              {t("confirmCancelOrder")}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {t("confirmCancelOrderMessage")}
+            </p>
+            <div className="flex space-x-4">
+              <button
+                onClick={confirmCancelOrder}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+              >
+                {t("yes")}
+              </button>
+              <button
+                onClick={() => setShowCancelModal(false)}
+                className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded-lg font-medium transition-colors"
+              >
+                {t("no")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

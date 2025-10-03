@@ -103,6 +103,15 @@ const resources = {
       continueAsGuest: "Continue as Guest",
       presentMemberQr: "Present Member QR",
       withMembership: "with membership",
+      // Confirmation modal translations
+      confirmBack: "Are you sure?",
+      confirmBackMessage:
+        "Are you sure you want to go back? Your current order will be cancelled.",
+      confirmCancelOrder: "Cancel Order?",
+      confirmCancelOrderMessage:
+        "Are you sure you want to cancel your order? All items will be removed from your cart.",
+      yes: "Yes",
+      no: "No",
       // Category names
       indoor: "Indoor",
       outdoor: "Outdoor",
@@ -197,6 +206,15 @@ const resources = {
       continueAsGuest: "ดำเนินการในฐานะผู้เยี่ยมชม",
       withMembership: "หากมีสมาชิก",
       presentMemberQr: "แสดงรหัส QR สมาชิก",
+      // Confirmation modal translations
+      confirmBack: "คุณแน่ใจหรือไม่?",
+      confirmBackMessage:
+        "คุณแน่ใจหรือไม่ที่จะกลับไป? คำสั่งซื้อปัจจุบันของคุณจะถูกยกเลิก",
+      confirmCancelOrder: "ยกเลิกคำสั่งซื้อ?",
+      confirmCancelOrderMessage:
+        "คุณแน่ใจหรือไม่ที่จะยกเลิกคำสั่งซื้อ? รายการทั้งหมดจะถูกลบออกจากตะกร้าของคุณ",
+      yes: "ใช่",
+      no: "ไม่",
       // Category names
       indoor: "ในร่ม",
       outdoor: "กลางแจ้ง",
@@ -288,7 +306,20 @@ const resources = {
         "Cliente no encontrado. Por favor verifica tu ID de miembro.",
       errorValidatingCustomer:
         "Error validando cliente. Por favor intenta de nuevo.",
+      continueWithoutMember: "Continuar Sin Miembro",
+      noMember: "Sin Miembro",
+      continueAsGuest: "Continuar como Invitado",
       presentMemberQr: "Presenta QR de Miembro",
+      withMembership: "con membresía",
+      // Confirmation modal translations
+      confirmBack: "¿Estás seguro?",
+      confirmBackMessage:
+        "¿Estás seguro de que quieres volver? Tu pedido actual será cancelado.",
+      confirmCancelOrder: "¿Cancelar Pedido?",
+      confirmCancelOrderMessage:
+        "¿Estás seguro de que quieres cancelar tu pedido? Todos los artículos serán eliminados de tu carrito.",
+      yes: "Sí",
+      no: "No",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -381,7 +412,20 @@ const resources = {
       customerNotFound: "Client non trouvé. Veuillez vérifier votre ID membre.",
       errorValidatingCustomer:
         "Erreur lors de la validation du client. Veuillez réessayer.",
+      continueWithoutMember: "Continuer Sans Membre",
+      noMember: "Pas de Membre",
+      continueAsGuest: "Continuer en tant qu'Invité",
       presentMemberQr: "Présentez le QR Membre",
+      withMembership: "avec adhésion",
+      // Confirmation modal translations
+      confirmBack: "Êtes-vous sûr ?",
+      confirmBackMessage:
+        "Êtes-vous sûr de vouloir revenir ? Votre commande actuelle sera annulée.",
+      confirmCancelOrder: "Annuler la Commande ?",
+      confirmCancelOrderMessage:
+        "Êtes-vous sûr de vouloir annuler votre commande ? Tous les articles seront supprimés de votre panier.",
+      yes: "Oui",
+      no: "Non",
       // Category names
       indoor: "Intérieur",
       outdoor: "Extérieur",
@@ -475,7 +519,20 @@ const resources = {
         "Kunde nicht gefunden. Bitte überprüfen Sie Ihre Mitglieds-ID.",
       errorValidatingCustomer:
         "Fehler beim Validieren des Kunden. Bitte versuchen Sie es erneut.",
+      continueWithoutMember: "Ohne Mitglied Fortfahren",
+      noMember: "Kein Mitglied",
+      continueAsGuest: "Als Gast Fortfahren",
       presentMemberQr: "Mitglieds-QR Vorzeigen",
+      withMembership: "mit Mitgliedschaft",
+      // Confirmation modal translations
+      confirmBack: "Sind Sie sicher?",
+      confirmBackMessage:
+        "Sind Sie sicher, dass Sie zurückgehen möchten? Ihre aktuelle Bestellung wird storniert.",
+      confirmCancelOrder: "Bestellung Stornieren?",
+      confirmCancelOrderMessage:
+        "Sind Sie sicher, dass Sie Ihre Bestellung stornieren möchten? Alle Artikel werden aus Ihrem Warenkorb entfernt.",
+      yes: "Ja",
+      no: "Nein",
       // Category names
       indoor: "Innen",
       outdoor: "Draußen",
@@ -567,7 +624,20 @@ const resources = {
       idShouldStartWith: "L'ID dovrebbe iniziare con CK-",
       customerNotFound: "Cliente non trovato. Controlla il tuo ID membro.",
       errorValidatingCustomer: "Errore nella convalida del cliente. Riprova.",
+      continueWithoutMember: "Continua Senza Membro",
+      noMember: "Nessun Membro",
+      continueAsGuest: "Continua come Ospite",
       presentMemberQr: "Presenta QR Membro",
+      withMembership: "con iscrizione",
+      // Confirmation modal translations
+      confirmBack: "Sei sicuro?",
+      confirmBackMessage:
+        "Sei sicuro di voler tornare indietro? Il tuo ordine attuale sarà cancellato.",
+      confirmCancelOrder: "Annullare Ordine?",
+      confirmCancelOrderMessage:
+        "Sei sicuro di voler annullare il tuo ordine? Tutti gli articoli saranno rimossi dal tuo carrello.",
+      yes: "Sì",
+      no: "No",
       // Category names
       indoor: "Interno",
       outdoor: "Esterno",
@@ -657,7 +727,20 @@ const resources = {
       idShouldStartWith: "IDはCK-で始まる必要があります",
       customerNotFound: "お客様が見つかりません。会員IDを確認してください。",
       errorValidatingCustomer: "お客様の検証エラー。もう一度お試しください。",
+      continueWithoutMember: "会員なしで続行",
+      noMember: "会員なし",
+      continueAsGuest: "ゲストとして続行",
       presentMemberQr: "会員QRを提示",
+      withMembership: "会員として",
+      // Confirmation modal translations
+      confirmBack: "よろしいですか？",
+      confirmBackMessage:
+        "戻ってもよろしいですか？現在の注文はキャンセルされます。",
+      confirmCancelOrder: "注文をキャンセルしますか？",
+      confirmCancelOrderMessage:
+        "注文をキャンセルしてもよろしいですか？すべてのアイテムがカートから削除されます。",
+      yes: "はい",
+      no: "いいえ",
       // Category names
       indoor: "屋内",
       outdoor: "屋外",
@@ -745,7 +828,19 @@ const resources = {
       idShouldStartWith: "ID应以CK-开头",
       customerNotFound: "未找到客户。请检查您的会员ID。",
       errorValidatingCustomer: "验证客户时出错。请重试。",
+      continueWithoutMember: "无会员继续",
+      noMember: "无会员",
+      continueAsGuest: "作为访客继续",
       presentMemberQr: "出示会员二维码",
+      withMembership: "会员身份",
+      // Confirmation modal translations
+      confirmBack: "您确定吗？",
+      confirmBackMessage: "您确定要返回吗？您当前的订单将被取消。",
+      confirmCancelOrder: "取消订单？",
+      confirmCancelOrderMessage:
+        "您确定要取消订单吗？所有商品将从购物车中移除。",
+      yes: "是",
+      no: "否",
       // Category names
       indoor: "室内",
       outdoor: "户外",
@@ -834,7 +929,20 @@ const resources = {
       idShouldStartWith: "ID должен начинаться с CK-",
       customerNotFound: "Клиент не найден. Проверьте ваш ID участника.",
       errorValidatingCustomer: "Ошибка проверки клиента. Попробуйте снова.",
+      continueWithoutMember: "Продолжить без участника",
+      noMember: "Нет участника",
+      continueAsGuest: "Продолжить как гость",
       presentMemberQr: "Предъявите QR Участника",
+      withMembership: "с членством",
+      // Confirmation modal translations
+      confirmBack: "Вы уверены?",
+      confirmBackMessage:
+        "Вы уверены, что хотите вернуться? Ваш текущий заказ будет отменен.",
+      confirmCancelOrder: "Отменить заказ?",
+      confirmCancelOrderMessage:
+        "Вы уверены, что хотите отменить заказ? Все товары будут удалены из корзины.",
+      yes: "Да",
+      no: "Нет",
       // Category names
       indoor: "Внутренний",
       outdoor: "Наружный",
@@ -924,7 +1032,20 @@ const resources = {
       idShouldStartWith: "ID deve começar com CK-",
       customerNotFound: "Cliente não encontrado. Verifique seu ID de membro.",
       errorValidatingCustomer: "Erro ao validar cliente. Tente novamente.",
+      continueWithoutMember: "Continuar Sem Membro",
+      noMember: "Sem Membro",
+      continueAsGuest: "Continuar como Convidado",
       presentMemberQr: "Apresente QR do Membro",
+      withMembership: "com associação",
+      // Confirmation modal translations
+      confirmBack: "Tem certeza?",
+      confirmBackMessage:
+        "Tem certeza de que quer voltar? Seu pedido atual será cancelado.",
+      confirmCancelOrder: "Cancelar Pedido?",
+      confirmCancelOrderMessage:
+        "Tem certeza de que quer cancelar seu pedido? Todos os itens serão removidos do seu carrinho.",
+      yes: "Sim",
+      no: "Não",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -1015,7 +1136,20 @@ const resources = {
       customerNotFound: "ग्राहक नहीं मिला। कृपया अपनी सदस्य ID जांचें।",
       errorValidatingCustomer:
         "ग्राहक सत्यापन में त्रुटि। कृपया फिर से कोशिश करें।",
+      continueWithoutMember: "सदस्य के बिना जारी रखें",
+      noMember: "कोई सदस्य नहीं",
+      continueAsGuest: "अतिथि के रूप में जारी रखें",
       presentMemberQr: "सदस्य QR प्रस्तुत करें",
+      withMembership: "सदस्यता के साथ",
+      // Confirmation modal translations
+      confirmBack: "क्या आप सुनिश्चित हैं?",
+      confirmBackMessage:
+        "क्या आप वापस जाना चाहते हैं? आपका वर्तमान ऑर्डर रद्द हो जाएगा।",
+      confirmCancelOrder: "ऑर्डर रद्द करें?",
+      confirmCancelOrderMessage:
+        "क्या आप अपना ऑर्डर रद्द करना चाहते हैं? सभी आइटम आपकी कार्ट से हटा दिए जाएंगे।",
+      yes: "हाँ",
+      no: "नहीं",
       // Category names
       indoor: "इनडोर",
       outdoor: "आउटडोर",
@@ -1105,7 +1239,19 @@ const resources = {
       idShouldStartWith: "ID는 CK-로 시작해야 합니다",
       customerNotFound: "고객을 찾을 수 없습니다. 회원 ID를 확인해 주세요.",
       errorValidatingCustomer: "고객 검증 오류입니다. 다시 시도해 주세요.",
+      continueWithoutMember: "회원 없이 계속",
+      noMember: "회원 없음",
+      continueAsGuest: "게스트로 계속",
       presentMemberQr: "회원 QR 제시",
+      withMembership: "회원권으로",
+      // Confirmation modal translations
+      confirmBack: "확실합니까?",
+      confirmBackMessage: "돌아가시겠습니까? 현재 주문이 취소됩니다.",
+      confirmCancelOrder: "주문 취소?",
+      confirmCancelOrderMessage:
+        "주문을 취소하시겠습니까? 모든 항목이 장바구니에서 제거됩니다.",
+      yes: "예",
+      no: "아니요",
       // Category names
       indoor: "실내",
       outdoor: "실외",
@@ -1196,7 +1342,20 @@ const resources = {
       idShouldStartWith: "ID moet beginnen met CK-",
       customerNotFound: "Klant niet gevonden. Controleer je lid ID.",
       errorValidatingCustomer: "Fout bij valideren klant. Probeer opnieuw.",
+      continueWithoutMember: "Doorgaan Zonder Lid",
+      noMember: "Geen Lid",
+      continueAsGuest: "Doorgaan als Gast",
       presentMemberQr: "Toon Lid QR",
+      withMembership: "met lidmaatschap",
+      // Confirmation modal translations
+      confirmBack: "Weet je het zeker?",
+      confirmBackMessage:
+        "Weet je zeker dat je terug wilt gaan? Je huidige bestelling wordt geannuleerd.",
+      confirmCancelOrder: "Bestelling Annuleren?",
+      confirmCancelOrderMessage:
+        "Weet je zeker dat je je bestelling wilt annuleren? Alle items worden uit je winkelwagen verwijderd.",
+      yes: "Ja",
+      no: "Nee",
       // Category names
       indoor: "Binnen",
       outdoor: "Buiten",
@@ -1285,7 +1444,20 @@ const resources = {
       idShouldStartWith: "ID CK- ile başlamalıdır",
       customerNotFound: "Müşteri bulunamadı. Üye ID'nizi kontrol edin.",
       errorValidatingCustomer: "Müşteri doğrulama hatası. Tekrar deneyin.",
+      continueWithoutMember: "Üye Olmadan Devam Et",
+      noMember: "Üye Yok",
+      continueAsGuest: "Misafir Olarak Devam Et",
       presentMemberQr: "Üye QR'ını Gösterin",
+      withMembership: "üyelikle",
+      // Confirmation modal translations
+      confirmBack: "Emin misiniz?",
+      confirmBackMessage:
+        "Geri dönmek istediğinizden emin misiniz? Mevcut siparişiniz iptal edilecek.",
+      confirmCancelOrder: "Siparişi İptal Et?",
+      confirmCancelOrderMessage:
+        "Siparişinizi iptal etmek istediğinizden emin misiniz? Tüm ürünler sepetinizden kaldırılacak.",
+      yes: "Evet",
+      no: "Hayır",
       // Category names
       indoor: "İç Mekan",
       outdoor: "Dış Mekan",

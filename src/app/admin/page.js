@@ -40,6 +40,7 @@ import {
   ChevronRight,
   Plus,
   X,
+  Clock,
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -62,6 +63,19 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [transactionSearchTerm, setTransactionSearchTerm] = useState("");
   const [productSearchTerm, setProductSearchTerm] = useState("");
+
+  // Transaction filter states
+  const [transactionFilters, setTransactionFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    category: "",
+    product: "",
+    customer: "",
+    paymentMethod: "",
+    minAmount: "",
+    maxAmount: "",
+  });
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   // Inline edit state for variant options (editing existing product)
@@ -2286,6 +2300,116 @@ export default function AdminPage() {
     }
   };
 
+  // Filter transactions based on selected criteria
+  const filterTransactions = () => {
+    let filtered = [...transactions];
+
+    // Filter by date range
+    if (transactionFilters.dateFrom) {
+      const fromDate = new Date(transactionFilters.dateFrom);
+      filtered = filtered.filter((transaction) => {
+        const transactionDate = new Date(
+          transaction.createdAt?.toDate
+            ? transaction.createdAt.toDate()
+            : transaction.createdAt
+        );
+        return transactionDate >= fromDate;
+      });
+    }
+
+    if (transactionFilters.dateTo) {
+      const toDate = new Date(transactionFilters.dateTo);
+      toDate.setHours(23, 59, 59, 999); // Include the entire day
+      filtered = filtered.filter((transaction) => {
+        const transactionDate = new Date(
+          transaction.createdAt?.toDate
+            ? transaction.createdAt.toDate()
+            : transaction.createdAt
+        );
+        return transactionDate <= toDate;
+      });
+    }
+
+    // Filter by customer name
+    if (transactionFilters.customer) {
+      filtered = filtered.filter((transaction) =>
+        transaction.customerName
+          ?.toLowerCase()
+          .includes(transactionFilters.customer.toLowerCase())
+      );
+    }
+
+    // Filter by payment method
+    if (transactionFilters.paymentMethod) {
+      filtered = filtered.filter(
+        (transaction) =>
+          transaction.paymentMethod === transactionFilters.paymentMethod
+      );
+    }
+
+    // Filter by amount range
+    if (transactionFilters.minAmount) {
+      const minAmount = parseFloat(transactionFilters.minAmount);
+      filtered = filtered.filter(
+        (transaction) =>
+          (transaction.total || transaction.amount || 0) >= minAmount
+      );
+    }
+
+    if (transactionFilters.maxAmount) {
+      const maxAmount = parseFloat(transactionFilters.maxAmount);
+      filtered = filtered.filter(
+        (transaction) =>
+          (transaction.total || transaction.amount || 0) <= maxAmount
+      );
+    }
+
+    // Filter by category (check if any item in transaction belongs to the category)
+    if (transactionFilters.category) {
+      filtered = filtered.filter((transaction) =>
+        transaction.items?.some(
+          (item) =>
+            item.categoryName
+              ?.toLowerCase()
+              .includes(transactionFilters.category.toLowerCase()) ||
+            item.categoryId === transactionFilters.category
+        )
+      );
+    }
+
+    // Filter by product name
+    if (transactionFilters.product) {
+      filtered = filtered.filter((transaction) =>
+        transaction.items?.some((item) =>
+          item.name
+            ?.toLowerCase()
+            .includes(transactionFilters.product.toLowerCase())
+        )
+      );
+    }
+
+    setFilteredTransactions(filtered);
+  };
+
+  // Apply filters whenever filters change or transactions are updated
+  useEffect(() => {
+    filterTransactions();
+  }, [transactions, transactionFilters]);
+
+  // Reset filters function
+  const resetTransactionFilters = () => {
+    setTransactionFilters({
+      dateFrom: "",
+      dateTo: "",
+      category: "",
+      product: "",
+      customer: "",
+      paymentMethod: "",
+      minAmount: "",
+      maxAmount: "",
+    });
+  };
+
   return (
     <AdminAuthGuard>
       <div className="h-screen bg-gray-50 flex overflow-hidden">
@@ -2360,6 +2484,18 @@ export default function AdminPage() {
               </button>
 
               <button
+                onClick={() => setActiveTab("pendingPoints")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "pendingPoints"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <Clock className="w-5 h-5 mr-3" />
+                Pending Points
+              </button>
+
+              <button
                 onClick={() => setActiveTab("categoryOrder")}
                 className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === "categoryOrder"
@@ -2417,6 +2553,8 @@ export default function AdminPage() {
                       ? "Transaction History"
                       : activeTab === "cashback"
                       ? "Cashback Management"
+                      : activeTab === "pendingPoints"
+                      ? "Pending Points"
                       : activeTab === "categoryOrder"
                       ? "Category Order"
                       : activeTab === "adminManagement"
@@ -2436,6 +2574,8 @@ export default function AdminPage() {
                       ? "Transaction history and details"
                       : activeTab === "cashback"
                       ? "Configure cashback rules and percentages"
+                      : activeTab === "pendingPoints"
+                      ? "Review and approve customer point requests"
                       : activeTab === "categoryOrder"
                       ? "Organize and reorder product categories"
                       : activeTab === "adminManagement"
@@ -5134,8 +5274,256 @@ export default function AdminPage() {
                       </h2>
                       <p className="text-gray-600 mt-1">
                         Recent transactions from customer purchases (Total:{" "}
-                        {transactions.length})
+                        {filteredTransactions.length} of {transactions.length})
                       </p>
+                    </div>
+
+                    {/* Filter Section */}
+                    <div className="px-8 py-6 border-b border-gray-200 bg-gray-50">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          Filters
+                        </h3>
+                        <div className="flex space-x-2">
+                          {/* Quick Date Filters */}
+                          <button
+                            onClick={() => {
+                              const today = new Date();
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                dateFrom: today.toISOString().split("T")[0],
+                                dateTo: today.toISOString().split("T")[0],
+                              }));
+                            }}
+                            className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
+                          >
+                            Today
+                          </button>
+                          <button
+                            onClick={() => {
+                              const today = new Date();
+                              const lastWeek = new Date(
+                                today.getTime() - 7 * 24 * 60 * 60 * 1000
+                              );
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                dateFrom: lastWeek.toISOString().split("T")[0],
+                                dateTo: today.toISOString().split("T")[0],
+                              }));
+                            }}
+                            className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
+                          >
+                            Last 7 Days
+                          </button>
+                          <button
+                            onClick={() => {
+                              const today = new Date();
+                              const lastMonth = new Date(
+                                today.getFullYear(),
+                                today.getMonth() - 1,
+                                today.getDate()
+                              );
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                dateFrom: lastMonth.toISOString().split("T")[0],
+                                dateTo: today.toISOString().split("T")[0],
+                              }));
+                            }}
+                            className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-md hover:bg-blue-200"
+                          >
+                            Last 30 Days
+                          </button>
+                          <button
+                            onClick={resetTransactionFilters}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium border border-blue-300 px-3 py-1 rounded-md hover:bg-blue-50"
+                          >
+                            Reset All Filters
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* Date From */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            From Date
+                          </label>
+                          <input
+                            type="date"
+                            value={transactionFilters.dateFrom}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                dateFrom: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Date To */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            To Date
+                          </label>
+                          <input
+                            type="date"
+                            value={transactionFilters.dateTo}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                dateTo: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Customer */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Customer Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Search customer..."
+                            value={transactionFilters.customer}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                customer: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Payment Method */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Payment Method
+                          </label>
+                          <select
+                            value={transactionFilters.paymentMethod}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                paymentMethod: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">All Methods</option>
+                            <option value="cash">Cash</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="crypto">Crypto</option>
+                          </select>
+                        </div>
+
+                        {/* Min Amount */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Min Amount (฿)
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="0"
+                            value={transactionFilters.minAmount}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                minAmount: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Max Amount */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Max Amount (฿)
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="999999"
+                            value={transactionFilters.maxAmount}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                maxAmount: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+
+                        {/* Category */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Category
+                          </label>
+                          <select
+                            value={transactionFilters.category}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                category: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">All Categories</option>
+                            {categories.map((category) => (
+                              <option key={category.id} value={category.id}>
+                                {category.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Product */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Product Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Search product..."
+                            value={transactionFilters.product}
+                            onChange={(e) =>
+                              setTransactionFilters((prev) => ({
+                                ...prev,
+                                product: e.target.value,
+                              }))
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Filter Summary */}
+                      {filteredTransactions.length !== transactions.length && (
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-blue-800">
+                              Showing {filteredTransactions.length} of{" "}
+                              {transactions.length} transactions
+                            </span>
+                            <span className="text-blue-600 font-medium">
+                              Total: ฿
+                              {filteredTransactions
+                                .reduce(
+                                  (sum, t) => sum + (t.total || t.amount || 0),
+                                  0
+                                )
+                                .toLocaleString("en-US", {
+                                  minimumFractionDigits: 2,
+                                })}
+                            </span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="overflow-x-auto">
@@ -5163,17 +5551,19 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {transactions.length === 0 ? (
+                          {filteredTransactions.length === 0 ? (
                             <tr>
                               <td
                                 colSpan="6"
                                 className="px-6 py-5 text-center text-gray-500"
                               >
-                                No transactions found
+                                {transactions.length === 0
+                                  ? "No transactions found"
+                                  : "No transactions match your filters"}
                               </td>
                             </tr>
                           ) : (
-                            transactions.map((transaction) => (
+                            filteredTransactions.map((transaction) => (
                               <tr
                                 key={transaction.transactionId}
                                 className="hover:bg-gray-50"
@@ -5443,6 +5833,17 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Pending Points Tab */}
+              {activeTab === "pendingPoints" && (
+                <div className="p-6">
+                  <iframe
+                    src="/admin/pending-points"
+                    className="w-full h-[80vh] border-0 rounded-lg"
+                    title="Pending Points Management"
+                  />
                 </div>
               )}
 

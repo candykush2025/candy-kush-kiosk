@@ -129,6 +129,21 @@ export default function ThermalReceiptPage() {
                   <span>Qty: {item.quantity || 1}</span>
                   <span>฿{item.price * (item.quantity || 1)}</span>
                 </div>
+                {/* Item Points - show if customer exists and points > 0 */}
+                {orderData?.customer && !orderData.customer.isNoMember && (
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "#666",
+                      marginTop: "1mm",
+                    }}
+                  >
+                    <span>
+                      Points: +
+                      {Math.floor(item.price * (item.quantity || 1) * 0.2)} pts
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
             <div
@@ -162,19 +177,43 @@ export default function ThermalReceiptPage() {
               </div>
             </div>
 
-            {orderData?.customer && (
+            {orderData?.customer && !orderData.customer.isNoMember && (
               <div style={{ fontSize: "10px", marginTop: "2mm" }}>
                 <div>
                   {t("customerLabel")}: {orderData.customer.name}
                 </div>
-                <div>
-                  {t("pointsEarned")}: {orderData.cashbackPoints || 0}
+                <div
+                  style={{ borderTop: "1px dashed #000", margin: "1mm 0" }}
+                ></div>
+                <div style={{ fontWeight: "bold", marginBottom: "1mm" }}>
+                  POINT BREAKDOWN:
                 </div>
-                {orderData.cashbackPoints > 0 && (
-                  <div>
-                    {t("cashbackPoints")}: {orderData.cashbackPoints}
+                {orderData?.items?.map((item, index) => (
+                  <div
+                    key={index}
+                    style={{ marginBottom: "1mm", fontSize: "9px" }}
+                  >
+                    <div>{item.name}</div>
+                    <div style={{ marginLeft: "2mm" }}>
+                      ฿{item.price} x {item.quantity || 1} = ฿
+                      {item.price * (item.quantity || 1)}
+                    </div>
+                    <div style={{ marginLeft: "2mm" }}>
+                      Points: +
+                      {Math.floor(item.price * (item.quantity || 1) * 0.2)}{" "}
+                      (20.0%)
+                    </div>
                   </div>
-                )}
+                ))}
+                <div
+                  style={{ borderTop: "1px dashed #000", margin: "1mm 0" }}
+                ></div>
+                <div style={{ fontWeight: "bold" }}>
+                  TOTAL POINTS EARNED: +{orderData.cashbackPoints || 0}
+                </div>
+                <div style={{ fontSize: "9px", marginTop: "1mm" }}>
+                  (Points pending admin approval)
+                </div>
               </div>
             )}
           </div>
