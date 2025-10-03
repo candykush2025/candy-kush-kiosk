@@ -1337,7 +1337,7 @@ export default function ShopPage() {
                                 {Object.entries(item.variants).map(
                                   ([variantName, variantValue]) => (
                                     <div key={variantName}>
-                                      {variantName}: {variantValue}
+                                      {variantName}: {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
                                     </div>
                                   )
                                 )}

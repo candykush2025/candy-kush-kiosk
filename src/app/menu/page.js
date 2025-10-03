@@ -2510,7 +2510,7 @@ export default function MenuPage() {
                                 {Object.entries(item.variants).map(
                                   ([variantName, variantValue]) => (
                                     <div key={variantName}>
-                                      {variantValue?.name || variantValue}
+                                      {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
                                     </div>
                                   )
                                 )}
@@ -2821,7 +2821,7 @@ export default function MenuPage() {
                           ([variantName, variantValue]) => (
                             <div key={variantName}>
                               {variantName}:{" "}
-                              {variantValue?.name || variantValue}
+                              {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
                             </div>
                           )
                         )}

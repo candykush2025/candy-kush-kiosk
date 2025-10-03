@@ -11265,7 +11265,7 @@ export default function AdminPage() {
                                             key={key}
                                             className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs mr-1 mb-1"
                                           >
-                                            {key}: {value}
+                                            {key}: {value?.name || (typeof value === 'string' ? value : JSON.stringify(value))}
                                           </span>
                                         )
                                       )}

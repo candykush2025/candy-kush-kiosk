@@ -132,7 +132,7 @@ export default function OrderCompletePage() {
                     {Object.entries(item.variants).map(
                       ([variantName, variantValue]) => (
                         <div key={variantName}>
-                          {variantName}: {variantValue?.name || variantValue}
+                          {variantName}: {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
                         </div>
                       )
                     )}
