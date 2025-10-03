@@ -1,8 +1,11 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword, getAuth } from "firebase/auth";
+import { AdminService } from "../../../lib/adminService";
 
 export default function AdminLoginPage() {
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,19 +16,103 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
 
-    // Hardcoded password check
-    if (password === "candykush123!") {
-      // Set session
+    try {
+      // Check hardcoded root admin first
+      if (email === "admin@root.com" && password === "candykush123!") {
+        // Set session for root admin
+        sessionStorage.setItem("adminAuthenticated", "true");
+        sessionStorage.setItem("adminLoginTime", new Date().toISOString());
+        sessionStorage.setItem("adminEmail", email);
+        sessionStorage.setItem("adminType", "root");
+        sessionStorage.setItem(
+          "adminPermissions",
+          JSON.stringify({
+            edit: true,
+            delete: true,
+            input: true,
+          })
+        );
+
+        // Redirect to admin dashboard
+        router.push("/admin");
+        return;
+      }
+
+      // If not root admin, try Firebase authentication
+      const auth = getAuth();
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // Check if this user is an admin in our admin collection
+      const admin = await AdminService.getAdminByUid(user.uid);
+
+      if (!admin) {
+        throw new Error("Access denied. You are not authorized as an admin.");
+      }
+
+      if (!admin.isActive) {
+        throw new Error(
+          "Your admin account has been deactivated. Please contact a root administrator."
+        );
+      }
+
+      // Set session for Firebase admin
       sessionStorage.setItem("adminAuthenticated", "true");
       sessionStorage.setItem("adminLoginTime", new Date().toISOString());
+      sessionStorage.setItem("adminEmail", admin.email);
+      sessionStorage.setItem("adminType", "firebase");
+      sessionStorage.setItem("adminId", admin.id);
+      sessionStorage.setItem(
+        "adminPermissions",
+        JSON.stringify(admin.permissions)
+      );
 
       // Redirect to admin dashboard
       router.push("/admin");
-    } else {
-      setError("Invalid password. Please try again.");
-    }
+    } catch (error) {
+      console.error("Login error:", error);
 
-    setLoading(false);
+      // Provide user-friendly error messages without exposing technical details
+      if (
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password" ||
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/invalid-email"
+      ) {
+        setError(
+          "Invalid email or password. Please check your credentials and try again."
+        );
+      } else if (error.code === "auth/too-many-requests") {
+        setError(
+          "Too many failed login attempts. Please wait a few minutes before trying again."
+        );
+      } else if (error.code === "auth/network-request-failed") {
+        setError(
+          "Network error. Please check your internet connection and try again."
+        );
+      } else if (
+        error.message === "Access denied. You are not authorized as an admin."
+      ) {
+        setError(
+          "Access denied. This account is not authorized for admin access."
+        );
+      } else if (error.message.includes("deactivated")) {
+        setError(
+          "Your admin account has been deactivated. Please contact an administrator."
+        );
+      } else {
+        // Generic error message for any other errors
+        setError(
+          "Login failed. Please check your email and password and try again."
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,12 +138,48 @@ export default function AdminLoginPage() {
             </div>
             <h2 className="text-3xl font-bold text-gray-900">Admin Login</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Please enter your password to access the admin panel
+              Please enter your email and password to access the admin panel
             </p>
           </div>
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg
+                    className="h-5 w-5 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"
+                    />
+                  </svg>
+                </div>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  className="appearance-none relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-green-500 focus:border-green-500 focus:z-10 sm:text-sm"
+                  placeholder="Enter admin email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
             <div>
               <label htmlFor="password" className="sr-only">
                 Password

@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation";
 import AdminAuthGuard from "../../components/AdminAuthGuard";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
+import { AdminService } from "../../lib/adminService";
+import { AdminAuth } from "../../lib/adminAuth";
 import {
   ProductService,
   CategoryService,
@@ -248,6 +250,41 @@ export default function AdminPage() {
 
   // Product status toggle loading state
   const [isTogglingStatus, setIsTogglingStatus] = useState(null);
+
+  // Admin Management states
+  const [admins, setAdmins] = useState([]);
+  const [showAddAdmin, setShowAddAdmin] = useState(false);
+  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [newAdminData, setNewAdminData] = useState({
+    email: "",
+    password: "",
+    permissions: {
+      edit: false,
+      delete: false,
+      input: false,
+    },
+  });
+  const [editingAdminId, setEditingAdminId] = useState(null);
+  const [editingAdminPermissions, setEditingAdminPermissions] = useState({
+    edit: false,
+    delete: false,
+    input: false,
+  });
+  const [updatingAdminPermissions, setUpdatingAdminPermissions] =
+    useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [changingPasswordAdminId, setChangingPasswordAdminId] = useState(null);
+  const [changingPasswordAdminEmail, setChangingPasswordAdminEmail] =
+    useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Settings states
+  const [transactionPrefix, setTransactionPrefix] = useState("");
+  const [storeName, setStoreName] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   // Complex Product Form States
   const [hasVariants, setHasVariants] = useState(false);
@@ -504,6 +541,37 @@ export default function AdminPage() {
     );
   };
 
+  // Permission checking functions
+  const checkEditPermission = () => {
+    if (!AdminAuth.hasPermission("edit")) {
+      alert(
+        "You do not have permission to edit. Please contact your administrator."
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const checkDeletePermission = () => {
+    if (!AdminAuth.hasPermission("delete")) {
+      alert(
+        "You do not have permission to delete. Please contact your administrator."
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const checkInputPermission = () => {
+    if (!AdminAuth.hasPermission("input")) {
+      alert(
+        "You do not have permission to create new entries. Please contact your administrator."
+      );
+      return false;
+    }
+    return true;
+  };
+
   const loadDashboardData = useCallback(async () => {
     try {
       const customersData = await CustomerService.getAllCustomers();
@@ -512,8 +580,10 @@ export default function AdminPage() {
       const categoriesData = await CategoryService.getAllCategories();
       const subcategoriesData = await SubcategoryService.getAllSubcategories();
       const cashbackRulesData = await CashbackService.getAllCashbackRules();
+      const adminsData = await AdminService.getAllAdmins();
 
       setCustomers(customersData);
+      setAdmins(adminsData);
 
       // Extract transactions from customer points data
       const extractedTransactions =
@@ -546,6 +616,10 @@ export default function AdminPage() {
       console.log("Customers:", customersData.length);
       console.log("Transactions extracted:", extractedTransactions.length);
       console.log("Products:", productsData.length);
+      console.log("Admins:", adminsData.length);
+
+      // Load settings
+      await loadSettings();
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
     } finally {
@@ -680,6 +754,7 @@ export default function AdminPage() {
 
   // Customer handlers
   const handleAddCustomer = () => {
+    if (!checkInputPermission()) return;
     setShowAddCustomer(true);
   };
 
@@ -757,6 +832,13 @@ export default function AdminPage() {
   const handleSaveCustomer = async (e) => {
     e.preventDefault();
 
+    // Check permissions based on whether editing or creating
+    if (editingCustomer) {
+      if (!checkEditPermission()) return;
+    } else {
+      if (!checkInputPermission()) return;
+    }
+
     // Prevent multiple submissions
     if (isCustomerSaving) {
       return;
@@ -831,6 +913,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteCustomer = async (customer) => {
+    if (!checkDeletePermission()) return;
+
     // Show confirmation dialog
     const confirmDelete = window.confirm(
       `Are you sure you want to delete customer "${customer.name} ${
@@ -862,6 +946,8 @@ export default function AdminPage() {
   };
 
   const handleToggleCustomerStatus = async (customer) => {
+    if (!checkEditPermission()) return;
+
     try {
       setIsTogglingCustomerStatus(customer.id);
       const updatedCustomer = { ...customer, isActive: !customer.isActive };
@@ -1019,6 +1105,8 @@ export default function AdminPage() {
   };
 
   const processPointAdjustment = async () => {
+    if (!checkEditPermission()) return;
+
     if (!selectedCustomerForPoints) {
       alert("No customer selected");
       return;
@@ -1038,7 +1126,11 @@ export default function AdminPage() {
     setIsProcessingPointAdjustment(true);
 
     try {
+      // Generate transaction ID using TransactionService
+      const transactionId = await TransactionService.generateTransactionId();
+
       const transactionDetails = {
+        transactionId: transactionId,
         reason: `Manual ${
           pointAdjustmentType === "add" ? "Addition" : "Subtraction"
         }: ${pointAdjustmentReason}`,
@@ -1201,6 +1293,14 @@ export default function AdminPage() {
   // Product handlers
   const handleSaveProduct = async (e) => {
     e.preventDefault(); // Prevent form reload
+
+    // Check permissions based on whether editing or creating
+    if (editingProduct) {
+      if (!checkEditPermission()) return;
+    } else {
+      if (!checkInputPermission()) return;
+    }
+
     try {
       setIsProductSaving(true);
 
@@ -1434,6 +1534,8 @@ export default function AdminPage() {
   };
 
   const handleDeleteProduct = async (productId) => {
+    if (!checkDeletePermission()) return;
+
     try {
       setIsDeletingProduct(productId);
       await ProductService.deleteProduct(productId);
@@ -1446,6 +1548,8 @@ export default function AdminPage() {
   };
 
   const handleToggleProductStatus = async (product) => {
+    if (!checkEditPermission()) return;
+
     try {
       setIsTogglingStatus(product.id);
       const updatedProduct = { ...product, isActive: !product.isActive };
@@ -1460,6 +1564,7 @@ export default function AdminPage() {
 
   // Category handlers (restored stable version)
   const handleSaveCategory = async () => {
+    if (!checkInputPermission()) return;
     if (isLoadingCategory) return; // Prevent double submission
 
     try {
@@ -1496,6 +1601,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteCategory = async (categoryId) => {
+    if (!checkDeletePermission()) return;
     if (isDeletingCategory) return; // Prevent double submission
 
     if (
@@ -1518,6 +1624,7 @@ export default function AdminPage() {
 
   // Subcategory handlers (restored stable version)
   const handleSaveSubcategory = async () => {
+    if (!checkInputPermission()) return;
     if (isLoadingSubcategory) return; // Prevent double submission
 
     try {
@@ -1567,6 +1674,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteSubcategory = async (subcategoryId) => {
+    if (!checkDeletePermission()) return;
     if (isDeletingSubcategory) return; // Prevent double submission
 
     if (
@@ -1693,6 +1801,14 @@ export default function AdminPage() {
 
   const handleSaveCashback = async (e) => {
     e.preventDefault();
+
+    // Check permissions based on whether editing or creating
+    if (editingCashback) {
+      if (!checkEditPermission()) return;
+    } else {
+      if (!checkInputPermission()) return;
+    }
+
     setIsCashbackSaving(true);
 
     try {
@@ -1761,6 +1877,7 @@ export default function AdminPage() {
   };
 
   const handleDeleteCashback = async (ruleId) => {
+    if (!checkDeletePermission()) return;
     if (isDeletingCashback) return; // Prevent double submission
 
     if (confirm("Are you sure you want to delete this cashback rule?")) {
@@ -1778,6 +1895,8 @@ export default function AdminPage() {
   };
 
   const handleToggleCashbackStatus = async (rule) => {
+    if (!checkEditPermission()) return;
+
     try {
       setIsTogglingCashbackStatus(rule.id);
       await CashbackService.updateCashbackRule(rule.id, {
@@ -1789,6 +1908,281 @@ export default function AdminPage() {
       console.error("Error updating cashback rule:", error);
     } finally {
       setIsTogglingCashbackStatus(null);
+    }
+  };
+
+  // Admin Management Functions
+  const handleAddAdmin = () => {
+    if (!checkInputPermission()) return;
+    setShowAddAdmin(true);
+    setNewAdminData({
+      email: "",
+      password: "",
+      permissions: {
+        edit: false,
+        delete: false,
+        input: false,
+      },
+    });
+  };
+
+  const handleCancelAddAdmin = () => {
+    setShowAddAdmin(false);
+    setNewAdminData({
+      email: "",
+      password: "",
+      permissions: {
+        edit: false,
+        delete: false,
+        input: false,
+      },
+    });
+  };
+
+  const handleSaveAdmin = async (e) => {
+    e.preventDefault();
+
+    if (!checkInputPermission()) return;
+
+    if (!newAdminData.email || !newAdminData.password) {
+      alert("Please fill in all required fields");
+      return;
+    }
+
+    if (newAdminData.password.length < 6) {
+      alert("Password must be at least 6 characters long");
+      return;
+    }
+
+    const hasAnyPermission = Object.values(newAdminData.permissions).some(
+      (permission) => permission
+    );
+    if (!hasAnyPermission) {
+      alert("Please select at least one permission");
+      return;
+    }
+
+    try {
+      setAddingAdmin(true);
+      await AdminService.createAdmin({
+        email: newAdminData.email,
+        password: newAdminData.password,
+        permissions: newAdminData.permissions,
+      });
+
+      setShowAddAdmin(false);
+      setNewAdminData({
+        email: "",
+        password: "",
+        permissions: {
+          edit: false,
+          delete: false,
+          input: false,
+        },
+      });
+      await loadDashboardData();
+      alert("Admin created successfully!");
+    } catch (error) {
+      console.error("Error creating admin:", error);
+      if (error.code === "auth/email-already-in-use") {
+        alert("Email is already in use. Please use a different email.");
+      } else {
+        alert("Error creating admin. Please try again.");
+      }
+    } finally {
+      setAddingAdmin(false);
+    }
+  };
+
+  const handleEditAdminPermissions = (admin) => {
+    if (!checkEditPermission()) return;
+    setEditingAdminId(admin.id);
+    setEditingAdminPermissions({ ...admin.permissions });
+  };
+
+  const handleCancelEditAdmin = () => {
+    setEditingAdminId(null);
+    setEditingAdminPermissions({
+      edit: false,
+      delete: false,
+      input: false,
+    });
+  };
+
+  const handleUpdateAdminPermissions = async () => {
+    if (!checkEditPermission()) return;
+
+    try {
+      setUpdatingAdminPermissions(true);
+      await AdminService.updateAdminPermissions(
+        editingAdminId,
+        editingAdminPermissions
+      );
+
+      setEditingAdminId(null);
+      setEditingAdminPermissions({
+        edit: false,
+        delete: false,
+        input: false,
+      });
+      await loadDashboardData();
+      alert("Admin permissions updated successfully!");
+    } catch (error) {
+      console.error("Error updating admin permissions:", error);
+      alert("Error updating admin permissions. Please try again.");
+    } finally {
+      setUpdatingAdminPermissions(false);
+    }
+  };
+
+  const handleToggleAdminStatus = async (admin) => {
+    if (
+      confirm(
+        `Are you sure you want to ${
+          admin.isActive ? "deactivate" : "activate"
+        } this admin?`
+      )
+    ) {
+      try {
+        await AdminService.updateAdminStatus(admin.id, !admin.isActive);
+        await loadDashboardData();
+      } catch (error) {
+        console.error("Error updating admin status:", error);
+        alert("Error updating admin status. Please try again.");
+      }
+    }
+  };
+
+  const handleDeleteAdmin = async (admin) => {
+    if (!checkDeletePermission()) return;
+
+    if (
+      confirm(
+        `Are you sure you want to permanently delete admin "${admin.email}"?\n\nThis action cannot be undone.`
+      )
+    ) {
+      try {
+        await AdminService.deleteAdmin(admin.id);
+        await loadDashboardData();
+        alert("Admin deleted successfully!");
+      } catch (error) {
+        console.error("Error deleting admin:", error);
+        alert("Error deleting admin. Please try again.");
+      }
+    }
+  };
+
+  const handleChangeAdminPassword = (admin) => {
+    setChangingPasswordAdminId(admin.id);
+    setChangingPasswordAdminEmail(admin.email);
+    setShowChangePasswordModal(true);
+  };
+
+  const handleCancelChangePassword = () => {
+    setShowChangePasswordModal(false);
+    setChangingPasswordAdminId(null);
+    setChangingPasswordAdminEmail("");
+    setNewPassword("");
+    setConfirmPassword("");
+  };
+
+  const handleSaveNewPassword = async (e) => {
+    e.preventDefault();
+
+    if (!newPassword || !confirmPassword) {
+      alert("Please fill in all password fields");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      alert("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+
+    try {
+      setChangingPassword(true);
+      await AdminService.changeAdminPassword(
+        changingPasswordAdminId,
+        newPassword
+      );
+
+      setShowChangePasswordModal(false);
+      setChangingPasswordAdminId(null);
+      setChangingPasswordAdminEmail("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      alert("Admin password updated successfully!");
+    } catch (error) {
+      console.error("Error changing admin password:", error);
+      alert("Error changing admin password. Please try again.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  // Settings Functions
+  const loadSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      console.log("Loading settings from Firestore...");
+      // Load settings from Firestore
+      const { db } = await import("../../lib/firebase");
+      const { doc, getDoc } = await import("firebase/firestore");
+
+      const settingsDoc = await getDoc(doc(db, "settings", "general"));
+      if (settingsDoc.exists()) {
+        const settings = settingsDoc.data();
+        console.log("Settings loaded:", settings);
+        setTransactionPrefix(settings.transactionPrefix || "TRX");
+        setStoreName(settings.storeName || "Candy Kush Dispensary");
+        console.log("Settings applied to state");
+      } else {
+        console.log("No settings document found, using defaults");
+        setTransactionPrefix("TRX");
+        setStoreName("Candy Kush Dispensary");
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      // Set defaults on error
+      setTransactionPrefix("TRX");
+      setStoreName("Candy Kush Dispensary");
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSavingSettings(true);
+      console.log("Saving settings:", { transactionPrefix, storeName });
+
+      // Save settings to Firestore
+      const { db } = await import("../../lib/firebase");
+      const { doc, setDoc } = await import("firebase/firestore");
+
+      const settingsData = {
+        transactionPrefix,
+        storeName,
+        updatedAt: new Date().toISOString(),
+      };
+
+      console.log("Settings data to save:", settingsData);
+
+      await setDoc(doc(db, "settings", "general"), settingsData);
+
+      console.log("Settings saved successfully to Firestore");
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Error saving settings: " + error.message);
+    } finally {
+      setSavingSettings(false);
     }
   };
 
@@ -1977,6 +2371,20 @@ export default function AdminPage() {
                 Category Order
               </button>
 
+              {AdminAuth.isRootAdmin() && (
+                <button
+                  onClick={() => setActiveTab("adminManagement")}
+                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "adminManagement"
+                      ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <User className="w-5 h-5 mr-3" />
+                  Admin Management
+                </button>
+              )}
+
               <button
                 onClick={() => setActiveTab("settings")}
                 className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
@@ -2009,6 +2417,10 @@ export default function AdminPage() {
                       ? "Transaction History"
                       : activeTab === "cashback"
                       ? "Cashback Management"
+                      : activeTab === "categoryOrder"
+                      ? "Category Order"
+                      : activeTab === "adminManagement"
+                      ? "Admin Management"
                       : activeTab === "settings"
                       ? "Settings"
                       : activeTab}
@@ -2024,10 +2436,49 @@ export default function AdminPage() {
                       ? "Transaction history and details"
                       : activeTab === "cashback"
                       ? "Configure cashback rules and percentages"
+                      : activeTab === "categoryOrder"
+                      ? "Organize and reorder product categories"
+                      : activeTab === "adminManagement"
+                      ? "Manage admin accounts and permissions"
                       : activeTab === "settings"
                       ? "System configuration and preferences"
                       : "Admin management"}
                   </p>
+                </div>
+
+                {/* Admin Info and Logout */}
+                <div className="flex items-center space-x-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">
+                      {AdminAuth.getCurrentAdmin()?.email || "admin@root.com"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {AdminAuth.isRootAdmin()
+                        ? "Root Administrator - Full Access"
+                        : `Permissions: ${AdminAuth.getPermissionsList().join(
+                            ", "
+                          )}`}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => AdminAuth.logout()}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                    Logout
+                  </button>
                 </div>
               </div>
             </div>
@@ -2410,13 +2861,15 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={handleAddCustomer}
-                      className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
-                    >
-                      <Users className="w-5 h-5 mr-2" />
-                      Add Customer
-                    </button>
+                    {AdminAuth.hasPermission("input") && (
+                      <button
+                        onClick={handleAddCustomer}
+                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
+                      >
+                        <Users className="w-5 h-5 mr-2" />
+                        Add Customer
+                      </button>
+                    )}
                   </div>
 
                   {/* Search */}
@@ -2539,91 +2992,100 @@ export default function AdminPage() {
                                   >
                                     Points
                                   </button>
-                                  <button
-                                    onClick={() => {
-                                      setCustomerForm({
-                                        nationality: customer.nationality || "",
-                                        name: customer.name || "",
-                                        lastName: customer.lastName || "",
-                                        nickname: customer.nickname || "",
-                                        email: customer.email || "",
-                                        cell: customer.cell || "",
-                                        memberId:
-                                          customer.memberId ||
-                                          customer.customerId ||
-                                          "",
-                                        isActive:
-                                          customer.isActive !== undefined
-                                            ? customer.isActive
-                                            : true,
-                                        dateOfBirth: customer.dateOfBirth || "",
-                                        customPoints:
-                                          customer.customPoints || 0,
-                                      });
-                                      setMemberIdError("");
-                                      setEditingCustomer(customer);
-                                    }}
-                                    className="text-green-600 hover:text-green-900"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleToggleCustomerStatus(customer)
-                                    }
-                                    disabled={
-                                      isTogglingCustomerStatus === customer.id
-                                    }
-                                    className={`${
-                                      isTogglingCustomerStatus === customer.id
-                                        ? "text-gray-400 cursor-not-allowed"
-                                        : "text-yellow-600 hover:text-yellow-900"
-                                    }`}
-                                  >
-                                    {isTogglingCustomerStatus ===
-                                    customer.id ? (
-                                      <div className="flex items-center space-x-1">
-                                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                                        <span>Updating...</span>
-                                      </div>
-                                    ) : (
-                                      <span>
-                                        {customer.isActive
-                                          ? "Deactivate"
-                                          : "Activate"}
-                                      </span>
-                                    )}
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteCustomer(customer)
-                                    }
-                                    disabled={
-                                      deletingCustomerId === customer.id
-                                    }
-                                    className={`${
-                                      deletingCustomerId === customer.id
-                                        ? "text-gray-400 cursor-not-allowed"
-                                        : "text-red-600 hover:text-red-900"
-                                    }`}
-                                    title={
-                                      deletingCustomerId === customer.id
-                                        ? "Deleting..."
-                                        : "Delete customer permanently"
-                                    }
-                                  >
-                                    {deletingCustomerId === customer.id ? (
-                                      <div className="flex items-center space-x-1">
-                                        <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                                        <span>Deleting...</span>
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center space-x-1">
-                                        <Trash2 className="w-4 h-4" />
-                                        <span>Delete</span>
-                                      </div>
-                                    )}
-                                  </button>
+                                  {AdminAuth.hasPermission("edit") && (
+                                    <button
+                                      onClick={() => {
+                                        if (!checkEditPermission()) return;
+                                        setCustomerForm({
+                                          nationality:
+                                            customer.nationality || "",
+                                          name: customer.name || "",
+                                          lastName: customer.lastName || "",
+                                          nickname: customer.nickname || "",
+                                          email: customer.email || "",
+                                          cell: customer.cell || "",
+                                          memberId:
+                                            customer.memberId ||
+                                            customer.customerId ||
+                                            "",
+                                          isActive:
+                                            customer.isActive !== undefined
+                                              ? customer.isActive
+                                              : true,
+                                          dateOfBirth:
+                                            customer.dateOfBirth || "",
+                                          customPoints:
+                                            customer.customPoints || 0,
+                                        });
+                                        setMemberIdError("");
+                                        setEditingCustomer(customer);
+                                      }}
+                                      className="text-green-600 hover:text-green-900"
+                                    >
+                                      Edit
+                                    </button>
+                                  )}
+                                  {AdminAuth.hasPermission("edit") && (
+                                    <button
+                                      onClick={() =>
+                                        handleToggleCustomerStatus(customer)
+                                      }
+                                      disabled={
+                                        isTogglingCustomerStatus === customer.id
+                                      }
+                                      className={`${
+                                        isTogglingCustomerStatus === customer.id
+                                          ? "text-gray-400 cursor-not-allowed"
+                                          : "text-yellow-600 hover:text-yellow-900"
+                                      }`}
+                                    >
+                                      {isTogglingCustomerStatus ===
+                                      customer.id ? (
+                                        <div className="flex items-center space-x-1">
+                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                          <span>Updating...</span>
+                                        </div>
+                                      ) : (
+                                        <span>
+                                          {customer.isActive
+                                            ? "Deactivate"
+                                            : "Activate"}
+                                        </span>
+                                      )}
+                                    </button>
+                                  )}
+                                  {AdminAuth.hasPermission("delete") && (
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteCustomer(customer)
+                                      }
+                                      disabled={
+                                        deletingCustomerId === customer.id
+                                      }
+                                      className={`${
+                                        deletingCustomerId === customer.id
+                                          ? "text-gray-400 cursor-not-allowed"
+                                          : "text-red-600 hover:text-red-900"
+                                      }`}
+                                      title={
+                                        deletingCustomerId === customer.id
+                                          ? "Deleting..."
+                                          : "Delete customer permanently"
+                                      }
+                                    >
+                                      {deletingCustomerId === customer.id ? (
+                                        <div className="flex items-center space-x-1">
+                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                          <span>Deleting...</span>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center space-x-1">
+                                          <Trash2 className="w-4 h-4" />
+                                          <span>Delete</span>
+                                        </div>
+                                      )}
+                                    </button>
+                                  )}
                                 </td>
                               </tr>
                             ))}
@@ -2648,63 +3110,69 @@ export default function AdminPage() {
                       </p>
                     </div>
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => setShowAddCategory(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                      {AdminAuth.hasPermission("input") && (
+                        <button
+                          onClick={() => setShowAddCategory(true)}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Add Category
-                      </button>
-                      <button
-                        onClick={() => setShowAddSubcategory(true)}
-                        className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Add Category
+                        </button>
+                      )}
+                      {AdminAuth.hasPermission("input") && (
+                        <button
+                          onClick={() => setShowAddSubcategory(true)}
+                          className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 flex items-center"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Add Subcategory
-                      </button>
-                      <button
-                        onClick={() => setShowAddProduct(true)}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-2"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Add Subcategory
+                        </button>
+                      )}
+                      {AdminAuth.hasPermission("input") && (
+                        <button
+                          onClick={() => setShowAddProduct(true)}
+                          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 flex items-center"
                         >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 4v16m8-8H4"
-                          />
-                        </svg>
-                        Add Product
-                      </button>
+                          <svg
+                            className="w-4 h-4 mr-2"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Add Product
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -4543,6 +5011,7 @@ export default function AdminPage() {
                                     </button>
                                     <button
                                       onClick={() => {
+                                        if (!checkEditPermission()) return;
                                         setEditingProduct(product);
                                         setVariants(product.variants || []);
                                         setHasVariants(
@@ -4586,58 +5055,64 @@ export default function AdminPage() {
                                     >
                                       Edit
                                     </button>
-                                    <button
-                                      onClick={() =>
-                                        handleToggleProductStatus(product)
-                                      }
-                                      disabled={isTogglingStatus === product.id}
-                                      className={`${
-                                        isTogglingStatus === product.id
-                                          ? "text-gray-400 cursor-not-allowed"
-                                          : "text-yellow-600 hover:text-yellow-900"
-                                      }`}
-                                    >
-                                      {isTogglingStatus === product.id ? (
-                                        <div className="flex items-center space-x-1">
-                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                                          <span>Updating...</span>
-                                        </div>
-                                      ) : (
-                                        <span>
-                                          {product.isActive
-                                            ? "Deactivate"
-                                            : "Activate"}
-                                        </span>
-                                      )}
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        if (
-                                          confirm(
-                                            `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
-                                          )
-                                        ) {
-                                          handleDeleteProduct(product.id);
+                                    {AdminAuth.hasPermission("edit") && (
+                                      <button
+                                        onClick={() =>
+                                          handleToggleProductStatus(product)
                                         }
-                                      }}
-                                      disabled={
-                                        isDeletingProduct === product.id
-                                      }
-                                      className={`${
-                                        isDeletingProduct === product.id
-                                          ? "text-gray-400 cursor-not-allowed"
-                                          : "text-red-600 hover:text-red-900"
-                                      }`}
-                                    >
-                                      {isDeletingProduct === product.id ? (
-                                        <div className="flex items-center space-x-1">
-                                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
-                                          <span>Deleting...</span>
-                                        </div>
-                                      ) : (
-                                        "Delete"
-                                      )}
-                                    </button>
+                                        disabled={
+                                          isTogglingStatus === product.id
+                                        }
+                                        className={`${
+                                          isTogglingStatus === product.id
+                                            ? "text-gray-400 cursor-not-allowed"
+                                            : "text-yellow-600 hover:text-yellow-900"
+                                        }`}
+                                      >
+                                        {isTogglingStatus === product.id ? (
+                                          <div className="flex items-center space-x-1">
+                                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                            <span>Updating...</span>
+                                          </div>
+                                        ) : (
+                                          <span>
+                                            {product.isActive
+                                              ? "Deactivate"
+                                              : "Activate"}
+                                          </span>
+                                        )}
+                                      </button>
+                                    )}
+                                    {AdminAuth.hasPermission("delete") && (
+                                      <button
+                                        onClick={() => {
+                                          if (
+                                            confirm(
+                                              `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
+                                            )
+                                          ) {
+                                            handleDeleteProduct(product.id);
+                                          }
+                                        }}
+                                        disabled={
+                                          isDeletingProduct === product.id
+                                        }
+                                        className={`${
+                                          isDeletingProduct === product.id
+                                            ? "text-gray-400 cursor-not-allowed"
+                                            : "text-red-600 hover:text-red-900"
+                                        }`}
+                                      >
+                                        {isDeletingProduct === product.id ? (
+                                          <div className="flex items-center space-x-1">
+                                            <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600"></div>
+                                            <span>Deleting...</span>
+                                          </div>
+                                        ) : (
+                                          "Delete"
+                                        )}
+                                      </button>
+                                    )}
                                   </td>
                                 </tr>
                               );
@@ -4908,6 +5383,7 @@ export default function AdminPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                                 <button
                                   onClick={() => {
+                                    if (!checkEditPermission()) return;
                                     setEditingCashback(rule);
                                     setCashbackForm({
                                       categoryId: rule.categoryId,
@@ -5042,6 +5518,232 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Admin Management Tab */}
+              {activeTab === "adminManagement" && AdminAuth.isRootAdmin() && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Admin Management
+                      </h3>
+                      {AdminAuth.hasPermission("input") && (
+                        <button
+                          onClick={handleAddAdmin}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Admin
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Admin List */}
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Email
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Permissions
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Created
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {admins.map((admin) => (
+                            <tr key={admin.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {admin.email}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-wrap gap-1">
+                                  {admin.permissions?.edit && (
+                                    <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                                      Edit
+                                    </span>
+                                  )}
+                                  {admin.permissions?.delete && (
+                                    <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                                      Delete
+                                    </span>
+                                  )}
+                                  {admin.permissions?.input && (
+                                    <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                                      Input
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    admin.isActive
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {admin.isActive ? "Active" : "Inactive"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {admin.createdAt
+                                  ? new Date(
+                                      admin.createdAt
+                                    ).toLocaleDateString()
+                                  : "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div className="flex space-x-2">
+                                  {editingAdminId === admin.id ? (
+                                    <>
+                                      <button
+                                        onClick={handleUpdateAdminPermissions}
+                                        disabled={updatingAdminPermissions}
+                                        className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                                      >
+                                        {updatingAdminPermissions
+                                          ? "Saving..."
+                                          : "Save"}
+                                      </button>
+                                      <button
+                                        onClick={handleCancelEditAdmin}
+                                        disabled={updatingAdminPermissions}
+                                        className="text-gray-600 hover:text-gray-900 disabled:opacity-50"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          handleEditAdminPermissions(admin)
+                                        }
+                                        className="text-indigo-600 hover:text-indigo-900"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleChangeAdminPassword(admin)
+                                        }
+                                        className="text-blue-600 hover:text-blue-900"
+                                      >
+                                        Change Password
+                                      </button>
+                                      <button
+                                        onClick={() =>
+                                          handleToggleAdminStatus(admin)
+                                        }
+                                        className={`${
+                                          admin.isActive
+                                            ? "text-yellow-600 hover:text-yellow-900"
+                                            : "text-green-600 hover:text-green-900"
+                                        }`}
+                                      >
+                                        {admin.isActive
+                                          ? "Deactivate"
+                                          : "Activate"}
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteAdmin(admin)}
+                                        className="text-red-600 hover:text-red-900"
+                                      >
+                                        Delete
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {admins.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          No admins found. Add your first admin to get started.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Edit Permissions Inline Form */}
+                    {editingAdminId && (
+                      <div className="mt-6 p-4 bg-gray-50 rounded-lg border">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Edit Permissions
+                        </h4>
+                        <div className="space-y-3">
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editingAdminPermissions.edit}
+                              onChange={(e) =>
+                                setEditingAdminPermissions({
+                                  ...editingAdminPermissions,
+                                  edit: e.target.checked,
+                                })
+                              }
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">
+                              <strong>Edit:</strong> Can modify customer,
+                              product, and category data
+                            </span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editingAdminPermissions.delete}
+                              onChange={(e) =>
+                                setEditingAdminPermissions({
+                                  ...editingAdminPermissions,
+                                  delete: e.target.checked,
+                                })
+                              }
+                              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">
+                              <strong>Delete:</strong> Can permanently remove
+                              data from the system
+                            </span>
+                          </label>
+                          <label className="flex items-center">
+                            <input
+                              type="checkbox"
+                              checked={editingAdminPermissions.input}
+                              onChange={(e) =>
+                                setEditingAdminPermissions({
+                                  ...editingAdminPermissions,
+                                  input: e.target.checked,
+                                })
+                              }
+                              className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                            />
+                            <span className="ml-2 text-sm text-gray-700">
+                              <strong>Input:</strong> Can create new customers,
+                              products, and categories
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Settings Tab */}
               {activeTab === "settings" && (
                 <div className="space-y-6">
@@ -5058,15 +5760,53 @@ export default function AdminPage() {
                         </label>
                         <input
                           type="text"
-                          defaultValue="Candy Kush Dispensary"
-                          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                          value={storeName}
+                          onChange={(e) => setStoreName(e.target.value)}
+                          placeholder={
+                            loadingSettings ? "Loading..." : "Enter store name"
+                          }
+                          disabled={loadingSettings}
+                          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                         />
+                      </div>
+
+                      {/* Transaction ID Prefix */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Transaction ID Prefix
+                        </label>
+                        <div className="space-y-2">
+                          <input
+                            type="text"
+                            value={transactionPrefix}
+                            onChange={(e) =>
+                              setTransactionPrefix(e.target.value.toUpperCase())
+                            }
+                            placeholder={
+                              loadingSettings ? "Loading..." : "Enter prefix"
+                            }
+                            disabled={loadingSettings}
+                            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          />
+                          <p className="text-sm text-gray-500">
+                            Example: {transactionPrefix || "TRX"}-00001,{" "}
+                            {transactionPrefix || "TRX"}-00002, etc.
+                          </p>
+                        </div>
                       </div>
 
                       {/* Save Button */}
                       <div className="flex justify-start">
-                        <button className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700">
-                          Save Settings
+                        <button
+                          onClick={handleSaveSettings}
+                          disabled={savingSettings || loadingSettings}
+                          className="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {loadingSettings
+                            ? "Loading..."
+                            : savingSettings
+                            ? "Saving..."
+                            : "Save Settings"}
                         </button>
                       </div>
                     </div>
@@ -10043,9 +10783,235 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* Add Admin Modal */}
+        {showAddAdmin && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Create New Admin
+                </h3>
+              </div>
+
+              <form onSubmit={handleSaveAdmin}>
+                <div className="px-6 py-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={newAdminData.email}
+                      onChange={(e) =>
+                        setNewAdminData({
+                          ...newAdminData,
+                          email: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="admin@example.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength="6"
+                      value={newAdminData.password}
+                      onChange={(e) =>
+                        setNewAdminData({
+                          ...newAdminData,
+                          password: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="Minimum 6 characters"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Permissions *
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={newAdminData.permissions.edit}
+                          onChange={(e) =>
+                            setNewAdminData({
+                              ...newAdminData,
+                              permissions: {
+                                ...newAdminData.permissions,
+                                edit: e.target.checked,
+                              },
+                            })
+                          }
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          <strong>Edit:</strong> Can modify customer, product,
+                          and category data
+                        </span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={newAdminData.permissions.delete}
+                          onChange={(e) =>
+                            setNewAdminData({
+                              ...newAdminData,
+                              permissions: {
+                                ...newAdminData.permissions,
+                                delete: e.target.checked,
+                              },
+                            })
+                          }
+                          className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          <strong>Delete:</strong> Can permanently remove data
+                          from the system
+                        </span>
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={newAdminData.permissions.input}
+                          onChange={(e) =>
+                            setNewAdminData({
+                              ...newAdminData,
+                              permissions: {
+                                ...newAdminData.permissions,
+                                input: e.target.checked,
+                              },
+                            })
+                          }
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700">
+                          <strong>Input:</strong> Can create new customers,
+                          products, and categories
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCancelAddAdmin}
+                    disabled={addingAdmin}
+                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingAdmin}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {addingAdmin ? "Creating..." : "Create Admin"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Change Admin Password Modal */}
+        {showChangePasswordModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Change Admin Password
+                </h3>
+              </div>
+
+              <form onSubmit={handleSaveNewPassword}>
+                <div className="px-6 py-4 space-y-4">
+                  <div className="text-sm text-gray-600 mb-4">
+                    <p>
+                      <strong>Admin Email:</strong> {changingPasswordAdminEmail}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      New Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength="6"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter new password (minimum 6 characters)"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Confirm New Password *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      minLength="6"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+
+                  {newPassword &&
+                    confirmPassword &&
+                    newPassword !== confirmPassword && (
+                      <div className="text-red-600 text-sm">
+                        Passwords do not match
+                      </div>
+                    )}
+                </div>
+
+                <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleCancelChangePassword}
+                    disabled={changingPassword}
+                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      changingPassword ||
+                      !newPassword ||
+                      !confirmPassword ||
+                      newPassword !== confirmPassword
+                    }
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {changingPassword ? "Updating..." : "Update Password"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Point Adjustment Modal */}
         {showPointAdjustmentModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
               <div className="px-6 py-4 border-b border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900">

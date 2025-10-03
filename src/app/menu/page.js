@@ -47,6 +47,8 @@ export default function MenuPage() {
   const [completedOrder, setCompletedOrder] = useState(null);
   const firstWindowRef = useRef(null);
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
+  const [cartTimer, setCartTimer] = useState(60);
+  const cartTimerRef = useRef(null);
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -213,6 +215,14 @@ export default function MenuPage() {
     };
 
     loadData();
+
+    // Make TransactionService available for debugging
+    if (typeof window !== "undefined") {
+      window.TransactionService = TransactionService;
+      console.log("🔧 TransactionService available globally for debugging");
+      console.log("🧪 Try: window.TransactionService.testFirebaseWrite()");
+      console.log("🧪 Try: window.TransactionService.createTestTransaction()");
+    }
   }, [router]);
 
   // Measure first window height after categories are loaded
@@ -401,6 +411,12 @@ export default function MenuPage() {
       );
 
       console.log("💳 Transaction result:", result);
+      console.log("🆔 Transaction ID from result:", result.transactionId);
+      console.log("🔧 Firebase document ID:", result.id);
+
+      // Debug: Check what we're actually using for orderId
+      console.log("🎯 Will use for orderId:", result.transactionId);
+      console.log("🎯 Will use for internal transactionId:", result.id);
 
       // If we get here without error, transaction was successful
       console.log(
@@ -453,11 +469,22 @@ export default function MenuPage() {
         timestamp: new Date().toISOString(),
       };
 
+      // Debug: Log what we're setting as orderId
+      console.log("🎯 Setting orderId to:", orderDataForComplete.orderId);
+      console.log("🎯 Complete order data:", orderDataForComplete);
+
       // Set completed order data and show modal
       setCompletedOrder(orderDataForComplete);
 
       // For KIOSK: After order complete, redirect to home for next customer
       setTimeout(() => {
+        // Clear cart timer
+        if (cartTimerRef.current) {
+          clearTimeout(cartTimerRef.current);
+          cartTimerRef.current = null;
+        }
+        setCartTimer(0);
+
         // Clear all session data for next customer
         sessionStorage.removeItem("cart");
         sessionStorage.removeItem("customerCode");
@@ -472,7 +499,7 @@ export default function MenuPage() {
 
         // Redirect to home page for next customer
         router.push("/");
-      }, 3000); // Show success for 3 seconds then redirect
+      }, 60000); // Show success for 60 seconds then redirect
 
       setShowOrderComplete(true);
 
@@ -562,6 +589,66 @@ export default function MenuPage() {
     calculateCashbackPoints();
   }, [cart, customer, calculateCashbackPoints]);
 
+  // Cart timer - 60 second timeout when cart is open
+  useEffect(() => {
+    if (showCart) {
+      // Clear any existing timer
+      if (cartTimerRef.current) {
+        clearTimeout(cartTimerRef.current);
+      }
+
+      // Start countdown
+      setCartTimer(60);
+
+      // Create timer that decrements every second
+      const countdownInterval = setInterval(() => {
+        setCartTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            // Clear the timeout timer as well
+            if (cartTimerRef.current) {
+              clearTimeout(cartTimerRef.current);
+              cartTimerRef.current = null;
+            }
+            // Go back to home page
+            setShowCart(false);
+            setCustomer(null);
+            setCart([]);
+            setSelectedProduct(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Set timeout for 60 seconds
+      cartTimerRef.current = setTimeout(() => {
+        clearInterval(countdownInterval);
+        // Go back to home page
+        setShowCart(false);
+        setCustomer(null);
+        setCart([]);
+        setSelectedProduct(null);
+      }, 60000);
+
+      // Cleanup function
+      return () => {
+        clearInterval(countdownInterval);
+        if (cartTimerRef.current) {
+          clearTimeout(cartTimerRef.current);
+          cartTimerRef.current = null;
+        }
+      };
+    } else {
+      // Clear timer when cart is closed
+      if (cartTimerRef.current) {
+        clearTimeout(cartTimerRef.current);
+        cartTimerRef.current = null;
+      }
+      setCartTimer(0);
+    }
+  }, [showCart]);
+
   // Handle quantity change
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
@@ -650,6 +737,13 @@ export default function MenuPage() {
   };
 
   const handleStartNewOrder = () => {
+    // Clear cart timer
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+      cartTimerRef.current = null;
+    }
+    setCartTimer(0);
+
     // Clear all session data for next customer
     sessionStorage.removeItem("lastOrder");
     sessionStorage.removeItem("cart");
@@ -1179,8 +1273,54 @@ export default function MenuPage() {
                           <div className="text-green-600 text-2xl font-medium mb-2">
                             {option.name}
                           </div>
-                          <div className="text-black text-3xl">
-                            ฿{option.price}
+
+                          {/* Price Display */}
+                          <div className="flex flex-col items-center">
+                            {customer &&
+                            !customer.isNoMember &&
+                            option.memberPrice &&
+                            option.memberPrice < option.price ? (
+                              // Member with discount - show member price as main
+                              <>
+                                <span className="text-green-600 font-semibold text-lg">
+                                  ฿{option.memberPrice}
+                                </span>
+                                <div className="text-lg text-orange-600 text-center">
+                                  <span className="line-through">
+                                    ฿{option.price}
+                                  </span>
+                                  <span className="ml-1">
+                                    → ฿{option.memberPrice}
+                                  </span>
+                                </div>
+                                <span className="text-base text-orange-600">
+                                  with membership
+                                </span>
+                              </>
+                            ) : (
+                              // No member or no discount - show regular price
+                              <>
+                                <span className="text-green-600 font-semibold text-lg">
+                                  ฿{option.price}
+                                </span>
+                                {option.memberPrice &&
+                                  option.memberPrice < option.price && (
+                                    <>
+                                      <div className="text-lg text-orange-600 text-center">
+                                        <span className="line-through">
+                                          ฿{option.price}
+                                        </span>
+                                        <span className="ml-1">
+                                          → ฿{option.memberPrice}
+                                        </span>
+                                      </div>
+                                      <span className="text-base text-orange-600">
+                                        with membership
+                                      </span>
+                                    </>
+                                  )}
+                              </>
+                            )}
                           </div>
                         </div>
                       </button>
@@ -1294,16 +1434,18 @@ export default function MenuPage() {
                 />
               </svg>
             </button>
-            <div className="relative">
-              <Image
-                alt="Logo"
-                width={150}
-                height={150}
-                src="/logo.png"
-                className="cursor-pointer object-cover"
-                style={{ color: "transparent" }}
-              />
-            </div>
+            {!showCart && (
+              <div className="relative">
+                <Image
+                  alt="Logo"
+                  width={150}
+                  height={150}
+                  src="/logo.png"
+                  className="cursor-pointer object-cover"
+                  style={{ color: "transparent" }}
+                />
+              </div>
+            )}
             <div className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center">
               <div className="text-center w-12 h-12" style={{ color: "white" }}>
                 <div className="text-2xl font-bold" style={{ color: "white" }}>
@@ -1331,9 +1473,34 @@ export default function MenuPage() {
               <h2 className="text-4xl font-bold text-center mb-4">
                 {t("orderSummary")}
               </h2>
-              <p className="text-xl text-center text-gray-600 mb-12">
+              <p className="text-xl text-center text-gray-600 mb-4">
                 {t("reviewBeforePayment")}
               </p>
+
+              {/* Cart Timer Display */}
+              {cartTimer > 0 && (
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center bg-orange-100 border border-orange-300 rounded-lg px-4 py-2">
+                    <svg
+                      className="w-5 h-5 text-orange-600 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                    <span className="text-orange-800 font-medium">
+                      Session expires in: {Math.floor(cartTimer / 60)}:
+                      {(cartTimer % 60).toString().padStart(2, "0")}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Cart Items */}
               <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
@@ -1375,14 +1542,17 @@ export default function MenuPage() {
                           <div className="text-green-600 font-semibold">
                             ฿{item.price} {item.unit || "each"}
                           </div>
-                          {/* Points Information */}
-                          <div className="text-sm text-blue-600 mt-1">
-                            +{Math.floor(item.price * 0.01)} points (
-                            {(((item.price * 0.01) / item.price) * 100).toFixed(
-                              1
-                            )}
-                            %)
-                          </div>
+                          {/* Points Information - only show if points > 0 */}
+                          {Math.floor(item.price * 0.01) > 0 && (
+                            <div className="text-sm text-blue-600 mt-1">
+                              +{Math.floor(item.price * 0.01)} points (
+                              {(
+                                ((item.price * 0.01) / item.price) *
+                                100
+                              ).toFixed(1)}
+                              %)
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1435,13 +1605,18 @@ export default function MenuPage() {
                           <div className="text-xl font-bold text-green-600">
                             ฿{item.price * (item.quantity || 1)}
                           </div>
-                          <div className="text-sm text-blue-600">
-                            +
-                            {Math.floor(
-                              item.price * (item.quantity || 1) * 0.01
-                            )}{" "}
-                            pts total
-                          </div>
+                          {/* Total points - only show if points > 0 */}
+                          {Math.floor(
+                            item.price * (item.quantity || 1) * 0.01
+                          ) > 0 && (
+                            <div className="text-sm text-blue-600">
+                              +
+                              {Math.floor(
+                                item.price * (item.quantity || 1) * 0.01
+                              )}{" "}
+                              pts total
+                            </div>
+                          )}
                         </div>
 
                         {/* Remove Button */}
@@ -1660,8 +1835,8 @@ export default function MenuPage() {
                   {t("time")}:{" "}
                   {new Date(completedOrder.timestamp).toLocaleTimeString()}
                 </div>
-                {completedOrder.transactionId && (
-                  <div>ID: {completedOrder.transactionId}</div>
+                {completedOrder.orderId && (
+                  <div>ID: {completedOrder.orderId}</div>
                 )}
                 <div
                   style={{ borderTop: "1px dashed #000", margin: "2mm 0" }}
@@ -1727,21 +1902,23 @@ export default function MenuPage() {
                   </div>
                 </div>
 
-                {completedOrder.customer && (
-                  <div style={{ fontSize: "10px", marginTop: "2mm" }}>
-                    <div>
-                      {t("customerLabel")}: {completedOrder.customer.name}
-                    </div>
-                    <div>
-                      {t("pointsEarned")}: {completedOrder.cashbackPoints || 0}
-                    </div>
-                    {completedOrder.cashbackPoints > 0 && (
+                {completedOrder.customer &&
+                  !completedOrder.customer.isNoMember && (
+                    <div style={{ fontSize: "10px", marginTop: "2mm" }}>
                       <div>
-                        {t("cashbackPoints")}: {completedOrder.cashbackPoints}
+                        {t("customerLabel")}: {completedOrder.customer.name}
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div>
+                        {t("pointsEarned")}:{" "}
+                        {completedOrder.cashbackPoints || 0}
+                      </div>
+                      {completedOrder.cashbackPoints > 0 && (
+                        <div>
+                          {t("cashbackPoints")}: {completedOrder.cashbackPoints}
+                        </div>
+                      )}
+                    </div>
+                  )}
               </div>
 
               {/* Footer */}
@@ -1817,19 +1994,24 @@ export default function MenuPage() {
                 </div>
 
                 {/* Customer Info */}
-                {completedOrder.customer && (
-                  <div className="mb-4">
-                    <h3 className="font-medium text-gray-800 mb-2">Customer</h3>
-                    <p className="text-gray-600">
-                      {completedOrder.customer.name}
-                    </p>
-                    {completedOrder.cashbackPoints > 0 && (
-                      <p className="text-green-600 font-medium">
-                        Cashback: {completedOrder.cashbackPoints} points earned!
+                {completedOrder.customer &&
+                  completedOrder.customer.name !== "No Member" &&
+                  !completedOrder.customer.isNoMember && (
+                    <div className="mb-4">
+                      <h3 className="font-medium text-gray-800 mb-2">
+                        Customer
+                      </h3>
+                      <p className="text-gray-600">
+                        {completedOrder.customer.name}
                       </p>
-                    )}
-                  </div>
-                )}
+                      {completedOrder.cashbackPoints > 0 && (
+                        <p className="text-green-600 font-medium">
+                          Cashback: {completedOrder.cashbackPoints} points
+                          earned!
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                 {/* Items */}
                 <div className="mb-6">

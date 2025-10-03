@@ -21,9 +21,13 @@ export default function AdminAuthGuard({ children }) {
         if (hoursDiff < 24) {
           setIsAuthenticated(true);
         } else {
-          // Session expired
+          // Session expired - clear all admin session data
           sessionStorage.removeItem("adminAuthenticated");
           sessionStorage.removeItem("adminLoginTime");
+          sessionStorage.removeItem("adminEmail");
+          sessionStorage.removeItem("adminType");
+          sessionStorage.removeItem("adminId");
+          sessionStorage.removeItem("adminPermissions");
           router.push("/admin/login");
         }
       } else {

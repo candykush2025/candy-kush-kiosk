@@ -101,9 +101,7 @@ export default function ThermalReceiptPage() {
             <div>
               {t("time")}: {new Date(orderData?.timestamp).toLocaleTimeString()}
             </div>
-            {orderData?.transactionId && (
-              <div>ID: {orderData.transactionId}</div>
-            )}
+            {orderData?.orderId && <div>ID: {orderData.orderId}</div>}
             <div
               style={{ borderTop: "1px dashed #000", margin: "2mm 0" }}
             ></div>

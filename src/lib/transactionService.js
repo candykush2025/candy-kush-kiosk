@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   orderBy,
   limit,
@@ -25,23 +26,79 @@ export class TransactionService {
   // Generate next transaction ID
   static async generateTransactionId() {
     try {
-      const transactionsSnapshot = await getDocs(
-        collection(db, TRANSACTIONS_COLLECTION)
-      );
-      const transactionCount = transactionsSnapshot.size + 1;
-      return `TXN-${transactionCount.toString().padStart(6, "0")}`;
+      console.log("🆔 Starting transaction ID generation...");
+
+      // Get transaction prefix from settings
+      const settingsDoc = await getDoc(doc(db, "settings", "general"));
+      let prefix = "TRX";
+      if (settingsDoc.exists()) {
+        const settingsData = settingsDoc.data();
+        prefix = settingsData.transactionPrefix || "TRX";
+        console.log("📋 Settings loaded:", settingsData);
+        console.log("🏷️ Using transaction prefix:", prefix);
+      } else {
+        console.log(
+          "⚠️ No settings document found, using default prefix:",
+          prefix
+        );
+      }
+
+      // Use a simple counter approach
+      let nextNumber = 1;
+      try {
+        // Try to get the counter document for this prefix
+        const counterDocRef = doc(db, "counters", `transaction_${prefix}`);
+        const counterDoc = await getDoc(counterDocRef);
+
+        if (counterDoc.exists()) {
+          nextNumber = (counterDoc.data().count || 0) + 1;
+        }
+
+        // Update the counter (this will create the document if it doesn't exist)
+        await setDoc(counterDocRef, { count: nextNumber }, { merge: true });
+
+        console.log(
+          `🔢 Generated transaction number ${nextNumber} for prefix '${prefix}'`
+        );
+      } catch (counterError) {
+        console.warn(
+          "⚠️ Counter method failed, falling back to timestamp:",
+          counterError
+        );
+        // Fallback to timestamp-based numbering if counter fails
+        nextNumber = Date.now() % 100000; // Use last 5 digits of timestamp
+      }
+
+      // Format with leading zeros (5 digits)
+      const formattedNumber = nextNumber.toString().padStart(5, "0");
+      const generatedId = `${prefix}-${formattedNumber}`;
+      console.log("🆔 Generated transaction ID:", generatedId);
+      return generatedId;
     } catch (error) {
       console.error("Error generating transaction ID:", error);
-      throw error;
+      // Fallback to timestamp-based ID with TRX prefix
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+      const fallbackId = `TRX-${timestamp}-${randomSuffix}`;
+      console.log("🆔 Using fallback transaction ID:", fallbackId);
+      return fallbackId;
     }
   }
 
   // Create a new transaction
   static async createTransaction(transactionData) {
     try {
-      const transactionId = await this.generateTransactionId();
+      console.log(
+        "🚀 Starting transaction creation with data:",
+        transactionData
+      );
 
-      const docRef = await addDoc(collection(db, TRANSACTIONS_COLLECTION), {
+      const transactionId = await this.generateTransactionId();
+      console.log("🆔 Generated transaction ID:", transactionId);
+
+      const transactionDocument = {
         transactionId: transactionId,
         customerId: transactionData.customerId || null,
         customerName: transactionData.customerName || "",
@@ -67,11 +124,78 @@ export class TransactionService {
         cashbackEarned: transactionData.cashbackEarned || 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      };
 
-      return { id: docRef.id, transactionId };
+      console.log("📄 Transaction document to save:", transactionDocument);
+
+      const docRef = await addDoc(
+        collection(db, TRANSACTIONS_COLLECTION),
+        transactionDocument
+      );
+
+      console.log(
+        "✅ Transaction successfully saved to Firestore with ID:",
+        docRef.id
+      );
+
+      const returnData = { id: docRef.id, transactionId };
+      console.log("🔄 Returning transaction data:", returnData);
+      return returnData;
     } catch (error) {
-      console.error("Error creating transaction:", error);
+      console.error("❌ Error creating transaction:", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        code: error.code,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
+  // Test function to verify Firebase connectivity and write permissions
+  static async testFirebaseWrite() {
+    try {
+      console.log("🧪 Testing Firebase write capability...");
+
+      const testDoc = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: "Test document from TransactionService",
+      };
+
+      const docRef = await addDoc(collection(db, "test_collection"), testDoc);
+      console.log("✅ Test write successful! Document ID:", docRef.id);
+
+      // Clean up the test document
+      await deleteDoc(doc(db, "test_collection", docRef.id));
+      console.log("🧹 Test document cleaned up");
+
+      return { success: true, documentId: docRef.id };
+    } catch (error) {
+      console.error("❌ Test write failed:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Simple test transaction creation
+  static async createTestTransaction() {
+    try {
+      console.log("🧪 Creating test transaction...");
+
+      const testTransactionData = {
+        customerId: null,
+        customerName: "Test Customer",
+        items: [{ name: "Test Item", price: 10, quantity: 1 }],
+        subtotal: 10,
+        total: 10,
+        paymentMethod: "cash",
+      };
+
+      const result = await this.createTransaction(testTransactionData);
+      console.log("✅ Test transaction created:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ Test transaction failed:", error);
       throw error;
     }
   }
