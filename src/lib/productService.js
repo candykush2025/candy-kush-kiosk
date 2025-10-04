@@ -597,18 +597,30 @@ export class ProductService {
     backgroundImageFile = null
   ) {
     try {
+      console.log("ProductService.createProduct called with:", {
+        productData: { ...productData },
+        imageFilesCount: imageFiles?.length || 0,
+        imageFileNames: imageFiles?.map(f => f.name) || [],
+        hasBackgroundImage: !!backgroundImageFile
+      });
+      
       const productId = await this.generateProductId();
 
       let images = [];
       let mainImage = "";
 
       if (imageFiles && imageFiles.length > 0) {
+        console.log("Processing image files...");
         for (let i = 0; i < imageFiles.length; i++) {
           const imagePath = `products/${productId}/${imageFiles[i].name}`;
+          console.log(`Uploading image ${i}: ${imagePath}`);
+          
           const imageUrl = await CategoryService.uploadImage(
             imageFiles[i],
             imagePath
           );
+          
+          console.log(`Image ${i} uploaded successfully: ${imageUrl}`);
 
           if (i === 0) {
             mainImage = imageUrl;
@@ -620,6 +632,8 @@ export class ProductService {
             name: imageFiles[i].name,
           });
         }
+      } else {
+        console.log("No image files to process");
       }
 
       // Handle background image upload if provided
@@ -632,12 +646,12 @@ export class ProductService {
         );
       }
 
-      const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), {
+      const documentData = {
         productId: productId,
         name: productData.name,
         description: productData.description || "",
         categoryId: productData.categoryId,
-        subcategoryId: productData.subcategoryId,
+        subcategoryId: productData.subcategoryId || null,
 
         // Variants structure
         hasVariants: productData.hasVariants || false,
@@ -664,8 +678,20 @@ export class ProductService {
 
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+      };
+
+      console.log("Saving product to database with data:", {
+        productId: documentData.productId,
+        name: documentData.name,
+        mainImage: documentData.mainImage,
+        imagesCount: documentData.images.length,
+        subcategoryId: documentData.subcategoryId,
+        categoryId: documentData.categoryId
       });
 
+      const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), documentData);
+
+      console.log("Product saved successfully with ID:", docRef.id, "and main image:", documentData.mainImage);
       return { id: docRef.id, productId };
     } catch (error) {
       console.error("Error creating product:", error);
@@ -791,8 +817,17 @@ export class ProductService {
   }
 
   // Update product
-  static async updateProduct(id, productData, imageFiles = []) {
+  static async updateProduct(id, productData, imageFiles = [], backgroundImageFile = null, removeMainImages = false) {
     try {
+      console.log("ProductService.updateProduct called with:", {
+        productId: id,
+        productData: { ...productData },
+        imageFilesCount: imageFiles?.length || 0,
+        imageFileNames: imageFiles?.map(f => f.name) || [],
+        hasBackgroundImage: !!backgroundImageFile,
+        removeMainImages: removeMainImages
+      });
+
       const docRef = doc(db, PRODUCTS_COLLECTION, id);
       const currentDoc = await getDoc(docRef);
 
@@ -822,10 +857,17 @@ export class ProductService {
       };
 
       if (imageFiles && imageFiles.length > 0) {
-        // Delete old images
-        if (currentData.images) {
+        // Delete old images before uploading new ones
+        console.log("Deleting old images before uploading new ones...");
+        if (currentData.images && currentData.images.length > 0) {
           for (const image of currentData.images) {
-            await CategoryService.deleteImage(image.path);
+            console.log(`Deleting old image: ${image.path}`);
+            try {
+              await CategoryService.deleteImage(image.path);
+              console.log(`Successfully deleted: ${image.path}`);
+            } catch (deleteError) {
+              console.warn(`Failed to delete old image ${image.path}:`, deleteError);
+            }
           }
         }
 
@@ -833,12 +875,17 @@ export class ProductService {
         let images = [];
         let mainImage = "";
 
+        console.log("Processing main image files for update...");
         for (let i = 0; i < imageFiles.length; i++) {
           const imagePath = `products/${currentData.productId}/${imageFiles[i].name}`;
+          console.log(`Uploading main image ${i}: ${imagePath}`);
+          
           const imageUrl = await CategoryService.uploadImage(
             imageFiles[i],
             imagePath
           );
+          
+          console.log(`Main image ${i} uploaded successfully: ${imageUrl}`);
 
           if (i === 0) {
             mainImage = imageUrl;
@@ -853,9 +900,56 @@ export class ProductService {
 
         updateData.mainImage = mainImage;
         updateData.images = images;
+        console.log("Main images updated:", { mainImage, imagesCount: images.length });
+      } else if (removeMainImages) {
+        // User wants to completely remove all main images
+        console.log("Removing all main images from product...");
+        if (currentData.images && currentData.images.length > 0) {
+          for (const image of currentData.images) {
+            console.log(`Deleting image for removal: ${image.path}`);
+            try {
+              await CategoryService.deleteImage(image.path);
+              console.log(`Successfully deleted: ${image.path}`);
+            } catch (deleteError) {
+              console.warn(`Failed to delete image ${image.path}:`, deleteError);
+            }
+          }
+        }
+        // Clear the image fields
+        updateData.mainImage = "";
+        updateData.images = [];
+        console.log("All main images removed from product");
+      } else {
+        console.log("No main image files to update");
       }
 
+      // Handle background image upload if provided
+      if (backgroundImageFile) {
+        console.log("Processing background image...");
+        const bgPath = `products/${currentData.productId}/background_${backgroundImageFile.name}`;
+        const backgroundImageUrl = await CategoryService.uploadImage(
+          backgroundImageFile,
+          bgPath
+        );
+        updateData.backgroundImage = backgroundImageUrl;
+        console.log("Background image uploaded:", backgroundImageUrl);
+      }
+
+      console.log("Updating product in database:", {
+        productId: id,
+        mainImage: updateData.mainImage,
+        imagesCount: updateData.images?.length || 0,
+        hasBackgroundImage: !!updateData.backgroundImage
+      });
+
       await updateDoc(docRef, updateData);
+      
+      console.log("✅ Product updated successfully in database:", {
+        productId: id,
+        mainImage: updateData.mainImage,
+        imagesCount: updateData.images?.length || 0
+      });
+      
       return true;
     } catch (error) {
       console.error("Error updating product:", error);

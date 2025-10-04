@@ -8,13 +8,13 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  sortableKeyboardCoordinates,
 } from "@dnd-kit/core";
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
   arrayMove,
+  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
@@ -406,6 +406,7 @@ export default function AdminPage() {
   const [variants, setVariants] = useState([]);
   const [productUnit, setProductUnit] = useState("pcs");
   const [productImageFile, setProductImageFile] = useState(null);
+  const [shouldRemoveMainImages, setShouldRemoveMainImages] = useState(false);
   const [optionImageFile, setOptionImageFile] = useState(null);
   const [isProductSaving, setIsProductSaving] = useState(false);
 
@@ -593,14 +594,10 @@ export default function AdminPage() {
 
   // Extract transactions from customer points data
   const extractTransactionsFromCustomers = (customers) => {
-    console.log("Processing customers:", customers.length);
     const allTransactions = [];
 
     customers.forEach((customer) => {
       if (customer.points && Array.isArray(customer.points)) {
-        console.log(
-          `Customer ${customer.name} has ${customer.points.length} point records`
-        );
         customer.points.forEach((pointRecord, index) => {
           // Use existing transactionId or create one based on index
           const transactionId =
@@ -613,10 +610,6 @@ export default function AdminPage() {
               return sum + (item.quantity || 1) * (item.price || 0);
             }, 0);
           }
-
-          console.log(
-            `Transaction ${transactionId}: calculated total = ฿${calculatedTotal}`
-          );
 
           const transaction = {
             transactionId: transactionId,
@@ -650,7 +643,6 @@ export default function AdminPage() {
       }
     });
 
-    console.log("Total transactions extracted:", allTransactions.length);
     return allTransactions.sort(
       (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
     );
@@ -690,7 +682,6 @@ export default function AdminPage() {
   // Helper function to load transactions from the Firebase transactions collection
   const loadTransactionsCollection = async () => {
     try {
-      console.log("🔍 Loading from transactions collection...");
 
       // Import Firestore functions
       const { collection, getDocs, orderBy, query } = await import(
@@ -742,11 +733,6 @@ export default function AdminPage() {
         });
       });
 
-      console.log(
-        `📈 Found ${transactions.length} transactions in Firebase transactions collection`
-      );
-      console.log("📄 Sample transaction:", transactions[0]);
-
       return transactions;
     } catch (error) {
       console.error("❌ Error loading transactions collection:", error);
@@ -766,13 +752,6 @@ export default function AdminPage() {
 
       // Load transactions ONLY from the transactions collection
       const firebaseTransactions = await loadTransactionsCollection();
-
-      console.log("🔍 Debug - Transaction Sources:");
-      console.log("📊 Customer data length:", customersData.length);
-      console.log(
-        "💳 Firebase transactions collection length:",
-        firebaseTransactions.length
-      );
 
       setCustomers(customersData);
       setAdmins(adminsData);
@@ -817,35 +796,6 @@ export default function AdminPage() {
         totalRevenue: totalRevenue,
         todayVisits: todayVisits,
       });
-
-      console.log("Dashboard data loaded successfully");
-      console.log("📊 Final Stats:");
-      console.log("👥 Customers:", customersData.length);
-      console.log(
-        "💳 Total Transactions (from transactions collection ONLY):",
-        allTransactions.length
-      );
-      console.log(
-        "� Firebase transactions collection:",
-        firebaseTransactions.length
-      );
-      console.log(
-        "� From Firebase transactions collection:",
-        firebaseTransactions.length
-      );
-      console.log("💰 Total Revenue:", totalRevenue);
-      console.log(
-        "🔢 Sample transactions:",
-        allTransactions.slice(0, 5).map((t) => ({
-          id: t.transactionId || t.id,
-          customer: t.customerName,
-          amount: t.total || t.amount,
-          source: t.sourceCollection || "unknown",
-          docId: t.id,
-        }))
-      );
-      console.log("Products:", productsData.length);
-      console.log("Admins:", adminsData.length);
 
       // Load settings
       await loadSettings();
@@ -1660,12 +1610,54 @@ export default function AdminPage() {
           backgroundFit: productForm.backgroundFit,
         };
 
+        // Debug: Check file state for edit mode
+        console.log("🔍 EDIT MODE FILE DEBUG - State before saving:", {
+          productImageFile: productImageFile,
+          fileName: productImageFile?.name,
+          fileSize: productImageFile?.size,
+          fileType: productImageFile?.type,
+          isValidFile: productImageFile instanceof File,
+          hasImageFile: !!productImageFile,
+          editingProductId: editingProduct.id
+        });
+
+        // Prepare image files for update (same as create flow)
+        const imageFiles = productImageFile ? [productImageFile] : [];
+
+        console.log("🚀 EDIT MODE SAVE DEBUG - Updating product with data:", {
+          productName: cleanProductData.name,
+          productId: editingProduct.id,
+          categoryId: cleanProductData.categoryId,
+          subcategoryId: cleanProductData.subcategoryId,
+          hasImageFile: !!productImageFile,
+          imageFileName: productImageFile?.name,
+          imageFilesCount: imageFiles.length
+        });
+
+        console.log("🚀 EDIT MODE SAVE DEBUG - Image handling:", {
+          hasNewImageFile: !!productImageFile,
+          shouldRemoveImages: shouldRemoveMainImages,
+          imageFilesCount: imageFiles.length
+        });
+
         await ProductService.updateProduct(
           editingProduct.id,
           cleanProductData,
-          productBackgroundImageFile
+          imageFiles,                    // New image files
+          productBackgroundImageFile,    // Background image
+          shouldRemoveMainImages         // Flag to remove existing images
         );
+
+        console.log("✅ EDIT MODE SUCCESS - Product updated successfully:", {
+          productId: editingProduct.id,
+          productName: cleanProductData.name,
+          hadImageFile: !!productImageFile,
+          subcategoryId: cleanProductData.subcategoryId
+        });
+
         setEditingProduct(null);
+        setProductImageFile(null);  // Clear the image file state
+        setShouldRemoveMainImages(false); // Reset removal flag
         setProductBackgroundImageFile(null);
         setProductForm({
           name: "",
@@ -1695,52 +1687,90 @@ export default function AdminPage() {
         // Handle adding new product - generate temporary product ID for image uploads
         const tempProductId = `PRD-${Date.now()}`;
         let processedVariants = [];
+        let productDataToSave = { ...newProduct };
 
         if (hasVariants && variants.length > 0) {
-          newProduct.hasVariants = true;
+          productDataToSave.hasVariants = true;
           // Upload variant images before saving
           processedVariants = await uploadVariantImages(
             variants,
             tempProductId
           );
-          newProduct.variants = processedVariants;
+          productDataToSave.variants = processedVariants;
         } else {
-          newProduct.hasVariants = false;
-          newProduct.variants = [];
+          productDataToSave.hasVariants = false;
+          productDataToSave.variants = [];
         }
 
+        // Debug: Check file state right before saving
+        console.log("🔍 FILE DEBUG - State before saving:", {
+          productImageFile: productImageFile,
+          fileName: productImageFile?.name,
+          fileSize: productImageFile?.size,
+          fileType: productImageFile?.type,
+          isValidFile: productImageFile instanceof File,
+          hasImageFile: !!productImageFile
+        });
+
+        // Preserve the file reference to prevent it from being lost
+        const imageFileToUpload = productImageFile;
+        
         // Create a clean product data object without File objects
         const cleanProductData = {
-          name: newProduct.name,
-          description: newProduct.description,
-          categoryId: newProduct.categoryId,
-          categoryName: newProduct.categoryName,
-          subcategoryId: newProduct.subcategoryId,
-          subcategoryName: newProduct.subcategoryName,
-          hasVariants: newProduct.hasVariants,
-          price: newProduct.price || 0,
+          name: productDataToSave.name,
+          description: productDataToSave.description,
+          categoryId: productDataToSave.categoryId,
+          categoryName: productDataToSave.categoryName,
+          subcategoryId: productDataToSave.subcategoryId || null,
+          subcategoryName: productDataToSave.subcategoryName || null,
+          hasVariants: productDataToSave.hasVariants,
+          price: productDataToSave.price || 0,
           // Only include memberPrice for products without variants
-          ...(newProduct.hasVariants
+          ...(productDataToSave.hasVariants
             ? {}
-            : { memberPrice: newProduct.memberPrice || 0 }),
+            : { memberPrice: productDataToSave.memberPrice || 0 }),
           variants: processedVariants, // Use already processed variants
-          sku: newProduct.sku,
-          barcode: newProduct.barcode,
-          supplier: newProduct.supplier,
-          isActive: newProduct.isActive,
-          isFeatured: newProduct.isFeatured,
-          tags: newProduct.tags || [],
-          notes: newProduct.notes,
-          textColor: newProduct.textColor,
-          backgroundFit: newProduct.backgroundFit,
+          sku: productDataToSave.sku || "",
+          barcode: productDataToSave.barcode || "",
+          supplier: productDataToSave.supplier || "",
+          isActive: productDataToSave.isActive,
+          isFeatured: productDataToSave.isFeatured,
+          tags: productDataToSave.tags || [],
+          notes: productDataToSave.notes || "",
+          textColor: productDataToSave.textColor || "#000000",
+          backgroundFit: productDataToSave.backgroundFit || "contain",
         };
 
-        const imageFiles = productImageFile ? [productImageFile] : [];
-        await ProductService.createProduct(
+        // Debug: Product data being sent to service
+        console.log("🚀 PRODUCT SAVE DEBUG - Creating product with data:", {
+          productName: cleanProductData.name,
+          categoryId: cleanProductData.categoryId,
+          subcategoryId: cleanProductData.subcategoryId,
+          hasImageFile: !!imageFileToUpload,
+          imageFileName: imageFileToUpload?.name,
+          imageFileSize: imageFileToUpload?.size,
+          imageFileType: imageFileToUpload?.type,
+          cleanDataKeys: Object.keys(cleanProductData),
+          isEditMode: !!editingProduct
+        });
+
+        const imageFiles = imageFileToUpload ? [imageFileToUpload] : [];
+        
+        const result = await ProductService.createProduct(
           cleanProductData,
           imageFiles,
           productBackgroundImageFile || null
         );
+
+        // Debug: Confirm product was saved successfully
+        console.log("✅ PRODUCT SAVE SUCCESS - Product created:", {
+          resultId: result?.id,
+          productId: result?.productId,
+          productName: cleanProductData.name,
+          hadImageFile: !!imageFileToUpload,
+          subcategoryId: cleanProductData.subcategoryId
+        });
+
         setNewProduct({
           name: "",
           description: "",
@@ -2376,7 +2406,6 @@ export default function AdminPage() {
   const loadSettings = async () => {
     try {
       setLoadingSettings(true);
-      console.log("Loading settings from Firestore...");
       // Load settings from Firestore
       const { db } = await import("../../lib/firebase");
       const { doc, getDoc } = await import("firebase/firestore");
@@ -2384,12 +2413,9 @@ export default function AdminPage() {
       const settingsDoc = await getDoc(doc(db, "settings", "general"));
       if (settingsDoc.exists()) {
         const settings = settingsDoc.data();
-        console.log("Settings loaded:", settings);
         setTransactionPrefix(settings.transactionPrefix || "TRX");
         setStoreName(settings.storeName || "Candy Kush Dispensary");
-        console.log("Settings applied to state");
       } else {
-        console.log("No settings document found, using defaults");
         setTransactionPrefix("TRX");
         setStoreName("Candy Kush Dispensary");
       }
@@ -2406,7 +2432,6 @@ export default function AdminPage() {
   const handleSaveSettings = async () => {
     try {
       setSavingSettings(true);
-      console.log("Saving settings:", { transactionPrefix, storeName });
 
       // Save settings to Firestore
       const { db } = await import("../../lib/firebase");
@@ -2418,11 +2443,8 @@ export default function AdminPage() {
         updatedAt: new Date().toISOString(),
       };
 
-      console.log("Settings data to save:", settingsData);
-
       await setDoc(doc(db, "settings", "general"), settingsData);
 
-      console.log("Settings saved successfully to Firestore");
       alert("Settings saved successfully!");
     } catch (error) {
       console.error("Error saving settings:", error);
@@ -2518,8 +2540,6 @@ export default function AdminPage() {
       ) {
         setSelectedCustomerForPoints(updatedCustomer);
       }
-
-      console.log("Transaction deleted successfully");
 
       // Show success message
       alert("✅ Transaction deleted successfully!");
@@ -4761,45 +4781,14 @@ export default function AdminPage() {
                                               "string" &&
                                               prod.subcategoryId.trim() === "");
 
-                                          console.log(`Product ${prod.name}:`, {
-                                            categoryId: prod.categoryId,
-                                            targetCategoryId: category.id,
-                                            hasCategory,
-                                            subcategoryId: prod.subcategoryId,
-                                            hasNoSubcategory,
-                                            shouldInclude:
-                                              hasCategory && hasNoSubcategory,
-                                          });
-
                                           return (
                                             hasCategory && hasNoSubcategory
                                           );
                                         });
 
-                                      console.log(
-                                        `=== SUMMARY for Category ${category.name} ===`
-                                      );
-                                      console.log(
-                                        `Products without subcategory:`,
-                                        productsWithoutSubcategory.length,
-                                        productsWithoutSubcategory
-                                      );
-                                      console.log(
-                                        `All products in category:`,
-                                        products.filter(
-                                          (p) => p.categoryId === category.id
-                                        )
-                                      );
-                                      console.log(
-                                        `================================`
-                                      );
-
                                       if (
                                         productsWithoutSubcategory.length === 0
                                       ) {
-                                        console.log(
-                                          `No products without subcategory found for ${category.name}`
-                                        );
                                         return null;
                                       }
 
@@ -4855,17 +4844,6 @@ export default function AdminPage() {
                                             <div className="p-3 space-y-2 ml-4">
                                               {productsWithoutSubcategory.map(
                                                 (product) => {
-                                                  console.log("Product data:", {
-                                                    id: product.id,
-                                                    name: product.name,
-                                                    mainImage:
-                                                      product.mainImage,
-                                                    images: product.images,
-                                                    image: product.image,
-                                                    allKeys:
-                                                      Object.keys(product),
-                                                  });
-
                                                   const isProductExpanded =
                                                     expandedProducts.has(
                                                       product.id
@@ -4951,15 +4929,6 @@ export default function AdminPage() {
                                                                   e.target.nextSibling.style.display =
                                                                     "flex";
                                                                 }}
-                                                                onLoad={() =>
-                                                                  console.log(
-                                                                    "Image loaded successfully:",
-                                                                    product.mainImage ||
-                                                                      product
-                                                                        .images?.[0] ||
-                                                                      product.image
-                                                                  )
-                                                                }
                                                               />
                                                             ) : null}
                                                             {!(
@@ -5355,6 +5324,7 @@ export default function AdminPage() {
                                       onClick={() => {
                                         if (!checkEditPermission()) return;
                                         setEditingProduct(product);
+                                        setShouldRemoveMainImages(false); // Reset removal flag when starting edit
                                         setVariants(product.variants || []);
                                         setHasVariants(
                                           product.hasVariants || false
@@ -8764,7 +8734,11 @@ export default function AdminPage() {
                           </div>
                           <button
                             type="button"
-                            onClick={() => setProductImageFile(null)}
+                            onClick={() => {
+                              console.log("🗑️ REMOVE IMAGE - Add Product mode");
+                              setProductImageFile(null);
+                              setShouldRemoveMainImages(false); // For new products, just clear
+                            }}
                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm hover:bg-red-600 shadow-lg transition-colors"
                           >
                             ×
@@ -8786,9 +8760,17 @@ export default function AdminPage() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) =>
-                            setProductImageFile(e.target.files[0])
-                          }
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            console.log("📁 IMAGE UPLOAD DEBUG - File selected (Add Product):", {
+                              fileName: file?.name,
+                              fileSize: file?.size,
+                              fileType: file?.type,
+                              isValidFile: file instanceof File,
+                              timestamp: new Date().toISOString()
+                            });
+                            setProductImageFile(file);
+                          }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           id="product-image-upload"
                         />
@@ -9488,7 +9470,10 @@ export default function AdminPage() {
                     Edit Product
                   </h3>
                   <button
-                    onClick={() => setEditingProduct(null)}
+                    onClick={() => {
+                      setEditingProduct(null);
+                      setShouldRemoveMainImages(false); // Reset flag on cancel
+                    }}
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <svg
@@ -9818,12 +9803,19 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => {
+                              console.log("🗑️ REMOVE IMAGE - Edit Product mode:", {
+                                hasLocalFile: !!productImageFile,
+                                hasExistingImage: !!productForm.mainImage
+                              });
                               setProductImageFile(null);
-                              if (!productImageFile) {
+                              if (!productImageFile && productForm.mainImage) {
+                                // Mark existing images for removal
+                                setShouldRemoveMainImages(true);
                                 setProductForm({
                                   ...productForm,
                                   mainImage: null,
                                 });
+                                console.log("🗑️ Marked existing images for removal");
                               }
                             }}
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
@@ -9838,9 +9830,17 @@ export default function AdminPage() {
                         <input
                           type="file"
                           accept="image/*"
-                          onChange={(e) =>
-                            setProductImageFile(e.target.files[0])
-                          }
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            console.log("📁 IMAGE UPLOAD DEBUG - File selected (Edit Product):", {
+                              fileName: file?.name,
+                              fileSize: file?.size,
+                              fileType: file?.type,
+                              isValidFile: file instanceof File,
+                              timestamp: new Date().toISOString()
+                            });
+                            setProductImageFile(file);
+                          }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                           id="editProductImageInput"
                         />
@@ -10412,7 +10412,10 @@ export default function AdminPage() {
                   <div className="flex justify-end space-x-3 pt-4 border-t">
                     <button
                       type="button"
-                      onClick={() => setEditingProduct(null)}
+                      onClick={() => {
+                        setEditingProduct(null);
+                        setShouldRemoveMainImages(false); // Reset flag on cancel
+                      }}
                       disabled={isProductSaving}
                       className={`px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-md ${
                         isProductSaving

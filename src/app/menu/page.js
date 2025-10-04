@@ -54,6 +54,7 @@ export default function MenuPage() {
   const cartTimerRef = useRef(null);
   const [sessionTimer, setSessionTimer] = useState(60); // 60 seconds = 1 minute
   const sessionTimerRef = useRef(null);
+  const sessionCountdownRef = useRef(null);
 
   // Language and modal states
   const [selectedLanguage, setSelectedLanguage] = useState(
@@ -62,6 +63,8 @@ export default function MenuPage() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showBackModal, setShowBackModal] = useState(false);
+  const [showSessionExpiryModal, setShowSessionExpiryModal] = useState(false);
+  const [sessionModalCountdown, setSessionModalCountdown] = useState(60);
 
   // Add to cart animation states
   const [showCartAnimation, setShowCartAnimation] = useState(false);
@@ -372,6 +375,58 @@ export default function MenuPage() {
     sessionStorage.removeItem("receiptData");
 
     setShowCancelModal(false);
+    router.push("/");
+  };
+
+  // Session expiry modal handlers
+  const handleSessionContinue = () => {
+    setShowSessionExpiryModal(false);
+    setSessionModalCountdown(60);
+    
+    // Clear existing timers
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+    }
+    if (sessionCountdownRef.current) {
+      clearInterval(sessionCountdownRef.current);
+    }
+    
+    // Restart the session timer immediately
+    setSessionTimer(60);
+    
+    // Start new countdown interval
+    sessionCountdownRef.current = setInterval(() => {
+      setSessionTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(sessionCountdownRef.current);
+          setShowSessionExpiryModal(true);
+          setSessionModalCountdown(60);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Set new timeout for 60 seconds
+    sessionTimerRef.current = setTimeout(() => {
+      clearInterval(sessionCountdownRef.current);
+      setShowSessionExpiryModal(true);
+      setSessionModalCountdown(60);
+    }, 60000);
+  };
+
+  const handleSessionTimeout = () => {
+    // Clear all session data and go to homepage
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("customerCode");
+    sessionStorage.removeItem("currentCustomer");
+    sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("lastOrder");
+    sessionStorage.removeItem("receiptData");
+
+    setShowSessionExpiryModal(false);
+    setCart([]);
+    setCustomer(null);
     router.push("/");
   };
 
@@ -832,64 +887,37 @@ export default function MenuPage() {
         setSessionTimer(60); // 5 minutes = 300 seconds
 
         // Create timer that decrements every second
-        const sessionCountdownInterval = setInterval(() => {
+        sessionCountdownRef.current = setInterval(() => {
           setSessionTimer((prev) => {
             if (prev <= 1) {
-              clearInterval(sessionCountdownInterval);
-
-              // Clear all session data
-              sessionStorage.removeItem("cart");
-              sessionStorage.removeItem("customerCode");
-              sessionStorage.removeItem("currentCustomer");
-              sessionStorage.removeItem("selectedPaymentMethod");
-              sessionStorage.removeItem("lastOrder");
-              sessionStorage.removeItem("receiptData");
-
-              // Reset state and go to home
-              setCustomer(null);
-              setCart([]);
-              setSelectedProduct(null);
-
-              // Use setTimeout to avoid setState during render
-              setTimeout(() => {
-                router.push("/");
-              }, 0);
-
+              clearInterval(sessionCountdownRef.current);
+              // Show "Are you still there?" modal instead of direct redirect
+              setShowSessionExpiryModal(true);
+              setSessionModalCountdown(60); // 60 seconds for modal countdown
               return 0;
             }
             return prev - 1;
           });
         }, 1000);
 
-        // Set timeout for 5 minutes
+        // Set timeout for 60 seconds
         sessionTimerRef.current = setTimeout(() => {
-          clearInterval(sessionCountdownInterval);
-
-          // Clear all session data
-          sessionStorage.removeItem("cart");
-          sessionStorage.removeItem("customerCode");
-          sessionStorage.removeItem("currentCustomer");
-          sessionStorage.removeItem("selectedPaymentMethod");
-          sessionStorage.removeItem("lastOrder");
-          sessionStorage.removeItem("receiptData");
-
-          // Reset state and go to home
-          setCustomer(null);
-          setCart([]);
-          setSelectedProduct(null);
-          router.push("/");
-        }, 60000); // 5 minutes
+          clearInterval(sessionCountdownRef.current);
+          // Show modal instead of direct redirect
+          setShowSessionExpiryModal(true);
+          setSessionModalCountdown(60);
+        }, 60000); // 60 seconds
 
         // Store interval reference for cleanup
-        return sessionCountdownInterval;
+        return sessionCountdownRef.current;
       };
 
       const sessionCountdownInterval = startSessionTimer();
 
       // Cleanup function
       return () => {
-        if (sessionCountdownInterval) {
-          clearInterval(sessionCountdownInterval);
+        if (sessionCountdownRef.current) {
+          clearInterval(sessionCountdownRef.current);
         }
         if (sessionTimerRef.current) {
           clearTimeout(sessionTimerRef.current);
@@ -897,14 +925,82 @@ export default function MenuPage() {
         }
       };
     } else {
-      // Clear session timer when cart is open
-      if (sessionTimerRef.current) {
-        clearTimeout(sessionTimerRef.current);
-        sessionTimerRef.current = null;
-      }
-      setSessionTimer(0);
+      // Start session timer for order summary (cart view) with same timeout
+      const startOrderSummarySessionTimer = () => {
+        // Clear any existing timers
+        if (sessionTimerRef.current) {
+          clearTimeout(sessionTimerRef.current);
+        }
+        if (sessionCountdownRef.current) {
+          clearInterval(sessionCountdownRef.current);
+        }
+
+        // Start countdown for order summary
+        setSessionTimer(60); // 60 seconds for order summary too
+
+        // Create timer that decrements every second
+        sessionCountdownRef.current = setInterval(() => {
+          setSessionTimer((prev) => {
+            if (prev <= 1) {
+              clearInterval(sessionCountdownRef.current);
+              // Show "Are you still there?" modal
+              setShowSessionExpiryModal(true);
+              setSessionModalCountdown(60);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+
+        // Set timeout for 60 seconds
+        sessionTimerRef.current = setTimeout(() => {
+          clearInterval(sessionCountdownRef.current);
+          // Show modal
+          setShowSessionExpiryModal(true);
+          setSessionModalCountdown(60);
+        }, 60000); // 60 seconds
+
+        return sessionCountdownRef.current;
+      };
+
+      const orderSummaryCountdownInterval = startOrderSummarySessionTimer();
+
+      // Cleanup function
+      return () => {
+        if (orderSummaryCountdownInterval) {
+          clearInterval(orderSummaryCountdownInterval);
+        }
+        if (sessionTimerRef.current) {
+          clearTimeout(sessionTimerRef.current);
+          sessionTimerRef.current = null;
+        }
+      };
     }
   }, [showCart, router]);
+
+  // Session expiry modal countdown timer
+  useEffect(() => {
+    let modalCountdownInterval;
+    
+    if (showSessionExpiryModal) {
+      modalCountdownInterval = setInterval(() => {
+        setSessionModalCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(modalCountdownInterval);
+            handleSessionTimeout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (modalCountdownInterval) {
+        clearInterval(modalCountdownInterval);
+      }
+    };
+  }, [showSessionExpiryModal]);
 
   // Reset session timer on user interactions
   const resetSessionTimer = useCallback(() => {
@@ -3084,6 +3180,37 @@ export default function MenuPage() {
               >
                 {t("no")}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Expiry Modal */}
+      {showSessionExpiryModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 m-4 max-w-md w-full border-2 border-red-200">
+            <div className="text-center">
+              <div className="text-6xl mb-4">⏰</div>
+              <h3 className="text-2xl font-bold mb-4 text-gray-800">
+                {t("areYouStillThere")}
+              </h3>
+              <p className="text-gray-600 mb-6 text-lg">
+                {t("sessionExpiryMessage")}
+              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleSessionContinue}
+                  className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold text-lg transition-colors"
+                >
+                  {t("yes")}
+                </button>
+                <button
+                  onClick={handleSessionTimeout}
+                  className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg font-bold text-lg transition-colors"
+                >
+                  {t("no")} ({sessionModalCountdown})
+                </button>
+              </div>
             </div>
           </div>
         </div>
