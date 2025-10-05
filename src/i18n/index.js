@@ -112,6 +112,9 @@ const resources = {
         "Are you sure you want to cancel your order? All items will be removed from your cart.",
       yes: "Yes",
       no: "No",
+      // Session expiry modal translations
+      areYouStillThere: "Are you still there?",
+      sessionExpiryMessage: "Your session will expire soon due to inactivity. Would you like to continue?",
       // Category names
       indoor: "Indoor",
       outdoor: "Outdoor",
@@ -224,6 +227,9 @@ const resources = {
         "คุณแน่ใจหรือไม่ที่จะยกเลิกคำสั่งซื้อ? รายการทั้งหมดจะถูกลบออกจากตะกร้าของคุณ",
       yes: "ใช่",
       no: "ไม่",
+      // Session expiry modal translations
+      areYouStillThere: "คุณยังอยู่หรือไม่?",
+      sessionExpiryMessage: "เซสชันของคุณจะหมดอายุเร็วๆ นี้เนื่องจากไม่มีการใช้งาน คุณต้องการดำเนินการต่อหรือไม่?",
       // Category names
       indoor: "ในร่ม",
       outdoor: "กลางแจ้ง",
@@ -338,6 +344,9 @@ const resources = {
         "¿Estás seguro de que quieres cancelar tu pedido? Todos los artículos serán eliminados de tu carrito.",
       yes: "Sí",
       no: "No",
+      // Session expiry modal translations
+      areYouStillThere: "¿Sigues ahí?",
+      sessionExpiryMessage: "Tu sesión expirará pronto debido a la inactividad. ¿Te gustaría continuar?",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -454,6 +463,9 @@ const resources = {
         "Êtes-vous sûr de vouloir annuler votre commande ? Tous les articles seront supprimés de votre panier.",
       yes: "Oui",
       no: "Non",
+      // Session expiry modal translations
+      areYouStillThere: "Êtes-vous toujours là ?",
+      sessionExpiryMessage: "Votre session va bientôt expirer en raison de l'inactivité. Souhaitez-vous continuer ?",
       // Category names
       indoor: "Intérieur",
       outdoor: "Extérieur",

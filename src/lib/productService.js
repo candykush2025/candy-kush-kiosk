@@ -7,6 +7,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   orderBy,
   limit,
@@ -1163,6 +1164,64 @@ export class CashbackService {
     } catch (error) {
       console.error("Error getting cashback percentage:", error);
       return 0;
+    }
+  }
+}
+
+// Non-Member Categories Service
+export class NonMemberCategoriesService {
+  static COLLECTION_NAME = "NonMemberCategories";
+  static DOC_ID = "current";
+
+  // Get non-member categories (returns array of category IDs)
+  static async getNonMemberCategories() {
+    try {
+      const docRef = doc(db, this.COLLECTION_NAME, this.DOC_ID);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        return data.categories || [];
+      } else {
+        // Document doesn't exist, return empty array
+        return [];
+      }
+    } catch (error) {
+      console.error("Error getting non-member categories:", error);
+      return []; // Return empty array on error
+    }
+  }
+
+  // Update non-member categories (always use setDoc to ensure single document)
+  static async updateNonMemberCategories(categoryIds) {
+    try {
+      const docRef = doc(db, this.COLLECTION_NAME, this.DOC_ID);
+      
+      // Always use setDoc to ensure we only have one document with ID "current"
+      await setDoc(docRef, {
+        categories: categoryIds || [],
+        updatedAt: serverTimestamp(),
+      }, { merge: true }); // Merge to preserve any other fields if they exist
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating non-member categories:", error);
+      throw error;
+    }
+  }
+
+  // Helper method to initialize if needed (rarely used)
+  static async initializeWithAllCategories(allCategoryIds) {
+    try {
+      const existing = await this.getNonMemberCategories();
+      if (existing.length === 0) {
+        await this.updateNonMemberCategories(allCategoryIds);
+        return allCategoryIds;
+      }
+      return existing;
+    } catch (error) {
+      console.error("Error initializing non-member categories:", error);
+      throw error;
     }
   }
 }

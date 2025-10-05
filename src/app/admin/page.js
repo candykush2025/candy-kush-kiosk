@@ -28,6 +28,7 @@ import {
   CategoryService,
   SubcategoryService,
   CashbackService,
+  NonMemberCategoriesService,
 } from "../../lib/productService";
 import { VisitService } from "../../lib/visitService";
 import { countries } from "../../lib/countries";
@@ -95,6 +96,10 @@ export default function AdminPage() {
   const [orderDirty, setOrderDirty] = useState(false);
   const [savingCategoryOrder, setSavingCategoryOrder] = useState(false);
   const [orderingCategories, setOrderingCategories] = useState(false);
+
+  // Non-Member Categories state
+  const [nonMemberCategories, setNonMemberCategories] = useState([]);
+  const [savingNonMemberCategories, setSavingNonMemberCategories] = useState(false);
 
   // Initialize order list when categories loaded
   useEffect(() => {
@@ -345,6 +350,11 @@ export default function AdminPage() {
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
   const [selectedTransactionDetails, setSelectedTransactionDetails] =
     useState(null);
+  
+  // Payment method editing states
+  const [editingPaymentMethod, setEditingPaymentMethod] = useState(false);
+  const [newPaymentMethod, setNewPaymentMethod] = useState("");
+  const [updatingPaymentMethod, setUpdatingPaymentMethod] = useState(false);
 
   // Nationality dropdown states
   const [showNationalityDropdown, setShowNationalityDropdown] = useState(false);
@@ -463,6 +473,7 @@ export default function AdminPage() {
     isActive: true,
     dateOfBirth: "",
     customPoints: 0,
+    allowedCategories: [], // Array of category IDs this customer can see
   });
   const [memberIdError, setMemberIdError] = useState("");
 
@@ -779,6 +790,25 @@ export default function AdminPage() {
       setSubcategories(subcategoriesData);
       setCashbackRules(cashbackRulesData);
 
+      // Load non-member categories after categories are set
+      if (categoriesData.length > 0) {
+        try {
+          const categoryIds = await NonMemberCategoriesService.getNonMemberCategories();
+          if (categoryIds.length === 0) {
+            // Initialize with all categories if empty
+            const allCategoryIds = categoriesData.map(cat => cat.id);
+            await NonMemberCategoriesService.updateNonMemberCategories(allCategoryIds);
+            setNonMemberCategories(allCategoryIds);
+          } else {
+            setNonMemberCategories(categoryIds);
+          }
+        } catch (error) {
+          console.error("Error loading non-member categories:", error);
+          // Default to all categories on error
+          setNonMemberCategories(categoriesData.map(cat => cat.id));
+        }
+      }
+
       // Calculate transaction stats from all transactions
       const totalRevenue = allTransactions.reduce((sum, t) => {
         // Use total, amount, or totalSpent (whichever is available)
@@ -934,6 +964,20 @@ export default function AdminPage() {
   // Customer handlers
   const handleAddCustomer = () => {
     if (!checkInputPermission()) return;
+    // Initialize with all categories allowed by default
+    setCustomerForm({
+      nationality: "",
+      name: "",
+      lastName: "",
+      nickname: "",
+      email: "",
+      cell: "",
+      memberId: "",
+      isActive: true,
+      dateOfBirth: "",
+      customPoints: 0,
+      allowedCategories: categories.map(cat => cat.id), // All categories checked by default
+    });
     setShowAddCustomer(true);
   };
 
@@ -952,6 +996,7 @@ export default function AdminPage() {
       isActive: true,
       dateOfBirth: "",
       customPoints: 0,
+      allowedCategories: [],
     });
     setMemberIdError("");
   };
@@ -1071,6 +1116,9 @@ export default function AdminPage() {
           cell: "",
           memberId: "",
           isActive: true,
+          dateOfBirth: "",
+          customPoints: 0,
+          allowedCategories: [],
         });
         setMemberIdError("");
       } else {
@@ -1484,6 +1532,100 @@ export default function AdminPage() {
       }
       return next;
     });
+  };
+
+  // Non-Member Categories handlers
+  const handleSaveNonMemberCategories = async () => {
+    if (!checkEditPermission()) return;
+
+    try {
+      setSavingNonMemberCategories(true);
+      await NonMemberCategoriesService.updateNonMemberCategories(nonMemberCategories);
+      alert("Non-member categories updated successfully!");
+    } catch (error) {
+      console.error("Error saving non-member categories:", error);
+      alert("Error saving non-member categories. Please try again.");
+    } finally {
+      setSavingNonMemberCategories(false);
+    }
+  };
+
+  const toggleNonMemberCategory = (categoryId) => {
+    setNonMemberCategories(prev => {
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const selectAllNonMemberCategories = () => {
+    setNonMemberCategories(categories.map(cat => cat.id));
+  };
+
+  const clearAllNonMemberCategories = () => {
+    setNonMemberCategories([]);
+  };
+
+  // Payment method update handlers
+  const handleStartEditPaymentMethod = () => {
+    const paymentMethod = selectedTransaction?.paymentMethod || selectedTransactionDetails?.paymentMethod || "";
+    setNewPaymentMethod(paymentMethod);
+    setEditingPaymentMethod(true);
+  };
+
+  const handleCancelEditPaymentMethod = () => {
+    setEditingPaymentMethod(false);
+    setNewPaymentMethod("");
+  };
+
+  const handleUpdatePaymentMethod = async () => {
+    if (!checkEditPermission()) return;
+    
+    try {
+      setUpdatingPaymentMethod(true);
+      
+      const transactionToUpdate = selectedTransaction || selectedTransactionDetails;
+      if (!transactionToUpdate) return;
+      
+      // Update the transaction in the database
+      await TransactionService.updateTransaction(transactionToUpdate.id, {
+        paymentMethod: newPaymentMethod
+      });
+      
+      // Update the selected transaction in the UI
+      if (selectedTransaction) {
+        setSelectedTransaction(prev => ({
+          ...prev,
+          paymentMethod: newPaymentMethod
+        }));
+      }
+      
+      if (selectedTransactionDetails) {
+        setSelectedTransactionDetails(prev => ({
+          ...prev,
+          paymentMethod: newPaymentMethod
+        }));
+      }
+      
+      // Also update in transactions list if it exists there
+      setTransactions(prev => prev.map(t => 
+        t.id === transactionToUpdate.id 
+          ? { ...t, paymentMethod: newPaymentMethod }
+          : t
+      ));
+      
+      setEditingPaymentMethod(false);
+      setNewPaymentMethod("");
+      
+      alert("Payment method updated successfully!");
+    } catch (error) {
+      console.error("Error updating payment method:", error);
+      alert("Error updating payment method. Please try again.");
+    } finally {
+      setUpdatingPaymentMethod(false);
+    }
   };
 
   // Product handlers
@@ -3223,26 +3365,128 @@ export default function AdminPage() {
                         </div>
                       </div>
                     </div>
-                    {AdminAuth.hasPermission("input") && (
-                      <button
-                        onClick={handleAddCustomer}
-                        className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
-                      >
-                        <Users className="w-5 h-5 mr-2" />
-                        Add Customer
-                      </button>
-                    )}
+                    <div className="flex space-x-3">
+                      {AdminAuth.hasPermission("input") && (
+                        <button
+                          onClick={handleAddCustomer}
+                          className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center"
+                        >
+                          <Users className="w-5 h-5 mr-2" />
+                          Add Customer
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-                    <input
-                      type="text"
-                      placeholder="Search customers by name, email, or member ID..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
+                  {/* Non Member Categories and Search */}
+                  <div className="space-y-6">
+                    {/* Search */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                      <input
+                        type="text"
+                        placeholder="Search customers by name, email, or member ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                    </div>
+
+                    {/* Non Member Categories */}
+                    {AdminAuth.hasPermission("edit") && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Non Member Categories
+                          </h3>
+                          <button
+                            onClick={handleSaveNonMemberCategories}
+                            disabled={savingNonMemberCategories}
+                            className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center ${
+                              savingNonMemberCategories
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-blue-600 hover:bg-blue-700"
+                            }`}
+                          >
+                            {savingNonMemberCategories ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Saving...
+                              </>
+                            ) : (
+                              "Save"
+                            )}
+                          </button>
+                        </div>
+                        
+                        <div className="max-h-32 overflow-y-auto">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-gray-600">
+                              {nonMemberCategories.length} of {categories.length} selected
+                            </span>
+                            <div className="space-x-2">
+                              <button
+                                type="button"
+                                onClick={selectAllNonMemberCategories}
+                                className="text-xs text-green-600 hover:text-green-800"
+                              >
+                                All
+                              </button>
+                              <button
+                                type="button"
+                                onClick={clearAllNonMemberCategories}
+                                className="text-xs text-red-600 hover:text-red-800"
+                              >
+                                None
+                              </button>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+                            {categories.map((category) => (
+                              <label
+                                key={category.id}
+                                className="flex items-center space-x-2 p-1 rounded hover:bg-gray-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={nonMemberCategories.includes(category.id)}
+                                  onChange={() => toggleNonMemberCategory(category.id)}
+                                  className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                />
+                                <span className="text-xs text-gray-700">
+                                  {category.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                          
+                          {categories.length === 0 && (
+                            <div className="text-center py-2 text-gray-500 text-xs">
+                              No categories available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Customers Table */}
@@ -3378,6 +3622,8 @@ export default function AdminPage() {
                                             customer.dateOfBirth || "",
                                           customPoints:
                                             customer.customPoints || 0,
+                                          allowedCategories:
+                                            customer.allowedCategories || [],
                                         });
                                         setMemberIdError("");
                                         setEditingCustomer(customer);
@@ -6415,7 +6661,7 @@ export default function AdminPage() {
         {/* Add Customer Modal */}
         {showAddCustomer && (
           <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
-            <div className="relative mt-10 mb-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div className="relative mt-10 mb-10 mx-auto p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
@@ -6516,28 +6762,6 @@ export default function AdminPage() {
                           </>
                         )}
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Member ID *
-                      </label>
-                      <input
-                        type="text"
-                        value={customerForm.memberId}
-                        onChange={handleMemberIdChange}
-                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                          memberIdError
-                            ? "border-red-300 focus:ring-red-500"
-                            : "border-gray-300 focus:ring-green-500"
-                        }`}
-                        required
-                      />
-                      {memberIdError && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {memberIdError}
-                        </p>
-                      )}
                     </div>
 
                     <div>
@@ -6691,6 +6915,84 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Category Permissions Section */}
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Category Permissions
+                      <span className="text-gray-500 text-xs ml-1">
+                        (Select which categories this customer can see in the kiosk)
+                      </span>
+                    </label>
+                    <div className="border border-gray-300 rounded-md p-4 max-h-48 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-gray-600">
+                          {customerForm.allowedCategories.length} of {categories.length} categories selected
+                        </span>
+                        <div className="space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerForm({
+                                ...customerForm,
+                                allowedCategories: categories.map(cat => cat.id)
+                              });
+                            }}
+                            className="text-xs text-green-600 hover:text-green-800"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerForm({
+                                ...customerForm,
+                                allowedCategories: []
+                              });
+                            }}
+                            className="text-xs text-red-600 hover:text-red-800"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {categories.map((category) => (
+                          <label
+                            key={category.id}
+                            className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={customerForm.allowedCategories.includes(category.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCustomerForm({
+                                    ...customerForm,
+                                    allowedCategories: [...customerForm.allowedCategories, category.id]
+                                  });
+                                } else {
+                                  setCustomerForm({
+                                    ...customerForm,
+                                    allowedCategories: customerForm.allowedCategories.filter(id => id !== category.id)
+                                  });
+                                }
+                              }}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-gray-700 flex-1">
+                              {category.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {categories.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          No categories available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-3 mt-6">
                     <button
                       type="button"
@@ -6773,6 +7075,9 @@ export default function AdminPage() {
                         cell: "",
                         isActive: true,
                         memberId: "",
+                        dateOfBirth: "",
+                        customPoints: 0,
+                        allowedCategories: [],
                       });
                       setMemberIdError("");
                     }}
@@ -7023,6 +7328,84 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Category Permissions Section */}
+                  <div className="mt-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      Category Permissions
+                      <span className="text-gray-500 text-xs ml-1">
+                        (Select which categories this customer can see in the kiosk)
+                      </span>
+                    </label>
+                    <div className="border border-gray-300 rounded-md p-4 max-h-48 overflow-y-auto">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm text-gray-600">
+                          {customerForm.allowedCategories.length} of {categories.length} categories selected
+                        </span>
+                        <div className="space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerForm({
+                                ...customerForm,
+                                allowedCategories: categories.map(cat => cat.id)
+                              });
+                            }}
+                            className="text-xs text-green-600 hover:text-green-800"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomerForm({
+                                ...customerForm,
+                                allowedCategories: []
+                              });
+                            }}
+                            className="text-xs text-red-600 hover:text-red-800"
+                          >
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {categories.map((category) => (
+                          <label
+                            key={category.id}
+                            className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={customerForm.allowedCategories.includes(category.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCustomerForm({
+                                    ...customerForm,
+                                    allowedCategories: [...customerForm.allowedCategories, category.id]
+                                  });
+                                } else {
+                                  setCustomerForm({
+                                    ...customerForm,
+                                    allowedCategories: customerForm.allowedCategories.filter(id => id !== category.id)
+                                  });
+                                }
+                              }}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm text-gray-700 flex-1">
+                              {category.name}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {categories.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                          No categories available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   <div className="flex justify-end space-x-3 mt-6">
                     <button
                       type="button"
@@ -7039,6 +7422,9 @@ export default function AdminPage() {
                           cell: "",
                           isActive: true,
                           memberId: "",
+                          dateOfBirth: "",
+                          customPoints: 0,
+                          allowedCategories: [],
                         });
                         setMemberIdError("");
                       }}
@@ -11100,6 +11486,8 @@ export default function AdminPage() {
                     onClick={() => {
                       setShowTransactionDetails(false);
                       setSelectedTransactionDetails(null);
+                      setEditingPaymentMethod(false);
+                      setNewPaymentMethod("");
                     }}
                     className="text-gray-400 hover:text-gray-600"
                   >
@@ -11191,6 +11579,47 @@ export default function AdminPage() {
                       <p>
                         <span className="font-medium">Phone:</span>{" "}
                         {selectedTransactionDetails.customerCell || "N/A"}
+                      </p>
+                      <p>
+                        <span className="font-medium">Payment Method:</span>{" "}
+                        {editingPaymentMethod ? (
+                          <div className="inline-flex items-center space-x-2">
+                            <select
+                              value={newPaymentMethod}
+                              onChange={(e) => setNewPaymentMethod(e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="cash">Cash</option>
+                              <option value="crypto">Crypto</option>
+                              <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                            <button
+                              onClick={handleUpdatePaymentMethod}
+                              disabled={updatingPaymentMethod}
+                              className="px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
+                            >
+                              {updatingPaymentMethod ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              onClick={handleCancelEditPaymentMethod}
+                              className="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center space-x-2">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 capitalize">
+                              {selectedTransactionDetails.paymentMethod || "N/A"}
+                            </span>
+                            <button
+                              onClick={handleStartEditPaymentMethod}
+                              className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        )}
                       </p>
                       <p className="text-lg">
                         <span className="font-medium">Total Amount:</span>
@@ -11371,7 +11800,11 @@ export default function AdminPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setSelectedTransaction(null)}
+                  onClick={() => {
+                    setSelectedTransaction(null);
+                    setEditingPaymentMethod(false);
+                    setNewPaymentMethod("");
+                  }}
                   className="text-gray-400 hover:text-gray-600"
                 >
                   <svg
@@ -11447,6 +11880,49 @@ export default function AdminPage() {
                       </div>
                       <div>
                         <span className="font-medium text-gray-700">
+                          Payment Method:{" "}
+                        </span>
+                        {editingPaymentMethod ? (
+                          <div className="inline-flex items-center space-x-2">
+                            <select
+                              value={newPaymentMethod}
+                              onChange={(e) => setNewPaymentMethod(e.target.value)}
+                              className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="cash">Cash</option>
+                              <option value="crypto">Crypto</option>
+                              <option value="bank_transfer">Bank Transfer</option>
+                            </select>
+                            <button
+                              onClick={handleUpdatePaymentMethod}
+                              disabled={updatingPaymentMethod}
+                              className="px-2 py-1 text-xs bg-green-500 hover:bg-green-600 text-white rounded disabled:opacity-50"
+                            >
+                              {updatingPaymentMethod ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              onClick={handleCancelEditPaymentMethod}
+                              className="px-2 py-1 text-xs bg-gray-500 hover:bg-gray-600 text-white rounded"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="inline-flex items-center space-x-2">
+                            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 capitalize">
+                              {selectedTransaction.paymentMethod || "N/A"}
+                            </span>
+                            <button
+                              onClick={handleStartEditPaymentMethod}
+                              className="px-2 py-1 text-xs bg-blue-500 hover:bg-blue-600 text-white rounded"
+                            >
+                              Change
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">
                           Date:{" "}
                         </span>
                         <span>
@@ -11478,7 +11954,11 @@ export default function AdminPage() {
 
                 <div className="flex justify-end">
                   <button
-                    onClick={() => setSelectedTransaction(null)}
+                    onClick={() => {
+                      setSelectedTransaction(null);
+                      setEditingPaymentMethod(false);
+                      setNewPaymentMethod("");
+                    }}
                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                   >
                     Close

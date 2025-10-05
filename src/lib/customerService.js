@@ -57,6 +57,9 @@ export class CustomerService {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         isActive: true,
+        allowedCategories: customerData.allowedCategories || [], // Category permissions for kiosk
+        dateOfBirth: customerData.dateOfBirth || "",
+        customPoints: customerData.customPoints || 0,
       });
 
       return { id: docRef.id, customerId, ...customerData };

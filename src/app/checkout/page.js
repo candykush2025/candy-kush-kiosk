@@ -19,6 +19,7 @@ export default function CheckoutPage() {
   const [cashbackPoints, setCashbackPoints] = useState(0);
   const router = useRouter();
   const { t } = useTranslation();
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     // Load cart from session storage
@@ -242,10 +243,20 @@ export default function CheckoutPage() {
   };
 
   const handleCancelOrder = () => {
+    // Show confirmation modal instead of immediate navigation
+    setShowCancelConfirm(true);
+  };
+
+  const confirmCancelOrder = () => {
     // Clear cart and return to home screen
     sessionStorage.removeItem("cart");
     setCart([]);
+    setShowCancelConfirm(false);
     router.push("/");
+  };
+
+  const cancelCancelOrder = () => {
+    setShowCancelConfirm(false);
   };
 
   const removeFromCart = (itemIdToRemove) => {
@@ -515,6 +526,30 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+
+        {/* Cancel confirmation modal */}
+        {showCancelConfirm && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded-lg p-6 max-w-sm w-full">
+              <h3 className="text-lg font-bold mb-2">{t("confirmCancelOrder")}</h3>
+              <p className="text-sm text-gray-600 mb-4">{t("confirmCancelOrderMessage")}</p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={cancelCancelOrder}
+                  className="px-4 py-2 border rounded bg-gray-100"
+                >
+                  {t("no")}
+                </button>
+                <button
+                  onClick={confirmCancelOrder}
+                  className="px-4 py-2 bg-red-500 text-white rounded"
+                >
+                  {t("yes")}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 p-6">
           <div className="max-w-4xl mx-auto">

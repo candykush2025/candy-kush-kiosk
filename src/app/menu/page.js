@@ -12,6 +12,7 @@ import {
   SubcategoryService,
   ProductService,
   CashbackService,
+  NonMemberCategoriesService,
 } from "../../lib/productService";
 import { TransactionService } from "../../lib/transactionService";
 import { PendingPointsService } from "../../lib/pendingPointsService";
@@ -140,9 +141,10 @@ export default function MenuPage() {
         // Get customer info from session storage
         const customerCode = sessionStorage.getItem("customerCode");
         const noMember = sessionStorage.getItem("noMember");
+        let customerData = null;
 
         if (customerCode) {
-          const customerData = await CustomerService.getCustomerByMemberId(
+          customerData = await CustomerService.getCustomerByMemberId(
             customerCode
           );
           if (customerData) {
@@ -158,14 +160,15 @@ export default function MenuPage() {
           }
         } else if (noMember === "true") {
           // Set "No Member" customer state
-          setCustomer({
+          customerData = {
             name: "No Member",
             memberId: null,
             tier: null,
             points: 0,
             totalPoints: 0,
             isNoMember: true,
-          });
+          };
+          setCustomer(customerData);
         } else {
           // No customer data and no "No Member" flag, redirect to scanner
           router.push("/scanner");
@@ -175,8 +178,47 @@ export default function MenuPage() {
         // Load categories from Firebase
         const categoriesData = await CategoryService.getAllCategories();
 
-        // Transform categories data for display
-        const transformedCategories = categoriesData.map((category) => ({
+        // Filter categories based on customer permissions
+        let allowedCategoryIds = [];
+        
+        if (customerData && customerData.allowedCategories && !customerData.isNoMember) {
+          // Member: Use customer's allowed categories
+          allowedCategoryIds = customerData.allowedCategories;
+          console.log("🔐 Member categories:", allowedCategoryIds);
+        } else if (noMember === "true" || (customerData && customerData.isNoMember)) {
+          // Non-member: Use NonMemberCategories from admin settings
+          try {
+            allowedCategoryIds = await NonMemberCategoriesService.getNonMemberCategories();
+            console.log("👤 Non-member categories:", allowedCategoryIds);
+          } catch (error) {
+            console.error("Error loading non-member categories:", error);
+            allowedCategoryIds = []; // Show nothing if error
+          }
+        } else {
+          // No customer data, no categories allowed
+          allowedCategoryIds = [];
+          console.log("❌ No customer data, no categories shown");
+        }
+
+        // Filter categories to only show allowed ones
+        const filteredCategoriesData = categoriesData.filter(category => 
+          allowedCategoryIds.includes(category.id)
+        );
+
+        console.log("📋 Categories filtering result:");
+        console.log("  - Total categories available:", categoriesData.length);
+        console.log("  - Allowed category IDs:", allowedCategoryIds);
+        console.log("  - Filtered categories count:", filteredCategoriesData.length);
+        console.log("  - Filtered category names:", filteredCategoriesData.map(c => c.name));
+
+        // Check if no categories are allowed
+        if (filteredCategoriesData.length === 0) {
+          console.warn("⚠️ No categories allowed for this customer/session");
+          // You might want to show a message to the user or redirect
+        }
+
+        // Transform filtered categories data for display
+        const transformedCategories = filteredCategoriesData.map((category) => ({
           id: category.id,
           categoryId: category.categoryId,
           name: category.name,
@@ -350,11 +392,8 @@ export default function MenuPage() {
   };
 
   const handleCancelOrder = () => {
-    if (cart.length > 0) {
-      setShowCancelModal(true);
-    } else {
-      router.push("/");
-    }
+    // Always show confirmation modal to avoid accidental navigation
+    setShowCancelModal(true);
   };
 
   const confirmCancelOrder = () => {
