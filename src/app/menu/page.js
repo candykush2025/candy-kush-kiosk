@@ -429,29 +429,61 @@ export default function MenuPage() {
     if (sessionCountdownRef.current) {
       clearInterval(sessionCountdownRef.current);
     }
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+    }
     
-    // Restart the session timer immediately
-    setSessionTimer(60);
-    
-    // Start new countdown interval
-    sessionCountdownRef.current = setInterval(() => {
-      setSessionTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(sessionCountdownRef.current);
-          setShowSessionExpiryModal(true);
-          setSessionModalCountdown(60);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    // If cart is open, restart cart timer
+    if (showCart) {
+      setCartTimer(60);
+      
+      // Start cart countdown interval
+      const countdownInterval = setInterval(() => {
+        setCartTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            if (cartTimerRef.current) {
+              clearTimeout(cartTimerRef.current);
+              cartTimerRef.current = null;
+            }
+            setShowSessionExpiryModal(true);
+            setSessionModalCountdown(60);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-    // Set new timeout for 60 seconds
-    sessionTimerRef.current = setTimeout(() => {
-      clearInterval(sessionCountdownRef.current);
-      setShowSessionExpiryModal(true);
-      setSessionModalCountdown(60);
-    }, 60000);
+      // Set cart timeout
+      cartTimerRef.current = setTimeout(() => {
+        clearInterval(countdownInterval);
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
+      }, 60000);
+    } else {
+      // Restart the session timer for main menu
+      setSessionTimer(60);
+      
+      // Start new countdown interval
+      sessionCountdownRef.current = setInterval(() => {
+        setSessionTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(sessionCountdownRef.current);
+            setShowSessionExpiryModal(true);
+            setSessionModalCountdown(60);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Set new timeout for 60 seconds
+      sessionTimerRef.current = setTimeout(() => {
+        clearInterval(sessionCountdownRef.current);
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
+      }, 60000);
+    }
   };
 
   const handleSessionTimeout = () => {
@@ -849,24 +881,9 @@ export default function MenuPage() {
               cartTimerRef.current = null;
             }
 
-            // Clear all session data
-            sessionStorage.removeItem("cart");
-            sessionStorage.removeItem("customerCode");
-            sessionStorage.removeItem("currentCustomer");
-            sessionStorage.removeItem("selectedPaymentMethod");
-            sessionStorage.removeItem("lastOrder");
-            sessionStorage.removeItem("receiptData");
-
-            // Reset state and schedule navigation
-            setShowCart(false);
-            setCustomer(null);
-            setCart([]);
-            setSelectedProduct(null);
-
-            // Use setTimeout to avoid setState during render
-            setTimeout(() => {
-              router.push("/");
-            }, 0);
+            // Show "Are you still there?" modal instead of direct redirect
+            setShowSessionExpiryModal(true);
+            setSessionModalCountdown(60);
 
             return 0;
           }
@@ -878,20 +895,9 @@ export default function MenuPage() {
       cartTimerRef.current = setTimeout(() => {
         clearInterval(countdownInterval);
 
-        // Clear all session data
-        sessionStorage.removeItem("cart");
-        sessionStorage.removeItem("customerCode");
-        sessionStorage.removeItem("currentCustomer");
-        sessionStorage.removeItem("selectedPaymentMethod");
-        sessionStorage.removeItem("lastOrder");
-        sessionStorage.removeItem("receiptData");
-
-        // Reset state and go back to home page
-        setShowCart(false);
-        setCustomer(null);
-        setCart([]);
-        setSelectedProduct(null);
-        router.push("/");
+        // Show "Are you still there?" modal instead of direct redirect
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
       }, 60000);
 
       // Cleanup function
@@ -1651,7 +1657,7 @@ export default function MenuPage() {
                         : "text-blue-800"
                     }`}
                   >
-                    Session expires in: {Math.floor(sessionTimer / 60)}:
+                    {t("sessionExpires")}: {Math.floor(sessionTimer / 60)}:
                     {(sessionTimer % 60).toString().padStart(2, "0")}
                   </span>
                 </div>
@@ -2509,7 +2515,7 @@ export default function MenuPage() {
                           : "text-blue-800"
                       }`}
                     >
-                      Session expires in: {Math.floor(cartTimer / 60)}:
+                      {t("sessionExpires")}: {Math.floor(cartTimer / 60)}:
                       {(cartTimer % 60).toString().padStart(2, "0")}
                     </span>
                   </div>
@@ -2594,12 +2600,12 @@ export default function MenuPage() {
                     )}
                   </div>
                   <div className="text-s" style={{ color: "white" }}>
-                    {cart.reduce(
-                      (total, item) => total + (item.quantity || 1),
-                      0
-                    ) === 1
-                      ? "item"
-                      : "items"}
+                    {t("itemsCount", {
+                      count: cart.reduce(
+                        (total, item) => total + (item.quantity || 1),
+                        0
+                      )
+                    })}
                   </div>
                 </div>
               </button>
@@ -2813,7 +2819,7 @@ export default function MenuPage() {
                   >
                     <div className="text-center">
                       <div className="text-4xl mb-2">💵</div>
-                      <div className="text-xl font-semibold">Cash</div>
+                      <div className="text-xl font-semibold">{t("cash")}</div>
                     </div>
                   </button>
                   <button
@@ -2826,7 +2832,7 @@ export default function MenuPage() {
                   >
                     <div className="text-center">
                       <div className="text-4xl mb-2">💳</div>
-                      <div className="text-xl font-semibold">Card</div>
+                      <div className="text-xl font-semibold">{t("card")}</div>
                     </div>
                   </button>
                   <button
@@ -2839,7 +2845,7 @@ export default function MenuPage() {
                   >
                     <div className="text-center">
                       <div className="text-4xl mb-2">₿</div>
-                      <div className="text-xl font-semibold">Crypto</div>
+                      <div className="text-xl font-semibold">{t("crypto")}</div>
                     </div>
                   </button>
                 </div>
@@ -2997,10 +3003,12 @@ export default function MenuPage() {
                   <div>
                     {t("paymentMethodLabel")}{" "}
                     {completedOrder.paymentMethod === "bank_transfer"
-                      ? "Bank Transfer"
+                      ? t("bankTransfer")
                       : completedOrder.paymentMethod === "crypto"
-                      ? "Crypto"
-                      : "Cash"}
+                      ? t("crypto")
+                      : completedOrder.paymentMethod === "card"
+                      ? t("card")
+                      : t("cash")}
                   </div>
                 </div>
 

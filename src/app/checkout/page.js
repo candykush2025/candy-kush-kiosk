@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import CustomerLookup from "../../components/CustomerLookup";
@@ -20,6 +20,12 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  
+  // Session timer states
+  const [sessionTimer, setSessionTimer] = useState(60); // 60 seconds = 1 minute
+  const sessionTimerRef = useRef(null);
+  const [showSessionExpiryModal, setShowSessionExpiryModal] = useState(false);
+  const [sessionModalCountdown, setSessionModalCountdown] = useState(60);
 
   useEffect(() => {
     // Load cart from session storage
@@ -117,7 +123,52 @@ export default function CheckoutPage() {
     calculateCashbackPoints();
   }, [cart, customer, calculateCashbackPoints]);
 
+  // Session timer useEffect
+  useEffect(() => {
+    // Start session timer when component mounts
+    setSessionTimer(60);
+    
+    sessionTimerRef.current = setTimeout(() => {
+      setShowSessionExpiryModal(true);
+      setSessionModalCountdown(60);
+    }, 60000);
+
+    // Cleanup on unmount
+    return () => {
+      if (sessionTimerRef.current) {
+        clearTimeout(sessionTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Session expiry modal countdown timer
+  useEffect(() => {
+    let modalCountdownInterval;
+    
+    if (showSessionExpiryModal) {
+      setSessionModalCountdown(60);
+      modalCountdownInterval = setInterval(() => {
+        setSessionModalCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(modalCountdownInterval);
+            handleSessionTimeout();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+
+    return () => {
+      if (modalCountdownInterval) {
+        clearInterval(modalCountdownInterval);
+      }
+    };
+  }, [showSessionExpiryModal, handleSessionTimeout]);
+
   const processPayment = async () => {
+    resetSessionTimer(); // Reset session timer on user interaction
+    
     if (cart.length === 0) {
       setError(t("cartEmpty"));
       return;
@@ -239,10 +290,12 @@ export default function CheckoutPage() {
   };
 
   const handleBack = () => {
+    resetSessionTimer(); // Reset session timer on user interaction
     router.push("/categories");
   };
 
   const handleCancelOrder = () => {
+    resetSessionTimer(); // Reset session timer on user interaction
     // Show confirmation modal instead of immediate navigation
     setShowCancelConfirm(true);
   };
@@ -277,6 +330,55 @@ export default function CheckoutPage() {
     setCart(updatedCart);
     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
   };
+
+  // Session timer functions
+  const handleSessionContinue = () => {
+    setShowSessionExpiryModal(false);
+    setSessionModalCountdown(60);
+    
+    // Clear existing timer
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+    }
+    
+    // Restart the session timer
+    setSessionTimer(60);
+    
+    // Set new timeout for 60 seconds
+    sessionTimerRef.current = setTimeout(() => {
+      setShowSessionExpiryModal(true);
+      setSessionModalCountdown(60);
+    }, 60000);
+  };
+
+  const handleSessionTimeout = useCallback(() => {
+    // Clear all session data and go to homepage
+    sessionStorage.removeItem("cart");
+    sessionStorage.removeItem("customerCode");
+    sessionStorage.removeItem("currentCustomer");
+    sessionStorage.removeItem("selectedPaymentMethod");
+    sessionStorage.removeItem("lastOrder");
+    sessionStorage.removeItem("receiptData");
+
+    setShowSessionExpiryModal(false);
+    setCart([]);
+    setCustomer(null);
+    router.push("/");
+  }, [router]);
+
+  // Reset session timer on user interactions
+  const resetSessionTimer = useCallback(() => {
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+      setSessionTimer(60); // Reset to 60 seconds
+      
+      // Set new timeout for 60 seconds
+      sessionTimerRef.current = setTimeout(() => {
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
+      }, 60000);
+    }
+  }, []);
 
   if (cart.length === 0) {
     return (
@@ -508,20 +610,27 @@ export default function CheckoutPage() {
               style={{ color: "transparent" }}
             />
           </div>
-          <div className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center">
-            <div className="text-center w-12 h-12" style={{ color: "white" }}>
-              <div className="text-2xl font-bold" style={{ color: "white" }}>
-                {cart.reduce((total, item) => total + (item.quantity || 1), 0)}
-              </div>
-              <div className="text-s" style={{ color: "white" }}>
-                {t("itemsCount", {
-                  count: cart.reduce(
-                    (total, item) => total + (item.quantity || 1),
-                    0
-                  ),
-                })
-                  .split(" ")
-                  .pop()}
+          <div className="flex items-center space-x-4">
+            {/* Session Timer */}
+            <div className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium">
+              {t("sessionExpiresIn")}: {Math.floor(sessionTimer / 60)}:
+              {(sessionTimer % 60).toString().padStart(2, "0")}
+            </div>
+            <div className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center">
+              <div className="text-center w-12 h-12" style={{ color: "white" }}>
+                <div className="text-2xl font-bold" style={{ color: "white" }}>
+                  {cart.reduce((total, item) => total + (item.quantity || 1), 0)}
+                </div>
+                <div className="text-s" style={{ color: "white" }}>
+                  {t("itemsCount", {
+                    count: cart.reduce(
+                      (total, item) => total + (item.quantity || 1),
+                      0
+                    ),
+                  })
+                    .split(" ")
+                    .pop()}
+                </div>
               </div>
             </div>
           </div>
@@ -726,14 +835,17 @@ export default function CheckoutPage() {
             {/* Payment Method */}
             <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
               <h3 className="text-2xl font-bold mb-4">{t("paymentMethod")}</h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
                   <input
                     type="radio"
                     name="payment"
                     value="cash"
                     checked={paymentMethod === "cash"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => {
+                      resetSessionTimer();
+                      setPaymentMethod(e.target.value);
+                    }}
                     className="text-green-500"
                   />
                   <span className="font-medium">{t("cash")}</span>
@@ -742,9 +854,26 @@ export default function CheckoutPage() {
                   <input
                     type="radio"
                     name="payment"
+                    value="card"
+                    checked={paymentMethod === "card"}
+                    onChange={(e) => {
+                      resetSessionTimer();
+                      setPaymentMethod(e.target.value);
+                    }}
+                    className="text-green-500"
+                  />
+                  <span className="font-medium">{t("card")}</span>
+                </label>
+                <label className="flex items-center space-x-3 p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
+                  <input
+                    type="radio"
+                    name="payment"
                     value="crypto"
                     checked={paymentMethod === "crypto"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => {
+                      resetSessionTimer();
+                      setPaymentMethod(e.target.value);
+                    }}
                     className="text-green-500"
                   />
                   <span className="font-medium">{t("crypto")}</span>
@@ -755,7 +884,10 @@ export default function CheckoutPage() {
                     name="payment"
                     value="bank_transfer"
                     checked={paymentMethod === "bank_transfer"}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    onChange={(e) => {
+                      resetSessionTimer();
+                      setPaymentMethod(e.target.value);
+                    }}
                     className="text-green-500"
                   />
                   <span className="font-medium">{t("bankTransfer")}</span>
@@ -805,6 +937,37 @@ export default function CheckoutPage() {
             onCustomerFound={handleCustomerFound}
             onClose={() => setShowCustomerLookup(false)}
           />
+        )}
+
+        {/* Session Expiry Modal */}
+        {showSessionExpiryModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 m-4 max-w-md w-full border-2 border-red-200">
+              <div className="text-center">
+                <div className="text-6xl mb-4">⏰</div>
+                <h3 className="text-2xl font-bold mb-4 text-gray-800">
+                  {t("areYouStillThere")}
+                </h3>
+                <p className="text-gray-600 mb-6 text-lg">
+                  {t("sessionExpiryMessage")}
+                </p>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={handleSessionContinue}
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-bold text-lg transition-colors"
+                  >
+                    {t("yes")}
+                  </button>
+                  <button
+                    onClick={handleSessionTimeout}
+                    className="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 px-6 rounded-lg font-bold text-lg transition-colors"
+                  >
+                    {t("no")} ({sessionModalCountdown})
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

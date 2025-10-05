@@ -67,6 +67,7 @@ const resources = {
         "(Add items from categories with cashback to earn points)",
       paymentMethod: "Payment Method",
       cash: "Cash",
+      card: "Card",
       crypto: "Crypto",
       bankTransfer: "Bank Transfer",
       addMoreItems: "Add More Items",
@@ -115,6 +116,8 @@ const resources = {
       // Session expiry modal translations
       areYouStillThere: "Are you still there?",
       sessionExpiryMessage: "Your session will expire soon due to inactivity. Would you like to continue?",
+      sessionExpires: "Session expires",
+      sessionExpiresIn: "Session expires in {{seconds}} seconds",
       // Category names
       indoor: "Indoor",
       outdoor: "Outdoor",
@@ -181,6 +184,7 @@ const resources = {
       cashbackNoPointsHint: "(เพิ่มรายการจากหมวดหมู่ที่มีเงินคืนเพื่อรับคะแนน)",
       paymentMethod: "วิธีการชำระเงิน",
       cash: "เงินสด",
+      card: "บัตร",
       crypto: "คริปโต",
       bankTransfer: "โอนเงิน",
       addMoreItems: "เพิ่มสินค้า",
@@ -230,6 +234,8 @@ const resources = {
       // Session expiry modal translations
       areYouStillThere: "คุณยังอยู่หรือไม่?",
       sessionExpiryMessage: "เซสชันของคุณจะหมดอายุเร็วๆ นี้เนื่องจากไม่มีการใช้งาน คุณต้องการดำเนินการต่อหรือไม่?",
+      sessionExpires: "เซสชันหมดอายุ",
+      sessionExpiresIn: "เซสชันหมดอายุใน {{seconds}} วินาที",
       // Category names
       indoor: "ในร่ม",
       outdoor: "กลางแจ้ง",
@@ -297,6 +303,7 @@ const resources = {
         "(Agrega artículos de categorías con reembolso para ganar puntos)",
       paymentMethod: "Método de Pago",
       cash: "Efectivo",
+      card: "Tarjeta",
       crypto: "Cripto",
       bankTransfer: "Transferencia Bancaria",
       addMoreItems: "Agregar Más Artículos",
@@ -347,6 +354,8 @@ const resources = {
       // Session expiry modal translations
       areYouStillThere: "¿Sigues ahí?",
       sessionExpiryMessage: "Tu sesión expirará pronto debido a la inactividad. ¿Te gustaría continuar?",
+      sessionExpires: "La sesión expira",
+      sessionExpiresIn: "La sesión expira en {{seconds}} segundos",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -417,6 +426,7 @@ const resources = {
         "(Ajoutez des articles des catégories avec cashback pour gagner des points)",
       paymentMethod: "Méthode de Paiement",
       cash: "Espèces",
+      card: "Carte",
       crypto: "Crypto",
       bankTransfer: "Virement Bancaire",
       addMoreItems: "Ajouter Plus d'Articles",
@@ -466,6 +476,8 @@ const resources = {
       // Session expiry modal translations
       areYouStillThere: "Êtes-vous toujours là ?",
       sessionExpiryMessage: "Votre session va bientôt expirer en raison de l'inactivité. Souhaitez-vous continuer ?",
+      sessionExpires: "La session expire",
+      sessionExpiresIn: "La session expire dans {{seconds}} secondes",
       // Category names
       indoor: "Intérieur",
       outdoor: "Extérieur",
@@ -536,6 +548,7 @@ const resources = {
         "(Fügen Sie Artikel aus Kategorien mit Cashback hinzu, um Punkte zu verdienen)",
       paymentMethod: "Zahlungsmethode",
       cash: "Bargeld",
+      card: "Karte",
       crypto: "Krypto",
       bankTransfer: "Banküberweisung",
       addMoreItems: "Weitere Artikel hinzufügen",
@@ -583,6 +596,11 @@ const resources = {
         "Sind Sie sicher, dass Sie Ihre Bestellung stornieren möchten? Alle Artikel werden aus Ihrem Warenkorb entfernt.",
       yes: "Ja",
       no: "Nein",
+      // Session expiry translations
+      areYouStillThere: "Sind Sie noch da?",
+      sessionExpiryMessage: "Ihre Sitzung läuft bald ab aufgrund von Inaktivität. Möchten Sie fortfahren?",
+      sessionExpires: "Sitzung läuft ab",
+      sessionExpiresIn: "Sitzung läuft in {{seconds}} Sekunden ab",
       // Category names
       indoor: "Innen",
       outdoor: "Draußen",
@@ -654,6 +672,7 @@ const resources = {
         "(Aggiungi articoli da categorie con cashback per guadagnare punti)",
       paymentMethod: "Metodo di Pagamento",
       cash: "Contanti",
+      card: "Carta",
       crypto: "Crypto",
       bankTransfer: "Bonifico Bancario",
       addMoreItems: "Aggiungi Altri Articoli",
@@ -699,6 +718,11 @@ const resources = {
         "Sei sicuro di voler annullare il tuo ordine? Tutti gli articoli saranno rimossi dal tuo carrello.",
       yes: "Sì",
       no: "No",
+      // Session expiry translations
+      areYouStillThere: "Sei ancora lì?",
+      sessionExpiryMessage: "La tua sessione scadrà presto a causa dell'inattività. Vorresti continuare?",
+      sessionExpires: "La sessione scade",
+      sessionExpiresIn: "La sessione scade tra {{seconds}} secondi",
       // Category names
       indoor: "Interno",
       outdoor: "Esterno",
@@ -757,6 +781,7 @@ const resources = {
         "（キャッシュバックのあるカテゴリーからアイテムを追加してポイントを獲得）",
       paymentMethod: "支払い方法",
       cash: "現金",
+      card: "カード",
       crypto: "暗号通貨",
       bankTransfer: "銀行振込",
       addMoreItems: "アイテムを追加",
@@ -802,6 +827,11 @@ const resources = {
         "注文をキャンセルしてもよろしいですか？すべてのアイテムがカートから削除されます。",
       yes: "はい",
       no: "いいえ",
+      // Session expiry translations
+      areYouStillThere: "まだそこにいらっしゃいますか？",
+      sessionExpiryMessage: "非アクティブのため、セッションがまもなく期限切れになります。続行しますか？",
+      sessionExpires: "セッション期限切れ",
+      sessionExpiresIn: "セッションは{{seconds}}秒で期限切れになります",
       // Category names
       indoor: "屋内",
       outdoor: "屋外",
@@ -858,6 +888,7 @@ const resources = {
       cashbackNoPointsHint: "（从有返现的分类添加商品来赚取积分）",
       paymentMethod: "支付方式",
       cash: "现金",
+      card: "银行卡",
       crypto: "加密货币",
       bankTransfer: "银行转账",
       addMoreItems: "添加更多商品",
@@ -902,6 +933,11 @@ const resources = {
         "您确定要取消订单吗？所有商品将从购物车中移除。",
       yes: "是",
       no: "否",
+      // Session expiry translations
+      areYouStillThere: "您还在吗？",
+      sessionExpiryMessage: "由于长时间未操作，您的会话即将过期。您要继续吗？",
+      sessionExpires: "会话即将过期",
+      sessionExpiresIn: "会话将在{{seconds}}秒后过期",
       // Category names
       indoor: "室内",
       outdoor: "户外",
@@ -959,6 +995,7 @@ const resources = {
         "(Добавьте товары из категорий с кэшбэком для получения баллов)",
       paymentMethod: "Способ оплаты",
       cash: "Наличные",
+      card: "Карта",
       crypto: "Криптовалюта",
       bankTransfer: "Банковский перевод",
       addMoreItems: "Добавить еще товары",
@@ -1004,6 +1041,11 @@ const resources = {
         "Вы уверены, что хотите отменить заказ? Все товары будут удалены из корзины.",
       yes: "Да",
       no: "Нет",
+      // Session expiry translations
+      areYouStillThere: "Вы еще здесь?",
+      sessionExpiryMessage: "Ваша сессия скоро истечет из-за неактивности. Хотите продолжить?",
+      sessionExpires: "Сессия истекает",
+      sessionExpiresIn: "Сессия истекает через {{seconds}} секунд",
       // Category names
       indoor: "Внутренний",
       outdoor: "Наружный",
@@ -1062,6 +1104,7 @@ const resources = {
         "(Adicione itens de categorias com cashback para ganhar pontos)",
       paymentMethod: "Método de Pagamento",
       cash: "Dinheiro",
+      card: "Cartão",
       crypto: "Cripto",
       bankTransfer: "Transferência Bancária",
       addMoreItems: "Adicionar Mais Itens",
@@ -1107,6 +1150,11 @@ const resources = {
         "Tem certeza de que quer cancelar seu pedido? Todos os itens serão removidos do seu carrinho.",
       yes: "Sim",
       no: "Não",
+      // Session expiry translations
+      areYouStillThere: "Você ainda está aí?",
+      sessionExpiryMessage: "Sua sessão expirará em breve devido à inatividade. Gostaria de continuar?",
+      sessionExpires: "Sessão expira",
+      sessionExpiresIn: "Sessão expira em {{seconds}} segundos",
       // Category names
       indoor: "Interior",
       outdoor: "Exterior",
@@ -1165,6 +1213,7 @@ const resources = {
         "(कैशबैक वाली श्रेणियों से आइटम जोड़कर पॉइंट्स कमाएं)",
       paymentMethod: "भुगतान विधि",
       cash: "नकद",
+      card: "कार्ड",
       crypto: "क्रिप्टो",
       bankTransfer: "बैंक ट्रांसफर",
       addMoreItems: "और आइटम जोड़ें",
@@ -1211,6 +1260,11 @@ const resources = {
         "क्या आप अपना ऑर्डर रद्द करना चाहते हैं? सभी आइटम आपकी कार्ट से हटा दिए जाएंगे।",
       yes: "हाँ",
       no: "नहीं",
+      // Session expiry translations
+      areYouStillThere: "क्या आप अभी भी वहाँ हैं?",
+      sessionExpiryMessage: "निष्क्रियता के कारण आपका सत्र जल्द ही समाप्त हो जाएगा। क्या आप जारी रखना चाहते हैं?",
+      sessionExpires: "सत्र समाप्त होता है",
+      sessionExpiresIn: "सत्र {{seconds}} सेकंड में समाप्त हो जाएगा",
       // Category names
       indoor: "इनडोर",
       outdoor: "आउटडोर",
@@ -1269,6 +1323,7 @@ const resources = {
         "(캐시백이 있는 카테고리에서 항목을 추가하여 포인트 획득)",
       paymentMethod: "결제 방법",
       cash: "현금",
+      card: "카드",
       crypto: "암호화폐",
       bankTransfer: "계좌이체",
       addMoreItems: "더 많은 항목 추가",
@@ -1313,6 +1368,11 @@ const resources = {
         "주문을 취소하시겠습니까? 모든 항목이 장바구니에서 제거됩니다.",
       yes: "예",
       no: "아니요",
+      // Session expiry translations
+      areYouStillThere: "아직 거기 계신가요?",
+      sessionExpiryMessage: "비활성 상태로 인해 세션이 곧 만료됩니다. 계속하시겠습니까?",
+      sessionExpires: "세션 만료",
+      sessionExpiresIn: "세션이 {{seconds}}초 후에 만료됩니다",
       // Category names
       indoor: "실내",
       outdoor: "실외",
@@ -1372,6 +1432,7 @@ const resources = {
         "(Voeg items toe uit categorieën met cashback om punten te verdienen)",
       paymentMethod: "Betalingsmethode",
       cash: "Contant",
+      card: "Kaart",
       crypto: "Crypto",
       bankTransfer: "Bankoverschrijving",
       addMoreItems: "Meer Items Toevoegen",
@@ -1417,6 +1478,11 @@ const resources = {
         "Weet je zeker dat je je bestelling wilt annuleren? Alle items worden uit je winkelwagen verwijderd.",
       yes: "Ja",
       no: "Nee",
+      // Session expiry translations
+      areYouStillThere: "Ben je er nog?",
+      sessionExpiryMessage: "Je sessie verloopt binnenkort vanwege inactiviteit. Wil je doorgaan?",
+      sessionExpires: "Sessie verloopt",
+      sessionExpiresIn: "Sessie verloopt over {{seconds}} seconden",
       // Category names
       indoor: "Binnen",
       outdoor: "Buiten",
@@ -1474,6 +1540,7 @@ const resources = {
         "(Para iadesi olan kategorilerden ürün ekleyerek puan kazanın)",
       paymentMethod: "Ödeme Yöntemi",
       cash: "Nakit",
+      card: "Kart",
       crypto: "Kripto",
       bankTransfer: "Banka Havalesi",
       addMoreItems: "Daha Fazla Ürün Ekle",
@@ -1519,6 +1586,11 @@ const resources = {
         "Siparişinizi iptal etmek istediğinizden emin misiniz? Tüm ürünler sepetinizden kaldırılacak.",
       yes: "Evet",
       no: "Hayır",
+      // Session expiry translations
+      areYouStillThere: "Hala orada mısın?",
+      sessionExpiryMessage: "Hareketsizlik nedeniyle oturumunuz yakında sona erecek. Devam etmek ister misiniz?",
+      sessionExpires: "Oturum sona eriyor",
+      sessionExpiresIn: "Oturum {{seconds}} saniye içinde sona erecek",
       // Category names
       indoor: "İç Mekan",
       outdoor: "Dış Mekan",
