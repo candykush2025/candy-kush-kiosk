@@ -43,23 +43,27 @@ class StockMovementService {
       const docRef = await addDoc(collection(db, 'StockMovement'), movement);
       console.log('Stock movement added with ID:', docRef.id);
       
-      // Update product stock quantity
-      try {
-        const productRef = doc(db, 'products', movementData.productId);
-        if (movementData.status === 'purchasing') {
-          await updateDoc(productRef, {
-            quantity: increment(parseInt(movementData.quantity))
-          });
-          console.log(`Updated product ${movementData.productId} stock: +${movementData.quantity}`);
-        } else if (movementData.status === 'sales') {
-          await updateDoc(productRef, {
-            quantity: increment(-parseInt(movementData.quantity))
-          });
-          console.log(`Updated product ${movementData.productId} stock: -${movementData.quantity}`);
+      // Update product stock quantity (skip if explicitly disabled)
+      if (!movementData.skipStockUpdate) {
+        try {
+          const productRef = doc(db, 'products', movementData.productId);
+          if (movementData.status === 'purchasing') {
+            await updateDoc(productRef, {
+              quantity: increment(parseInt(movementData.quantity))
+            });
+            console.log(`Updated product ${movementData.productId} stock: +${movementData.quantity}`);
+          } else if (movementData.status === 'sales') {
+            await updateDoc(productRef, {
+              quantity: increment(-parseInt(movementData.quantity))
+            });
+            console.log(`Updated product ${movementData.productId} stock: -${movementData.quantity}`);
+          }
+        } catch (productUpdateError) {
+          console.error('Error updating product stock:', productUpdateError);
+          // Don't throw here - the stock movement was still recorded
         }
-      } catch (productUpdateError) {
-        console.error('Error updating product stock:', productUpdateError);
-        // Don't throw here - the stock movement was still recorded
+      } else {
+        console.log('Skipping product stock update as requested');
       }
       
       return docRef.id;
@@ -192,7 +196,7 @@ class StockMovementService {
         summary[key].totalStock = Math.max(0, summary[key].totalStock);
       });
       
-      return Object.values(summary);
+      return summary;
     } catch (error) {
       console.error('Error getting stock summary:', error);
       throw error;

@@ -439,17 +439,33 @@ export default function AdminPage() {
   const [alertProductSearch, setAlertProductSearch] = useState("");
   const [showAlertProductDropdown, setShowAlertProductDropdown] = useState(false);
 
+  // Edit Alert states
+  const [editingAlert, setEditingAlert] = useState(null);
+  const [showEditAlertForm, setShowEditAlertForm] = useState(false);
+  const [editAlertProductSearch, setEditAlertProductSearch] = useState("");
+  const [showEditAlertProductDropdown, setShowEditAlertProductDropdown] = useState(false);
+  const [editSelectedProductForAlert, setEditSelectedProductForAlert] = useState(null);
+  const [editAlertKioskLevel, setEditAlertKioskLevel] = useState("");
+  const [editAlertAdminLevel, setEditAlertAdminLevel] = useState("");
+  const [editStockZeroAction, setEditStockZeroAction] = useState("disable");
+
   // Stock submenu state - updated to include purchasing
-  const [stockActiveSubTab, setStockActiveSubTab] = useState("movements");
+  const [stockActiveSubTab, setStockActiveSubTab] = useState("overview");
   const [stockZeroAction, setStockZeroAction] = useState("disable"); // "disable" or "keepVisible"
+
+  // Stock Detail Modal states
+  const [showStockDetailModal, setShowStockDetailModal] = useState(false);
+  const [selectedStockDetail, setSelectedStockDetail] = useState(null);
 
   // Stock Movement data state
   const [stockMovements, setStockMovements] = useState([]);
   const [stockCalculations, setStockCalculations] = useState({});
+  const [stockCalculationsLoaded, setStockCalculationsLoaded] = useState(false);
   const [stockPurchases, setStockPurchases] = useState([]);
 
   // Purchasing state (for the new purchasing submenu)
   const [showPurchasingForm, setShowPurchasingForm] = useState(false);
+  const [isPurchasingSaving, setIsPurchasingSaving] = useState(false);
   const [purchasingProducts, setPurchasingProducts] = useState([
     { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
   ]);
@@ -2829,6 +2845,7 @@ export default function AdminPage() {
       
       // Reload stock movements and products data
       await loadStockMovementsData();
+      await loadAllStockCalculations(); // Recalculate stock after stock in
       await loadDashboardData(); // This will refresh the products with updated stock quantities
       
       alert("Stock in added successfully!");
@@ -2937,8 +2954,10 @@ export default function AdminPage() {
   // Load stock movements when tab is accessed
   useEffect(() => {
     if (activeTab === 'stockManagement') {
+      setStockCalculationsLoaded(false); // Reset loading state
       loadStockMovementsData(); // Use the new service for consistency
       loadStockAlerts();
+      loadAllStockCalculations(); // Load proper stock calculations
     }
   }, [activeTab]);
 
@@ -2989,7 +3008,12 @@ export default function AdminPage() {
     
     if (!checkInputPermission()) return;
 
+    // Prevent double submission
+    if (isPurchasingSaving) return;
+
     try {
+      setIsPurchasingSaving(true);
+      
       // Validate that all products have required fields
       const validProducts = purchasingProducts.filter(p => 
         p.productId && p.quantity > 0 && p.buyPrice > 0
@@ -3020,6 +3044,7 @@ export default function AdminPage() {
       
       // Reload data
       await loadStockMovementsData();
+      await loadAllStockCalculations(); // Recalculate stock after purchase
       await loadDashboardData(); // Refresh products if needed
       
       // Reset form
@@ -3029,6 +3054,8 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Error saving purchasing:", error);
       alert("❌ Failed to save purchasing. Please try again.");
+    } finally {
+      setIsPurchasingSaving(false);
     }
   };
 
@@ -3061,7 +3088,7 @@ export default function AdminPage() {
 
   // Load stock movements data when stockActiveSubTab changes
   useEffect(() => {
-    if (stockActiveSubTab === 'movements' || stockActiveSubTab === 'purchasing') {
+    if (stockActiveSubTab === 'overview' || stockActiveSubTab === 'movements' || stockActiveSubTab === 'purchasing') {
       loadStockMovementsData();
     }
   }, [stockActiveSubTab]);
@@ -3101,6 +3128,7 @@ export default function AdminPage() {
       }
 
       const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
 
       const alertData = {
         productId: selectedProductForAlert.id,
@@ -3142,6 +3170,7 @@ export default function AdminPage() {
       }
 
       const { doc, deleteDoc } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
 
       await deleteDoc(doc(db, 'StockAlert', alertId));
       await loadStockAlerts();
@@ -3152,41 +3181,256 @@ export default function AdminPage() {
     }
   };
 
+  // Edit Stock Alert Functions
+  const startEditAlert = (alert) => {
+    setEditingAlert(alert);
+    setShowEditAlertForm(true);
+    
+    // Pre-populate edit form with current values
+    const product = products.find(p => p.id === alert.productId);
+    if (product) {
+      setEditSelectedProductForAlert({
+        ...product,
+        selectedVariantId: alert.variantId || null,
+        selectedVariantName: alert.variantName || ''
+      });
+      
+      // Set search text
+      let searchText = `${product.categoryName || 'Uncategorized'} - ${product.subcategoryName || 'No Subcategory'} - ${product.name}`;
+      if (alert.variantName) {
+        searchText += ` - ${alert.variantName}`;
+      }
+      setEditAlertProductSearch(searchText);
+    }
+    
+    setEditAlertKioskLevel(alert.alertKioskLevel.toString());
+    setEditAlertAdminLevel(alert.alertAdminLevel.toString());
+    setEditStockZeroAction(alert.stockZeroAction);
+  };
+
+  const cancelEditAlert = () => {
+    setEditingAlert(null);
+    setShowEditAlertForm(false);
+    setEditAlertProductSearch("");
+    setEditSelectedProductForAlert(null);
+    setEditAlertKioskLevel("");
+    setEditAlertAdminLevel("");
+    setEditStockZeroAction("disable");
+    setShowEditAlertProductDropdown(false);
+  };
+
+  const saveEditAlert = async () => {
+    try {
+      if (!editSelectedProductForAlert) {
+        alert("Please select a product");
+        return;
+      }
+
+      if (!editAlertKioskLevel || !editAlertAdminLevel) {
+        alert("Please enter both kiosk and admin alert levels");
+        return;
+      }
+
+      const kioskLevel = parseInt(editAlertKioskLevel);
+      const adminLevel = parseInt(editAlertAdminLevel);
+
+      if (isNaN(kioskLevel) || isNaN(adminLevel) || kioskLevel < 0 || adminLevel < 0) {
+        alert("Alert levels must be valid numbers (0 or greater)");
+        return;
+      }
+
+      const { doc, updateDoc } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      const alertData = {
+        productId: editSelectedProductForAlert.id,
+        productName: editSelectedProductForAlert.name,
+        variantId: editSelectedProductForAlert.selectedVariantId || "",
+        variantName: editSelectedProductForAlert.selectedVariantName || "",
+        alertKioskLevel: kioskLevel,
+        alertAdminLevel: adminLevel,
+        stockZeroAction: editStockZeroAction,
+        isActive: true,
+        updatedAt: new Date(),
+        updatedBy: 'admin'
+      };
+
+      await updateDoc(doc(db, 'StockAlert', editingAlert.id), alertData);
+      await loadStockAlerts();
+      cancelEditAlert();
+      alert("Stock alert updated successfully!");
+    } catch (error) {
+      console.error("Error updating stock alert:", error);
+      alert("Failed to update stock alert: " + error.message);
+    }
+  };
+
   // Get stock alert for a product
   const getProductStockAlert = (productId) => {
     return stockAlerts.find(alert => alert.productId === productId && alert.isActive);
   };
 
+  // Calculate stock directly from StockMovement collection
+  const calculateStock = async (productId, variantId = null) => {
+    try {
+      const { collection, query, where, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      // Create query to get all stock movements for this product
+      let stockQuery = query(
+        collection(db, 'StockMovement'),
+        where('productId', '==', productId)
+      );
+
+      // If variantId is provided, also filter by variantId
+      if (variantId) {
+        stockQuery = query(
+          collection(db, 'StockMovement'),
+          where('productId', '==', productId),
+          where('variantId', '==', variantId)
+        );
+      }
+
+      const querySnapshot = await getDocs(stockQuery);
+      let totalStock = 0;
+
+      // Calculate stock: add "purchasing", subtract "sales"
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const quantity = data.quantity || 0;
+        
+        if (data.status === 'purchasing') {
+          totalStock += quantity;
+        } else if (data.status === 'sales') {
+          totalStock -= quantity;
+        }
+      });
+
+      return totalStock;
+    } catch (error) {
+      console.error('Error calculating stock:', error);
+      return 0;
+    }
+  };
+
+  // Load all stock calculations from StockMovement collection
+  const loadAllStockCalculations = async () => {
+    try {
+      console.log('🔍 Starting stock calculation...');
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      // Get all stock movements
+      const querySnapshot = await getDocs(collection(db, 'StockMovement'));
+      const stockSummary = {};
+      
+      console.log('📊 Total StockMovement documents found:', querySnapshot.size);
+
+      // Process each stock movement
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const productId = data.productId;
+        const variantId = data.variantId || '';
+        const quantity = data.quantity || 0;
+        const status = data.status;
+        
+        // Create key for this product/variant combination
+        const key = variantId ? `${productId}-${variantId}` : productId;
+
+        // Initialize if not exists
+        if (!stockSummary[key]) {
+          stockSummary[key] = { stock: 0 };
+        }
+
+        // Calculate stock: add "purchasing", subtract "sales"
+        if (status === 'purchasing') {
+          stockSummary[key].stock += quantity;
+          console.log(`➕ PURCHASING: ${key} +${quantity} = ${stockSummary[key].stock}`);
+        } else if (status === 'sales') {
+          stockSummary[key].stock -= quantity;
+          console.log(`➖ SALES: ${key} -${quantity} = ${stockSummary[key].stock}`);
+        }
+      });
+
+      console.log('✅ Final stock calculations:', stockSummary);
+      console.log('📈 Stock summary keys:', Object.keys(stockSummary));
+
+      // Update state with calculated stock
+      setStockCalculations(stockSummary);
+      setStockCalculationsLoaded(true);
+      console.log('Stock calculations loaded:', stockSummary);
+    } catch (error) {
+      console.error('❌ Error loading stock calculations:', error);
+      setStockCalculationsLoaded(false);
+    }
+  };
+
   // Get current stock level for a product - Updated to use StockMovement system
   const getCurrentStock = (product, variantId = null) => {
-    if (!product) return 0;
+    if (!product) {
+      console.log('🚫 getCurrentStock: No product provided');
+      return 0;
+    }
+
+    // Removed excessive logging
+
+    // If stock calculations are not loaded yet, return 0
+    if (!stockCalculationsLoaded) {
+      return 0;
+    }
 
     // First check if we have stock calculations from StockMovement system
-    if (stockCalculations && Object.keys(stockCalculations).length > 0) {
+    if (stockCalculations && ((typeof stockCalculations === 'object' && Object.keys(stockCalculations).length > 0) || Array.isArray(stockCalculations))) {
+      // Handle case where stockCalculations might be an array (should be fixed now)
+      let calculations = stockCalculations;
+      if (Array.isArray(stockCalculations)) {
+        console.log('⚠️ WARNING: stockCalculations is an array, converting to object format');
+        calculations = {};
+        stockCalculations.forEach(item => {
+          const key = item.variantId ? `${item.productId}-${item.variantId}` : item.productId;
+          calculations[key] = { stock: item.totalStock };
+        });
+      }
+      
       // If variantId is provided, get stock for specific variant
       if (variantId) {
         const key = `${product.id}-${variantId}`;
-        return stockCalculations[key] ? stockCalculations[key].stock : 0;
+        const stockData = calculations[key];
+        const stock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
+        console.log(`🎯 VARIANT LOOKUP - ProductId: "${product.id}" | VariantId: "${variantId}" | Key: "${key}"`);
+        console.log(`📋 Available keys:`, Object.keys(calculations));
+        console.log(`💰 Found stock:`, stock);
+        if (stockData) {
+          console.log(`✅ Key found! Stock data:`, stockData);
+        } else {
+          console.log(`❌ Key NOT found! Checking if similar keys exist...`);
+          const similarKeys = Object.keys(calculations).filter(k => k.includes(product.id));
+          console.log(`🔍 Keys containing productId "${product.id}":`, similarKeys);
+        }
+        return stock;
       }
       
       // Check if product has variants
-      if (product.variants && Array.isArray(product.variants)) {
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
         let totalStock = 0;
         product.variants.forEach(variant => {
           if (variant.options && Array.isArray(variant.options)) {
             variant.options.forEach(option => {
               const key = `${product.id}-${variant.id}-${option.id}`;
-              if (stockCalculations[key]) {
-                totalStock += stockCalculations[key].stock || 0;
-              }
+              const stockData = calculations[key];
+              const variantStock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
+              totalStock += variantStock;
             });
           }
         });
         return totalStock;
       } else {
-        // Product without variants
+        // Product without variants (or empty variants array)
         const key = product.id;
-        return stockCalculations[key] ? stockCalculations[key].stock : 0;
+        const stockData = calculations[key];
+        const stock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
+        console.log(`📦 SIMPLE PRODUCT - Product: "${product.name}" | Key: "${key}" | Stock: ${stock}`);
+        return stock;
       }
     }
     
@@ -3472,6 +3716,19 @@ export default function AdminPage() {
                 {/* Stock Management Submenu */}
                 {activeTab === "stockManagement" && (
                   <div className="ml-8 mt-2 space-y-1">
+                    <button
+                      onClick={() => setStockActiveSubTab("overview")}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                        stockActiveSubTab === "overview"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      Stock Overview
+                    </button>
                     <button
                       onClick={() => setStockActiveSubTab("movements")}
                       className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
@@ -6301,6 +6558,361 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Stock Detail Modal */}
+              {showStockDetailModal && selectedStockDetail && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                    {/* Modal Header */}
+                    <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-4 text-white">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-xl font-bold">{selectedStockDetail.product.name}</h3>
+                          <p className="text-green-100 text-sm opacity-90">Detailed Stock Analysis</p>
+                        </div>
+                        <button
+                          onClick={() => setShowStockDetailModal(false)}
+                          className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white/10 transition-colors"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Modal Content */}
+                    <div className="p-6 max-h-[calc(90vh-80px)] overflow-y-auto">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        {/* Left Column - Product Info */}
+                        <div className="lg:col-span-1 space-y-6">
+                          {/* Product Summary Card */}
+                          <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Product Information</h4>
+                            <div className="space-y-3">
+                              <div className="flex justify-between">
+                                <span className="text-sm font-medium text-gray-600">Category:</span>
+                                <span className="text-sm text-gray-800">
+                                  {selectedStockDetail.product.categoryName || 'Uncategorized'}
+                                </span>
+                              </div>
+                              {selectedStockDetail.product.subcategoryName && (
+                                <div className="flex justify-between">
+                                  <span className="text-sm font-medium text-gray-600">Subcategory:</span>
+                                  <span className="text-sm text-gray-800">
+                                    {selectedStockDetail.product.subcategoryName}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-sm font-medium text-gray-600">Type:</span>
+                                <span className="text-sm text-gray-800">
+                                  {selectedStockDetail.hasVariants ? 'Variable Product' : 'Simple Product'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Stock Status Card */}
+                          {(() => {
+                            // Recalculate stock status in modal using the same logic as cards
+                            const stockAlert = stockAlerts.find(alert => alert.productId === selectedStockDetail.product.id && alert.isActive);
+                            let modalStockStatus = null;
+                            
+                            if (stockAlert) {
+                              if (selectedStockDetail.totalStock <= stockAlert.alertAdminLevel) {
+                                modalStockStatus = 'critical';
+                              } else if (selectedStockDetail.totalStock <= stockAlert.alertKioskLevel) {
+                                modalStockStatus = 'warning';
+                              } else {
+                                modalStockStatus = 'good';
+                              }
+                            }
+                            
+                            return modalStockStatus ? (
+                              <div className={`rounded-xl p-6 ${
+                                modalStockStatus === 'good' ? 'bg-green-50 border border-green-200' :
+                                modalStockStatus === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                                'bg-red-50 border border-red-200'
+                              }`}>
+                                <div className="flex items-center space-x-3 mb-4">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    modalStockStatus === 'good' ? 'bg-green-500' :
+                                    modalStockStatus === 'warning' ? 'bg-yellow-500' :
+                                    'bg-red-500'
+                                  }`}></div>
+                                  <h4 className={`text-lg font-semibold ${
+                                    modalStockStatus === 'good' ? 'text-green-800' :
+                                    modalStockStatus === 'warning' ? 'text-yellow-800' :
+                                    'text-red-800'
+                                  }`}>
+                                    {modalStockStatus === 'good' ? 'Well Stocked' :
+                                     modalStockStatus === 'warning' ? 'Low Stock' :
+                                     'Critical Stock'}
+                                  </h4>
+                                </div>
+                                <div className="text-3xl font-bold mb-2 text-gray-900">
+                                  {selectedStockDetail.totalStock} units
+                                </div>
+                                <p className={`text-sm ${
+                                  modalStockStatus === 'good' ? 'text-green-700' :
+                                  modalStockStatus === 'warning' ? 'text-yellow-700' :
+                                  'text-red-700'
+                                }`}>
+                                  {modalStockStatus === 'good' ? 'Stock levels are healthy' :
+                                   modalStockStatus === 'warning' ? 'Consider restocking soon' :
+                                   'Immediate restocking required'}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="rounded-xl p-6 bg-gray-50 border border-gray-200">
+                                <div className="text-center">
+                                  <div className="text-3xl font-bold mb-2 text-gray-900">
+                                    {selectedStockDetail.totalStock} units
+                                  </div>
+                                  <p className="text-sm text-gray-600">No stock alert configured</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Stock Alert Information */}
+                          {(() => {
+                            const stockAlert = stockAlerts.find(alert => alert.productId === selectedStockDetail.product.id && alert.isActive);
+                            return stockAlert ? (
+                              <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
+                                <h4 className="text-lg font-semibold text-gray-900 mb-4">Stock Alert Settings</h4>
+                                <div className="space-y-3 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-600">Kiosk Alert Level:</span>
+                                    <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                                      {stockAlert.alertKioskLevel} units
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-600">Admin Alert Level:</span>
+                                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                                      {stockAlert.alertAdminLevel} units
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-gray-600">When Stock is Zero:</span>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                      stockAlert.stockZeroAction === 'disable' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {stockAlert.stockZeroAction === 'disable' ? 'Disable Product' : 'Keep Visible'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-gray-50 rounded-xl p-6">
+                                <h4 className="text-lg font-semibold text-gray-900 mb-2">No Stock Alert</h4>
+                                <p className="text-sm text-gray-600 mb-3">
+                                  This product doesn't have stock alerts configured.
+                                </p>
+                                <button
+                                  onClick={() => {
+                                    setStockActiveSubTab('alerts');
+                                    setShowStockDetailModal(false);
+                                  }}
+                                  className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                                >
+                                  Set Up Stock Alert
+                                </button>
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Right Column - Stock Details */}
+                        <div className="lg:col-span-2 space-y-6">
+                          {/* Variants Table (if has variants) */}
+                          {selectedStockDetail.hasVariants && (
+                            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                              <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                                <h4 className="text-lg font-semibold text-gray-900">Stock by Variant</h4>
+                                <p className="text-sm text-gray-600 mt-1">Individual stock levels for each product variant</p>
+                              </div>
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200">
+                                  <thead className="bg-gray-50">
+                                    <tr>
+                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Variant
+                                      </th>
+                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Stock Level
+                                      </th>
+                                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white divide-y divide-gray-200">
+                                    {selectedStockDetail.product.variants.map((variant) => {
+                                      if (variant.options && Array.isArray(variant.options)) {
+                                        return variant.options.map((option) => {
+                                          const variantId = `${variant.id}-${option.id}`;
+                                          const variantStock = getCurrentStock(selectedStockDetail.product, variantId);
+                                          const variantStatus = variantStock > 10 ? 'high' : variantStock > 0 ? 'low' : 'out';
+                                          
+                                          return (
+                                            <tr key={`${variant.id}-${option.id}`} className="hover:bg-gray-50">
+                                              <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-medium text-gray-900">
+                                                  {variant.variantName}: {option.name}
+                                                </div>
+                                                <div className="text-xs text-gray-500">
+                                                  ID: {variantId}
+                                                </div>
+                                              </td>
+                                              <td className="px-6 py-4 whitespace-nowrap">
+                                                <div className="text-2xl font-bold text-gray-900">
+                                                  {variantStock}
+                                                </div>
+                                                <div className="text-xs text-gray-500">units</div>
+                                              </td>
+                                              <td className="px-6 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                  variantStatus === 'high' ? 'bg-green-100 text-green-800' :
+                                                  variantStatus === 'low' ? 'bg-yellow-100 text-yellow-800' :
+                                                  'bg-red-100 text-red-800'
+                                                }`}>
+                                                  <div className={`w-2 h-2 rounded-full mr-1 ${
+                                                    variantStatus === 'high' ? 'bg-green-500' :
+                                                    variantStatus === 'low' ? 'bg-yellow-500' :
+                                                    'bg-red-500'
+                                                  }`}></div>
+                                                  {variantStatus === 'high' ? 'In Stock' :
+                                                   variantStatus === 'low' ? 'Low Stock' :
+                                                   'Out of Stock'}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                          );
+                                        });
+                                      } else {
+                                        const variantStock = getCurrentStock(selectedStockDetail.product, variant.id);
+                                        const variantStatus = variantStock > 10 ? 'high' : variantStock > 0 ? 'low' : 'out';
+                                        
+                                        return (
+                                          <tr key={variant.id} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                              <div className="text-sm font-medium text-gray-900">
+                                                {variant.name || `Variant ${variant.id}`}
+                                              </div>
+                                              <div className="text-xs text-gray-500">
+                                                ID: {variant.id}
+                                              </div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                              <div className="text-2xl font-bold text-gray-900">
+                                                {variantStock}
+                                              </div>
+                                              <div className="text-xs text-gray-500">units</div>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap">
+                                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                variantStatus === 'high' ? 'bg-green-100 text-green-800' :
+                                                variantStatus === 'low' ? 'bg-yellow-100 text-yellow-800' :
+                                                'bg-red-100 text-red-800'
+                                              }`}>
+                                                <div className={`w-2 h-2 rounded-full mr-1 ${
+                                                  variantStatus === 'high' ? 'bg-green-500' :
+                                                  variantStatus === 'low' ? 'bg-yellow-500' :
+                                                  'bg-red-500'
+                                                }`}></div>
+                                                {variantStatus === 'high' ? 'In Stock' :
+                                                 variantStatus === 'low' ? 'Low Stock' :
+                                                 'Out of Stock'}
+                                              </span>
+                                            </td>
+                                          </tr>
+                                        );
+                                      }
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Simple Product Stock (if no variants) */}
+                          {!selectedStockDetail.hasVariants && (
+                            <div className="bg-white border border-gray-200 rounded-xl p-6">
+                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Stock Information</h4>
+                              <div className="text-center py-8">
+                                <div className="text-6xl font-bold text-gray-900 mb-2">
+                                  {selectedStockDetail.totalStock}
+                                </div>
+                                <div className="text-lg text-gray-600">Total Units Available</div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Stock Movement Summary */}
+                          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
+                              <h4 className="text-lg font-semibold text-gray-900">Recent Stock Movements</h4>
+                              <p className="text-sm text-gray-600 mt-1">Last 10 stock transactions for this product</p>
+                            </div>
+                            <div className="p-6">
+                              <div className="space-y-4">
+                                {stockMovements
+                                  .filter(movement => movement.productId === selectedStockDetail.product.id)
+                                  .slice(0, 10)
+                                  .map((movement) => (
+                                    <div key={movement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                      <div className="flex items-center space-x-3">
+                                        <div className={`w-3 h-3 rounded-full ${
+                                          movement.status === 'purchasing' ? 'bg-green-500' : 'bg-red-500'
+                                        }`}></div>
+                                        <div>
+                                          <div className="text-sm font-medium text-gray-900">
+                                            {movement.status === 'purchasing' ? 'Purchase' : 'Sale'}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            {movement.variantName && `${movement.variantName} • `}
+                                            {movement.date} {movement.time}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className={`text-sm font-medium ${
+                                        movement.status === 'purchasing' ? 'text-green-600' : 'text-red-600'
+                                      }`}>
+                                        {movement.status === 'purchasing' ? '+' : '-'}{movement.quantity}
+                                      </div>
+                                    </div>
+                                  ))}
+                                {stockMovements.filter(movement => movement.productId === selectedStockDetail.product.id).length === 0 && (
+                                  <div className="text-center py-8 text-gray-500">
+                                    <svg className="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                    <p className="text-sm">No stock movements recorded yet</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="bg-gray-50 px-6 py-4 flex justify-end space-x-3 border-t border-gray-200">
+                      <button
+                        onClick={() => setShowStockDetailModal(false)}
+                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Transactions Tab */}
               {activeTab === "transactions" && (
                 <div className="space-y-6">
@@ -7208,6 +7820,269 @@ export default function AdminPage() {
               {activeTab === "stockManagement" && (
                 <div className="space-y-6">
                   
+                  {/* Stock Overview Sub-tab - Modern Professional Design */}
+                  {stockActiveSubTab === "overview" && (
+                    <div className="space-y-6">
+                      {/* Header Section */}
+                      <div className="bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-2xl font-bold mb-2">Stock Overview</h3>
+                            <p className="text-green-100 opacity-90">Real-time inventory management dashboard</p>
+                          </div>
+                          <div className="flex items-center space-x-4">
+                            <div className="text-right">
+                              <div className="text-3xl font-bold">{products.length}</div>
+                              <div className="text-sm text-green-100 opacity-75">Total Products</div>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                setStockCalculationsLoaded(false);
+                                await loadAllStockCalculations();
+                                await loadStockMovementsData();
+                                console.log('🔄 Stock data refreshed manually');
+                              }}
+                              className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-200 flex items-center space-x-2"
+                              title="Refresh Stock Data"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              <span>Refresh</span>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {/* Quick Stats */}
+                        {stockCalculationsLoaded && (
+                          <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                              <div className="text-2xl font-bold text-green-200">
+                                {products.filter(p => {
+                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
+                                  return alert && getCurrentStock(p) > alert.alertKioskLevel;
+                                }).length}
+                              </div>
+                              <div className="text-sm text-green-100">Well Stocked</div>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                              <div className="text-2xl font-bold text-yellow-200">
+                                {products.filter(p => {
+                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
+                                  return alert && getCurrentStock(p) <= alert.alertKioskLevel && getCurrentStock(p) > alert.alertAdminLevel;
+                                }).length}
+                              </div>
+                              <div className="text-sm text-green-100">Low Stock</div>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                              <div className="text-2xl font-bold text-red-200">
+                                {products.filter(p => {
+                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
+                                  return alert && getCurrentStock(p) <= alert.alertAdminLevel;
+                                }).length}
+                              </div>
+                              <div className="text-sm text-green-100">Critical Stock</div>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+                              <div className="text-2xl font-bold">
+                                {products.reduce((total, p) => total + getCurrentStock(p), 0)}
+                              </div>
+                              <div className="text-sm text-green-100">Total Units</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Loading State */}
+                      {!stockCalculationsLoaded && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Stock Data</h3>
+                            <p className="text-gray-600">Calculating inventory levels for all products...</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Products Grid */}
+                      {stockCalculationsLoaded && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                          {products.map((product) => {
+                            const totalStock = getCurrentStock(product);
+                            const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0;
+                            
+                            // Find stock alert for this product (if exists)
+                            const stockAlert = stockAlerts.find(alert => alert.productId === product.id && alert.isActive);
+                            
+                            // Determine stock status based on stock alert levels (if configured)
+                            let stockStatus = null;
+                            if (stockAlert) {
+                              if (totalStock <= stockAlert.alertAdminLevel) {
+                                stockStatus = 'critical';
+                              } else if (totalStock <= stockAlert.alertKioskLevel) {
+                                stockStatus = 'warning';
+                              } else {
+                                stockStatus = 'good';
+                              }
+                            }
+                            
+                            return (
+                              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                                {/* Product Card Header */}
+                                <div className="p-6 border-b border-gray-100">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <h4 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
+                                        {product.name}
+                                      </h4>
+                                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                                        <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
+                                          {product.categoryName || 'Uncategorized'}
+                                        </span>
+                                        {product.subcategoryName && (
+                                          <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs">
+                                            {product.subcategoryName}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Stock Status Indicator - Only show if stock alert is configured */}
+                                    <div className="text-right">
+                                      <div className="text-lg font-semibold text-gray-900 mb-1">
+                                        {totalStock} units
+                                      </div>
+                                      {stockStatus && (
+                                        <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                          stockStatus === 'good' ? 'bg-green-100 text-green-700' :
+                                          stockStatus === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                                          'bg-red-100 text-red-700'
+                                        }`}>
+                                          <div className={`w-1.5 h-1.5 rounded-full ${
+                                            stockStatus === 'good' ? 'bg-green-500' :
+                                            stockStatus === 'warning' ? 'bg-yellow-500' :
+                                            'bg-red-500'
+                                          }`}></div>
+                                          <span>
+                                            {stockStatus === 'good' ? 'Well Stocked' :
+                                             stockStatus === 'warning' ? 'Low Stock' :
+                                             'Critical'}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Product Details */}
+                                <div className="p-6">
+                                  {/* Product Info */}
+                                  {(hasVariants || stockAlert) && (
+                                    <div className="space-y-3 mb-4">
+                                      {hasVariants && (
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-gray-600">Product Type:</span>
+                                          <span className="font-medium">
+                                            {product.variants.length} Variant{product.variants.length > 1 ? 's' : ''}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {stockAlert && (
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-gray-600">Alert Levels:</span>
+                                          <span className="text-xs text-gray-600">
+                                            Kiosk: {stockAlert.alertKioskLevel} • Admin: {stockAlert.alertAdminLevel}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Variants Preview (if any) */}
+                                  {hasVariants && (
+                                    <div className="mb-4">
+                                      <h5 className="text-sm font-medium text-gray-700 mb-2">Variants:</h5>
+                                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                                        {product.variants.slice(0, 3).map((variant) => {
+                                          if (variant.options && Array.isArray(variant.options)) {
+                                            return variant.options.slice(0, 2).map((option) => {
+                                              const variantId = `${variant.id}-${option.id}`;
+                                              const variantStock = getCurrentStock(product, variantId);
+                                              return (
+                                                <div key={`${variant.id}-${option.id}`} className="flex justify-between items-center text-xs bg-gray-50 rounded p-2">
+                                                  <span className="text-gray-700 truncate">
+                                                    {variant.variantName}: {option.name}
+                                                  </span>
+                                                  <span className={`font-medium ${variantStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {variantStock}
+                                                  </span>
+                                                </div>
+                                              );
+                                            });
+                                          }
+                                          return (
+                                            <div key={variant.id} className="flex justify-between items-center text-xs bg-gray-50 rounded p-2">
+                                              <span className="text-gray-700 truncate">
+                                                {variant.name || `Variant ${variant.id}`}
+                                              </span>
+                                              <span className={`font-medium ${getCurrentStock(product, variant.id) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                {getCurrentStock(product, variant.id)}
+                                              </span>
+                                            </div>
+                                          );
+                                        })}
+                                        {product.variants.length > 3 && (
+                                          <div className="text-xs text-gray-500 text-center py-1">
+                                            +{product.variants.length - 3} more variants
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Action Button */}
+                                  <button
+                                    onClick={() => {
+                                      setSelectedStockDetail({
+                                        product,
+                                        totalStock,
+                                        stockStatus,
+                                        hasVariants
+                                      });
+                                      setShowStockDetailModal(true);
+                                    }}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                    <span>View Stock Details</span>
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Empty State */}
+                      {stockCalculationsLoaded && products.length === 0 && (
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+                          <div className="text-center">
+                            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
+                            <p className="text-gray-600 mb-6">Get started by adding some products to your inventory.</p>
+                            <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
+                              Add First Product
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   {/* Stock Movements Sub-tab - Updated for StockMovement system */}
                   {stockActiveSubTab === "movements" && (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -7720,15 +8595,33 @@ export default function AdminPage() {
                             <button
                               type="button"
                               onClick={handleCancelPurchasing}
-                              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                              disabled={isPurchasingSaving}
+                              className={`px-4 py-2 rounded-md ${
+                                isPurchasingSaving
+                                  ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                                  : "text-gray-700 bg-gray-200 hover:bg-gray-300"
+                              }`}
                             >
                               Cancel
                             </button>
                             <button
                               type="submit"
-                              className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700"
+                              disabled={isPurchasingSaving}
+                              className={`px-4 py-2 text-white rounded-md flex items-center space-x-2 ${
+                                isPurchasingSaving
+                                  ? "bg-gray-400 cursor-not-allowed"
+                                  : "bg-green-600 hover:bg-green-700"
+                              }`}
                             >
-                              Save Purchase
+                              {isPurchasingSaving && (
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                              )}
+                              <span>
+                                {isPurchasingSaving ? "Saving..." : "Save Purchase"}
+                              </span>
                             </button>
                           </div>
                         </form>
@@ -7882,31 +8775,117 @@ export default function AdminPage() {
                           {showAlertProductDropdown && (
                             <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                               {products
-                                .filter(p => 
-                                  !alertProductSearch || 
-                                  `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
-                                )
+                                .filter(p => {
+                                  if (!alertProductSearch) return true;
+                                  const searchTerm = alertProductSearch.toLowerCase();
+                                  const productMatch = `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(searchTerm);
+                                  
+                                  // Also search in variants
+                                  let variantMatch = false;
+                                  if (p.variants && Array.isArray(p.variants)) {
+                                    variantMatch = p.variants.some(variant => {
+                                      const variantNameMatch = (variant.variantName || '').toLowerCase().includes(searchTerm);
+                                      const optionsMatch = variant.options && Array.isArray(variant.options) && variant.options.some(option => 
+                                        (option.name || '').toLowerCase().includes(searchTerm)
+                                      );
+                                      return variantNameMatch || optionsMatch;
+                                    });
+                                  }
+                                  
+                                  return productMatch || variantMatch;
+                                })
                                 .slice(0, 50)
-                                .map(p => (
-                                  <div
-                                    key={p.id}
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      setSelectedProductForAlert(p);
-                                      setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
-                                      setShowAlertProductDropdown(false);
-                                    }}
-                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                  >
-                                    <div className="font-medium text-gray-900">
-                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      Current Stock: {getCurrentStock(p)}
-                                    </div>
-                                  </div>
-                                ))}
+                                .map(p => {
+                                  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+                                    return p.variants.map(variant => {
+                                      if (variant.options && Array.isArray(variant.options)) {
+                                        return variant.options.map(option => (
+                                          <div
+                                            key={`${p.id}-${variant.id}-${option.id}`}
+                                            onMouseDown={(e) => {
+                                              e.preventDefault();
+                                              e.stopPropagation();
+                                              console.log('Stock Alert: Selecting product variant:', p.name, variant.variantName, option.name);
+                                              const productWithVariant = {
+                                                ...p,
+                                                variantId: `${variant.id}-${option.id}`,
+                                                variantName: `${variant.variantName}: ${option.name}`,
+                                                selectedVariant: variant,
+                                                selectedOption: option
+                                              };
+                                              setSelectedProductForAlert(productWithVariant);
+                                              setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
+                                              setShowAlertProductDropdown(false);
+                                            }}
+                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                          >
+                                            <div className="font-medium text-gray-900">
+                                              {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                            </div>
+                                            <div className="text-xs text-blue-600">
+                                              {variant.variantName}: {option.name}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                              Current Stock: {stockCalculationsLoaded ? getCurrentStock(p, `${variant.id}-${option.id}`) : 'Loading...'}
+                                            </div>
+                                          </div>
+                                        ));
+                                      }
+                                      return (
+                                        <div
+                                          key={`${p.id}-${variant.id}`}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log('Stock Alert: Selecting product variant (no options):', p.name, variant.name);
+                                            const productWithVariant = {
+                                              ...p,
+                                              variantId: variant.id,
+                                              variantName: variant.name || `Variant ${variant.id}`,
+                                              selectedVariant: variant
+                                            };
+                                            setSelectedProductForAlert(productWithVariant);
+                                            setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
+                                            setShowAlertProductDropdown(false);
+                                          }}
+                                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                        >
+                                          <div className="font-medium text-gray-900">
+                                            {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                          </div>
+                                          <div className="text-xs text-blue-600">
+                                            {variant.name || 'Variant'}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            Current Stock: {stockCalculationsLoaded ? getCurrentStock(p, variant.id) : 'Loading...'}
+                                          </div>
+                                        </div>
+                                      );
+                                    }).flat();
+                                  } else {
+                                    return (
+                                      <div
+                                        key={p.id}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('Stock Alert: Selecting product (no variants):', p.name);
+                                          setSelectedProductForAlert(p);
+                                          setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                          setShowAlertProductDropdown(false);
+                                        }}
+                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                      >
+                                        <div className="font-medium text-gray-900">
+                                          {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          Current Stock: {stockCalculationsLoaded ? getCurrentStock(p) : 'Loading...'}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                }).flat()}
                               
                               {alertProductSearch && products.filter(p => 
                                 `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
@@ -7984,7 +8963,7 @@ export default function AdminPage() {
                       {selectedProductForAlert && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-md">
                           <p className="text-sm text-blue-800">
-                            <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId)} units
+                            <strong>Current Stock:</strong> {stockCalculationsLoaded ? getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId) : 'Loading...'} units
                             {selectedProductForAlert.variantName && (
                               <span className="block text-xs text-blue-600 mt-1">
                                 Variant: {selectedProductForAlert.variantName}
@@ -7994,6 +8973,214 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* Edit Alert Form */}
+                    {showEditAlertForm && (
+                      <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-md font-medium text-gray-900">Edit Stock Alert</h4>
+                          <button
+                            onClick={cancelEditAlert}
+                            className="text-gray-600 hover:text-gray-800"
+                          >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                          {/* Product Selection - Searchable Dropdown */}
+                          <div className="relative">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Select Product
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Search products..."
+                              value={editAlertProductSearch}
+                              onChange={(e) => {
+                                setEditAlertProductSearch(e.target.value);
+                                setShowEditAlertProductDropdown(true);
+                              }}
+                              onFocus={() => setShowEditAlertProductDropdown(true)}
+                              onBlur={() => {
+                                setTimeout(() => setShowEditAlertProductDropdown(false), 200);
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            
+                            {/* Dropdown */}
+                            {showEditAlertProductDropdown && editAlertProductSearch && (
+                              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                {products.filter(p => {
+                                  if (!editAlertProductSearch) return true;
+                                  const searchTerm = editAlertProductSearch.toLowerCase();
+                                  return `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(searchTerm);
+                                }).slice(0, 10).map(p => {
+                                  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+                                    // Product with variants
+                                    return p.variants.map(variant => {
+                                      if (variant.options && Array.isArray(variant.options)) {
+                                        return variant.options.map(option => (
+                                          <div
+                                            key={`${p.id}-${variant.id}-${option.id}`}
+                                            onMouseDown={() => {
+                                              setEditSelectedProductForAlert({
+                                                ...p,
+                                                selectedVariantId: `${variant.id}-${option.id}`,
+                                                selectedVariantName: `${variant.variantName}: ${option.name}`
+                                              });
+                                              setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
+                                              setShowEditAlertProductDropdown(false);
+                                            }}
+                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                          >
+                                            <div className="font-medium text-gray-900">
+                                              {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                            </div>
+                                            <div className="text-xs text-blue-600">
+                                              {variant.variantName}: {option.name}
+                                            </div>
+                                          </div>
+                                        ));
+                                      }
+                                      return (
+                                        <div
+                                          key={`${p.id}-${variant.id}`}
+                                          onMouseDown={() => {
+                                            setEditSelectedProductForAlert({
+                                              ...p,
+                                              selectedVariantId: variant.id,
+                                              selectedVariantName: variant.name || `Variant ${variant.id}`
+                                            });
+                                            setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
+                                            setShowEditAlertProductDropdown(false);
+                                          }}
+                                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                        >
+                                          <div className="font-medium text-gray-900">
+                                            {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                          </div>
+                                          <div className="text-xs text-blue-600">
+                                            {variant.name || `Variant ${variant.id}`}
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  }
+                                  
+                                  // Product without variants
+                                  return (
+                                    <div
+                                      key={p.id}
+                                      onMouseDown={() => {
+                                        setEditSelectedProductForAlert({...p, selectedVariantId: null, selectedVariantName: ''});
+                                        setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                        setShowEditAlertProductDropdown(false);
+                                      }}
+                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                    >
+                                      <div className="font-medium text-gray-900">
+                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                
+                                {editAlertProductSearch && products.filter(p => 
+                                  `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(editAlertProductSearch.toLowerCase())
+                                ).length === 0 && (
+                                  <div className="px-3 py-2 text-sm text-gray-500">
+                                    No products found matching &quot;{editAlertProductSearch}&quot;
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Kiosk Alert Level */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Kiosk Alert Level
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="e.g., 10"
+                              value={editAlertKioskLevel}
+                              onChange={(e) => setEditAlertKioskLevel(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              min="0"
+                            />
+                          </div>
+
+                          {/* Admin Alert Level */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Admin Alert Level
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="e.g., 5"
+                              value={editAlertAdminLevel}
+                              onChange={(e) => setEditAlertAdminLevel(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              min="0"
+                            />
+                          </div>
+
+                          {/* Stock Zero Action */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              When Stock is 0
+                            </label>
+                            <select
+                              value={editStockZeroAction}
+                              onChange={(e) => setEditStockZeroAction(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="disable">Disable Product</option>
+                              <option value="keepVisible">Keep Visible</option>
+                            </select>
+                          </div>
+
+                          {/* Update Button */}
+                          <div className="flex items-end space-x-2">
+                            <button
+                              onClick={saveEditAlert}
+                              disabled={!editSelectedProductForAlert || !editAlertKioskLevel || !editAlertAdminLevel}
+                              className={`flex-1 px-4 py-2 text-white text-sm font-medium rounded-md ${
+                                !editSelectedProductForAlert || !editAlertKioskLevel || !editAlertAdminLevel
+                                  ? "bg-gray-400 cursor-not-allowed"
+                                  : "bg-blue-600 hover:bg-blue-700"
+                              }`}
+                            >
+                              Update Alert
+                            </button>
+                            <button
+                              onClick={cancelEditAlert}
+                              className="px-4 py-2 text-gray-700 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Current Stock Display for Edit */}
+                        {editSelectedProductForAlert && (
+                          <div className="mt-4 p-3 bg-blue-100 rounded-md">
+                            <p className="text-sm text-blue-800">
+                              <strong>Current Stock:</strong> {stockCalculationsLoaded ? getCurrentStock(editSelectedProductForAlert, editSelectedProductForAlert?.selectedVariantId) : 'Loading...'} units
+                              {editSelectedProductForAlert.selectedVariantName && (
+                                <span className="block text-xs text-blue-600 mt-1">
+                                  Variant: {editSelectedProductForAlert.selectedVariantName}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {/* Existing Alerts List */}
                     <div>
@@ -8095,12 +9282,20 @@ export default function AdminPage() {
                                       )}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                      <button
-                                        onClick={() => deleteStockAlert(alert.id)}
-                                        className="text-red-600 hover:text-red-900 text-sm"
-                                      >
-                                        Delete
-                                      </button>
+                                      <div className="flex space-x-2">
+                                        <button
+                                          onClick={() => startEditAlert(alert)}
+                                          className="text-blue-600 hover:text-blue-900 text-sm"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button
+                                          onClick={() => deleteStockAlert(alert.id)}
+                                          className="text-red-600 hover:text-red-900 text-sm"
+                                        >
+                                          Delete
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -14417,7 +15612,7 @@ export default function AdminPage() {
 
         {/* Stock Alert Modal */}
         {showStockAlertModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="fixed inset-0 bg-gray-600/50 overflow-y-auto h-full w-full z-50">
             <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
               <div className="mt-3">
                 {/* Header */}

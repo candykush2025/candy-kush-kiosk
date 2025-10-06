@@ -16,6 +16,7 @@ import {
 } from "../../lib/productService";
 import { TransactionService } from "../../lib/transactionService";
 import { PendingPointsService } from "../../lib/pendingPointsService";
+import StockMovementService from "../../lib/stockMovementService";
 import CustomerSection from "../../components/CustomerSection";
 import KioskHeader from "../../components/KioskHeader";
 import { VisitService } from "../../lib/visitService";
@@ -78,6 +79,11 @@ export default function MenuPage() {
   
   // Cashback percentages for categories
   const [categoryPercentages, setCategoryPercentages] = useState({});
+  
+  // Stock alerts
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [stockCalculations, setStockCalculations] = useState({});
+  const [stockCalculationsLoaded, setStockCalculationsLoaded] = useState(false);
 
   const router = useRouter();
   const { t } = useTranslation();
@@ -115,6 +121,83 @@ export default function MenuPage() {
     localStorage.setItem("i18nextLng", lng);
     setShowLanguageDropdown(false);
     console.log(`Menu page: Language changed to ${lng}`);
+  };
+
+  // Load stock alerts from Firebase
+  const loadStockAlerts = async () => {
+    try {
+      const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      const alertsRef = collection(db, 'StockAlert');
+      const q = query(alertsRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const alerts = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data() || {};
+        alerts.push({
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : data.createdAt || null,
+          updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : data.updatedAt || null,
+        });
+      });
+      
+      setStockAlerts(alerts);
+      console.log("📊 Stock alerts loaded:", alerts.length);
+    } catch (error) {
+      console.error("Error loading stock alerts:", error);
+    }
+  };
+
+  // Load stock calculations from StockMovement collection (same as admin panel)
+  const loadStockCalculations = async () => {
+    try {
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      // Get all stock movements
+      const querySnapshot = await getDocs(collection(db, 'StockMovement'));
+      const stockSummary = {};
+      
+      console.log('📊 Menu: Total StockMovement documents found:', querySnapshot.size);
+
+      // Process each stock movement
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const productId = data.productId;
+        const variantId = data.variantId || '';
+        const quantity = data.quantity || 0;
+        const status = data.status;
+        
+        // Create key for this product/variant combination
+        const key = variantId ? `${productId}-${variantId}` : productId;
+
+        // Initialize if not exists
+        if (!stockSummary[key]) {
+          stockSummary[key] = { stock: 0 };
+        }
+
+        // Calculate stock: add "purchasing", subtract "sales"
+        if (status === 'purchasing') {
+          stockSummary[key].stock += quantity;
+        } else if (status === 'sales') {
+          stockSummary[key].stock -= quantity;
+        }
+      });
+
+      console.log('✅ Menu: Final stock calculations:', stockSummary);
+      console.log('📋 Menu: Stock calculation keys:', Object.keys(stockSummary));
+      
+      // Update state with calculated stock
+      setStockCalculations(stockSummary);
+      setStockCalculationsLoaded(true);
+      console.log('🔄 Menu: Stock calculations state updated');
+    } catch (error) {
+      console.error('❌ Menu: Error loading stock calculations:', error);
+      setStockCalculationsLoaded(false);
+    }
   };
 
   // Ensure language is loaded from localStorage on page mount
@@ -213,17 +296,9 @@ export default function MenuPage() {
           allowedCategoryIds.includes(category.id)
         );
 
-        console.log("📋 Categories filtering result:");
-        console.log("  - Total categories available:", categoriesData.length);
-        console.log("  - Allowed category IDs:", allowedCategoryIds);
-        console.log("  - Filtered categories count:", filteredCategoriesData.length);
-        console.log("  - Filtered category names:", filteredCategoriesData.map(c => c.name));
 
-        // Check if no categories are allowed
-        if (filteredCategoriesData.length === 0) {
-          console.warn("⚠️ No categories allowed for this customer/session");
-          // You might want to show a message to the user or redirect
-        }
+
+
 
         // Transform filtered categories data for display
         const transformedCategories = filteredCategoriesData.map((category) => ({
@@ -260,28 +335,12 @@ export default function MenuPage() {
               : product.categoryId,
           };
 
-          // Debug log to see if categoryId is being mapped correctly
-          if (
-            product.name === "Testing Product" ||
-            product.name.includes("Product 1") ||
-            product.name === "Product Without Subcategory"
-          ) {
-            console.log("🔍 Product mapping debug:", {
-              productName: product.name,
-              subcategoryId: product.subcategoryId,
-              directCategoryId: product.categoryId,
-              foundSubcategory: subcategory,
-              mappedCategoryId: mappedProduct.categoryId,
-            });
-          }
+
 
           return mappedProduct;
         });
 
-        console.log(
-          "📦 Sample products with categoryId:",
-          productsWithCategoryId.slice(0, 3)
-        );
+
         setProducts(productsWithCategoryId);
 
         // Auto-select first category on initial load
@@ -300,12 +359,7 @@ export default function MenuPage() {
           setFilteredSubcategories(firstCategorySubcategories);
           setFilteredProducts(firstCategoryProducts);
 
-          console.log("🎯 Auto-selected first category:", firstCategory);
-          console.log(
-            "📂 Auto-loaded subcategories:",
-            firstCategorySubcategories
-          );
-          console.log("📦 Auto-loaded products:", firstCategoryProducts);
+
         }
 
         // Load cart from session storage
@@ -313,6 +367,10 @@ export default function MenuPage() {
         if (savedCart) {
           setCart(JSON.parse(savedCart));
         }
+        
+        // Load stock alerts and stock calculations
+        await loadStockAlerts();
+        await loadStockCalculations();
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -568,6 +626,17 @@ export default function MenuPage() {
   const handleAddVariantToCart = () => {
     if (!selectedProduct || !selectedProduct.hasVariants) return;
 
+    // Create variant ID from selected options for stock checking
+    const variantOptions = Object.values(selectedVariantOptions);
+    if (variantOptions.length > 0) {
+      const variantId = `${variantOptions[0].variantId}-${variantOptions[0].id}`;
+      const stockCheck = canAddToCart(selectedProduct, 1, variantId);
+      if (!stockCheck.canAdd) {
+        alert(`Cannot add to cart: ${stockCheck.reason}`);
+        return;
+      }
+    }
+
     // Calculate total price from selected options
     let totalPrice = 0;
     Object.values(selectedVariantOptions).forEach((option) => {
@@ -783,6 +852,36 @@ export default function MenuPage() {
         result.transactionId
       );
 
+      // Create stock movements for each cart item
+      try {
+        for (const item of cart) {
+          // Find the product document to get the correct document ID
+          const product = products.find(p => p.productId === item.productId);
+          if (product) {
+            const stockMovementData = {
+              productId: product.id, // Use document ID for stock movement system
+              productName: item.name,
+              variantId: item.isVariant && item.variants ? Object.keys(item.variants)[0] : '',
+              variantName: item.isVariant && item.variants ? Object.values(item.variants).map(v => v.name).join(', ') : '',
+              quantity: item.quantity,
+              price: item.price,
+              status: 'sales',
+              notes: `Kiosk sale - Transaction: ${result.transactionId}`,
+              createdBy: 'kiosk-system',
+              skipStockUpdate: true // Let admin system handle stock calculations
+            };
+
+            await StockMovementService.addStockMovement(stockMovementData);
+            console.log(`📦 Stock movement created for product ${product.id} (PRD: ${item.productId}), quantity: -${item.quantity}`);
+          } else {
+            console.warn(`⚠️ Product not found for productId: ${item.productId}`);
+          }
+        }
+      } catch (stockError) {
+        console.error("Error creating stock movements:", stockError);
+        // Don't fail the transaction if stock movement creation fails
+      }
+
       // Update customer points if customer exists and is not "No Member"
       if (customer && !customer.isNoMember) {
         try {
@@ -899,6 +998,9 @@ export default function MenuPage() {
       }, 60000); // Show success for 60 seconds then redirect
 
       setShowOrderComplete(true);
+
+      // Refresh stock calculations to update stock warnings immediately
+      await loadStockCalculations();
 
       // Clear cart
       setCart([]);
@@ -1203,15 +1305,32 @@ export default function MenuPage() {
   // Handle quantity change
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
-    if (newQuantity >= 1) {
-      setQuantity(newQuantity);
+    
+    if (newQuantity < 1) return; // Don't allow quantity below 1
+
+    // If increasing quantity, check stock limits
+    if (change > 0 && selectedProduct) {
+      const stockCheck = canAddToCart(selectedProduct, newQuantity - getProductCartQuantity(selectedProduct));
+      if (!stockCheck.canAdd) {
+        alert(`Cannot increase quantity: ${stockCheck.reason}`);
+        return;
+      }
     }
+
+    setQuantity(newQuantity);
   };
 
   // Handle add to cart
   const handleAddToCart = () => {
     resetSessionTimer(); // Reset session timer on user interaction
     if (selectedProduct) {
+      // Check stock limits first
+      const stockCheck = canAddToCart(selectedProduct, quantity);
+      if (!stockCheck.canAdd) {
+        alert(`Cannot add to cart: ${stockCheck.reason}`);
+        return;
+      }
+
       // Trigger animation first
       setAnimationProduct({
         name: selectedProduct.name,
@@ -1219,10 +1338,6 @@ export default function MenuPage() {
         quantity: quantity,
       });
       setShowCartAnimation(true);
-      console.log(
-        "🎬 Add to cart animation triggered for:",
-        selectedProduct.name
-      );
 
       // Determine the correct price based on customer status
       let productPrice = selectedProduct.price;
@@ -1470,6 +1585,126 @@ export default function MenuPage() {
       totalPoints: 0,
       percentage: 0,
     };
+  };
+
+  // Stock alert helper functions
+  const getProductStockAlert = (productId) => {
+    return stockAlerts.find(alert => alert.productId === productId && alert.isActive);
+  };
+
+  const getCurrentStock = (product, variantId = null) => {
+    if (!product) return 0;
+
+    // If stock calculations are loaded, use them (same logic as admin panel)
+    if (stockCalculationsLoaded && stockCalculations && Object.keys(stockCalculations).length > 0) {
+      // If variantId is provided, get stock for specific variant
+      if (variantId) {
+        const key = `${product.id}-${variantId}`;
+        const stockData = stockCalculations[key];
+        return stockData ? (stockData.stock || 0) : 0;
+      }
+      
+      // Check if product has variants - sum all variant stock
+      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+        let totalStock = 0;
+        product.variants.forEach(variant => {
+          if (variant.options && Array.isArray(variant.options)) {
+            variant.options.forEach(option => {
+              const key = `${product.id}-${variant.id}-${option.id}`;
+              const stockData = stockCalculations[key];
+              const variantStock = stockData ? (stockData.stock || 0) : 0;
+              totalStock += variantStock;
+            });
+          }
+        });
+        return totalStock;
+      } else {
+        // Product without variants (or empty variants array)
+        const key = product.id;
+        const stockData = stockCalculations[key];
+        const stock = stockData ? (stockData.stock || 0) : 0;
+        console.log(`📦 Stock lookup for ${product.name}: key=${key}, stockData=`, stockData, `stock=${stock}`);
+        return stock;
+      }
+    }
+
+    // Fallback to old system if stock calculations not loaded
+    if (variantId && product.variants && Array.isArray(product.variants)) {
+      // For variant products, get specific variant stock
+      const [vId, oId] = variantId.split('-');
+      
+      // Find the variant
+      const variant = product.variants.find(v => v.id === vId);
+      if (!variant) return 0;
+
+      // If variant has options, find the specific option
+      if (variant.options && Array.isArray(variant.options) && oId) {
+        const option = variant.options.find(o => o.id === oId);
+        return option ? (option.quantity || 0) : 0;
+      }
+      
+      // If no options, use variant quantity directly
+      return variant.quantity || 0;
+    }
+    
+    // For simple products or when no variant is specified
+    return product.quantity || 0;
+  };
+
+  const getStockWarningText = (product) => {
+    const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
+    
+    console.log(`🔍 STOCK DEBUG for ${product.name}:`);
+    console.log(`  - Product ID: ${product.productId}`);
+    console.log(`  - Document ID: ${product.id}`);
+    console.log(`  - Stock Alert Found:`, stockAlert);
+    console.log(`  - Stock Calculations Loaded:`, stockCalculationsLoaded);
+    console.log(`  - Stock Calculations Keys:`, Object.keys(stockCalculations));
+    
+    if (!stockAlert) {
+      console.log(`  ❌ No stock alert found for document ID ${product.id}`);
+      return null;
+    }
+
+    const currentStock = getCurrentStock(product);
+    
+    console.log(`  - Current Stock: ${currentStock}`);
+    console.log(`  - Kiosk Alert Level: ${stockAlert.alertKioskLevel}`);
+    console.log(`  - Admin Alert Level: ${stockAlert.alertAdminLevel}`);
+    console.log(`  - Should show warning: ${currentStock <= stockAlert.alertKioskLevel && currentStock > 0}`);
+    
+    if (currentStock <= stockAlert.alertKioskLevel && currentStock > 0) {
+      console.log(`  ✅ Showing warning: Stock ${currentStock} left!`);
+      return `Stock ${currentStock} left!`;
+    }
+    console.log(`  ❌ No warning needed`);
+    return null;
+  };
+
+  const canAddToCart = (product, requestedQuantity = 1, variantId = null) => {
+    const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
+    
+    // If no stock alert, allow unlimited
+    if (!stockAlert) {
+      return { canAdd: true, reason: null };
+    }
+
+    const currentStock = getCurrentStock(product, variantId);
+    const currentCartQty = getProductCartQuantity(product);
+    const totalRequestedQty = currentCartQty + requestedQuantity;
+
+    if (currentStock <= 0) {
+      return { canAdd: false, reason: "Out of stock" };
+    }
+
+    if (totalRequestedQty > currentStock) {
+      return { 
+        canAdd: false, 
+        reason: `Only ${currentStock} available (${currentCartQty} already in cart)` 
+      };
+    }
+
+    return { canAdd: true, reason: null };
   };
 
   // Removed scroll buttons per request; panes will use native scroll.
@@ -2060,6 +2295,11 @@ export default function MenuPage() {
                                   >
                                     {getProductPriceDisplay(product)}
                                   </div>
+                                  {getStockWarningText(product) && (
+                                    <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
+                                      {getStockWarningText(product)}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}
@@ -2078,11 +2318,23 @@ export default function MenuPage() {
                       .map((product) => (
                         <div
                           key={product.id}
-                          className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 bg-white border ${
+                          className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
                             selectedProduct?.id === product.id
                               ? "transform scale-105 shadow-lg border-green-500"
                               : "border-gray-100"
                           } `}
+                          style={{
+                            backgroundImage: product.backgroundImage
+                              ? `url(${product.backgroundImage})`
+                              : "none",
+                            backgroundSize:
+                              product.backgroundFit || "cover",
+                            backgroundPosition: "center",
+                            backgroundRepeat: "no-repeat",
+                            backgroundColor: product.backgroundImage
+                              ? "transparent"
+                              : "white",
+                          }}
                           onClick={() => handleProductSelect(product)}
                         >
                           {product.mainImage && (
@@ -2117,6 +2369,11 @@ export default function MenuPage() {
                             >
                               {getProductPriceDisplay(product)}
                             </div>
+                            {getStockWarningText(product) && (
+                              <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
+                                {getStockWarningText(product)}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
