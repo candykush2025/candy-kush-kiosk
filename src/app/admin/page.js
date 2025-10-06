@@ -7301,12 +7301,15 @@ export default function AdminPage() {
                               <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
                                 Notes
                               </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                PO ID
+                              </th>
                             </tr>
                           </thead>
                           <tbody>
                             {stockMovements.length === 0 ? (
                               <tr>
-                                <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                <td colSpan="8" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
                                   No stock movements found. Use "Purchasing" tab to add stock.
                                 </td>
                               </tr>
@@ -7357,6 +7360,11 @@ export default function AdminPage() {
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
                                     <div className="text-sm text-gray-600">{movement.notes || '-'}</div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="text-xs font-mono text-blue-600">
+                                      {movement.purchaseOrderId ? movement.purchaseOrderId.slice(-8) : '-'}
+                                    </div>
                                   </td>
                                 </tr>
                               ))
