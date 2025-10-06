@@ -32,6 +32,7 @@ import {
 } from "../../lib/productService";
 import { VisitService } from "../../lib/visitService";
 import { StockService } from "../../lib/stockService";
+import StockMovementService from "../../lib/stockMovementService";
 import { countries } from "../../lib/countries";
 import {
   Users,
@@ -413,17 +414,45 @@ export default function AdminPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
-  // Stock Management states
-  const [stockMovements, setStockMovements] = useState([]);
+  // Old Stock Management states (keeping for compatibility with existing Add Stock In)
   const [showAddStockIn, setShowAddStockIn] = useState(false);
   const [stockInForm, setStockInForm] = useState({
     supplier: "",
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-    products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+    products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
   });
   const [isStockSaving, setIsStockSaving] = useState(false);
   const [stockSearchTerm, setStockSearchTerm] = useState("");
+
+  // Stock Alert Management states
+  const [stockAlerts, setStockAlerts] = useState([]);
+  const [showStockAlertModal, setShowStockAlertModal] = useState(false);
+  const [selectedProductForAlert, setSelectedProductForAlert] = useState(null);
+  const [alertKioskLevel, setAlertKioskLevel] = useState("");
+  const [alertAdminLevel, setAlertAdminLevel] = useState("");
+  // Stock Alert searchable dropdown states
+  const [alertProductSearch, setAlertProductSearch] = useState("");
+  const [showAlertProductDropdown, setShowAlertProductDropdown] = useState(false);
+
+  // Stock submenu state - updated to include purchasing
+  const [stockActiveSubTab, setStockActiveSubTab] = useState("movements");
+  const [stockZeroAction, setStockZeroAction] = useState("disable"); // "disable" or "keepVisible"
+
+  // Stock Movement data state
+  const [stockMovements, setStockMovements] = useState([]);
+  const [stockCalculations, setStockCalculations] = useState({});
+  const [stockPurchases, setStockPurchases] = useState([]);
+
+  // Purchasing state (for the new purchasing submenu)
+  const [showPurchasingForm, setShowPurchasingForm] = useState(false);
+  const [purchasingProducts, setPurchasingProducts] = useState([
+    { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+  ]);
+  const [purchasingSupplier, setPurchasingSupplier] = useState("");
+  const [purchasingNotes, setPurchasingNotes] = useState("");
+  const [purchasingDate, setPurchasingDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format
+  const [purchasingTime, setPurchasingTime] = useState(new Date().toTimeString().slice(0, 5)); // HH:MM format
 
   // Complex Product Form States
   const [hasVariants, setHasVariants] = useState(false);
@@ -799,7 +828,19 @@ export default function AdminPage() {
 
       setTransactions(allTransactions);
 
-      setProducts(productsData);
+      // Populate categoryName and subcategoryName in products
+      const enrichedProducts = productsData.map(product => {
+        const category = categoriesData.find(cat => cat.id === product.categoryId);
+        const subcategory = subcategoriesData.find(sub => sub.id === product.subcategoryId);
+        
+        return {
+          ...product,
+          categoryName: category?.name || '',
+          subcategoryName: subcategory?.name || ''
+        };
+      });
+
+      setProducts(enrichedProducts);
       setCategories(categoriesData);
       setSubcategories(subcategoriesData);
       setCashbackRules(cashbackRulesData);
@@ -2724,7 +2765,7 @@ export default function AdminPage() {
       supplier: "",
       date: new Date().toISOString().split('T')[0],
       time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-      products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+      products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
     });
     setShowAddStockIn(true);
   };
@@ -2735,7 +2776,7 @@ export default function AdminPage() {
       supplier: "",
       date: new Date().toISOString().split('T')[0],
       time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-      products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+      products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
     });
   };
 
@@ -2766,6 +2807,16 @@ export default function AdminPage() {
           alert("Please select all products");
           return;
         }
+        
+        // Check if product has variants and validate variant selection
+        const selectedProduct = products.find(p => p.id === product.productId);
+        if (selectedProduct?.hasVariants && selectedProduct?.variants?.length > 0) {
+          if (!product.variantId) {
+            alert(`Please select a variant for ${product.productName}`);
+            return;
+          }
+        }
+        
         if (product.quantity <= 0) {
           alert("Please enter valid quantities");
           return;
@@ -2779,8 +2830,9 @@ export default function AdminPage() {
       // Save stock in
       await StockService.addStockIn(stockInForm);
       
-      // Reload stock movements
+      // Reload stock movements and products data
       await loadStockMovements();
+      await loadDashboardData(); // This will refresh the products with updated stock quantities
       
       alert("Stock in added successfully!");
       setShowAddStockIn(false);
@@ -2798,7 +2850,7 @@ export default function AdminPage() {
       ...stockInForm,
       products: [
         ...stockInForm.products,
-        { productId: "", productName: "", quantity: 0, buyPrice: 0 }
+        { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }
       ]
     });
   };
@@ -2807,21 +2859,77 @@ export default function AdminPage() {
     const newProducts = stockInForm.products.filter((_, i) => i !== index);
     setStockInForm({
       ...stockInForm,
-      products: newProducts.length > 0 ? newProducts : [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+      products: newProducts.length > 0 ? newProducts : [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
     });
   };
 
   const updateStockInProduct = (index, field, value) => {
+    console.log('updateStockInProduct called:', { index, field, value });
     const newProducts = [...stockInForm.products];
     newProducts[index] = { ...newProducts[index], [field]: value };
     
-    // If productId is selected, auto-fill productName
+    console.log('Updated product at index', index, ':', newProducts[index]);
+    
+    // If productId is selected, auto-fill productName and clear variant selection
     if (field === 'productId' && value) {
       const selectedProduct = products.find(p => p.id === value);
       if (selectedProduct) {
         newProducts[index].productName = selectedProduct.name;
+        // Clear variant selection when product changes
+        newProducts[index].variantId = "";
+        newProducts[index].variantName = "";
       }
     }
+    
+    // If variantId is selected, auto-fill variantName
+    if (field === 'variantId' && value) {
+      const selectedProduct = products.find(p => p.id === newProducts[index].productId);
+      if (selectedProduct && selectedProduct.variants) {
+        // Handle Firebase variant structure with options
+        let variantDisplay = '';
+        
+        // Check if it's the new format with variant-option combination
+        if (value.includes('-')) {
+          const [variantId, optionId] = value.split('-');
+          const selectedVariant = selectedProduct.variants.find(v => v.id === variantId);
+          if (selectedVariant && selectedVariant.options) {
+            const selectedOption = selectedVariant.options.find(o => o.id === optionId);
+            if (selectedOption) {
+              variantDisplay = `${selectedVariant.variantName}: ${selectedOption.name}`;
+            }
+          }
+        } else {
+          // Fallback for old variant structure
+          const selectedVariant = selectedProduct.variants.find(v => v.id === value);
+          if (selectedVariant) {
+            variantDisplay = selectedProduct.variantGroups?.map(group => {
+              const selection = selectedVariant.selections?.find(s => s.groupId === group.id);
+              return selection ? `${group.variantName}: ${selection.name}` : '';
+            }).filter(Boolean).join(' | ') || selectedVariant.name || `Variant ${selectedVariant.id}`;
+          }
+        }
+        
+        newProducts[index].variantName = variantDisplay;
+      }
+    }
+    
+    setStockInForm({
+      ...stockInForm,
+      products: newProducts
+    });
+  };
+
+  // New function to update multiple fields at once
+  const updateStockInProductMultiple = (index, updates) => {
+    console.log('updateStockInProductMultiple called:', { index, updates });
+    const newProducts = [...stockInForm.products];
+    
+    // Apply all updates at once
+    Object.keys(updates).forEach(field => {
+      newProducts[index][field] = updates[field];
+    });
+    
+    console.log('Updated product at index', index, ':', newProducts[index]);
     
     setStockInForm({
       ...stockInForm,
@@ -2833,8 +2941,263 @@ export default function AdminPage() {
   useEffect(() => {
     if (activeTab === 'stockManagement') {
       loadStockMovements();
+      loadStockAlerts();
     }
   }, [activeTab]);
+
+  // Purchasing Management Functions (New StockMovement-based system)
+  const loadStockMovementsData = async () => {
+    try {
+      // Load stock movements
+      const movements = await StockMovementService.getAllStockMovements();
+      setStockMovements(movements);
+      
+      // Load stock purchases
+      const purchases = await StockMovementService.getAllStockPurchasing();
+      setStockPurchases(purchases);
+      
+      // Calculate current stock summary for all products
+      const stockSummary = await StockMovementService.getStockSummary();
+      setStockCalculations(stockSummary);
+    } catch (error) {
+      console.error("Error loading stock movements data:", error);
+    }
+  };
+
+  const handleAddPurchasing = () => {
+    if (!checkInputPermission()) return;
+    setShowPurchasingForm(true);
+    setPurchasingProducts([
+      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    ]);
+    setPurchasingSupplier("");
+    setPurchasingNotes("");
+    setPurchasingDate(new Date().toISOString().split('T')[0]);
+    setPurchasingTime(new Date().toTimeString().slice(0, 5));
+  };
+
+  const handleCancelPurchasing = () => {
+    setShowPurchasingForm(false);
+    setPurchasingProducts([
+      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    ]);
+    setPurchasingSupplier("");
+    setPurchasingNotes("");
+    setPurchasingDate(new Date().toISOString().split('T')[0]);
+    setPurchasingTime(new Date().toTimeString().slice(0, 5));
+  };
+
+  const handleSavePurchasing = async (e) => {
+    e.preventDefault();
+    
+    if (!checkInputPermission()) return;
+
+    try {
+      // Validate that all products have required fields
+      const validProducts = purchasingProducts.filter(p => 
+        p.productId && p.quantity > 0 && p.buyPrice > 0
+      );
+      
+      if (validProducts.length === 0) {
+        alert("Please add at least one valid product with quantity and price.");
+        return;
+      }
+      
+      if (!purchasingSupplier.trim()) {
+        alert("Please enter a supplier name.");
+        return;
+      }
+      
+      // Create purchasing data
+      const purchasingData = {
+        items: validProducts,
+        supplier: purchasingSupplier,
+        notes: purchasingNotes,
+        date: purchasingDate,
+        time: purchasingTime,
+        createdBy: 'admin'
+      };
+      
+      // Add to StockPurchasing and StockMovement databases
+      const result = await StockMovementService.addPurchasing(purchasingData);
+      
+      // Reload data
+      await loadStockMovementsData();
+      await loadDashboardData(); // Refresh products if needed
+      
+      // Reset form
+      handleCancelPurchasing();
+      
+      alert(`✅ Purchase Order created successfully!\n\nPO ID: ${result.purchaseOrderId}\nTotal Items: ${result.totalItems}\nTotal Amount: ฿${result.totalAmount.toFixed(2)}`);
+    } catch (error) {
+      console.error("Error saving purchasing:", error);
+      alert("❌ Failed to save purchasing. Please try again.");
+    }
+  };
+
+  const addProductToPurchasing = () => {
+    setPurchasingProducts([...purchasingProducts, 
+      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    ]);
+  };
+
+  const removeProductFromPurchasing = (index) => {
+    const newProducts = purchasingProducts.filter((_, i) => i !== index);
+    setPurchasingProducts(newProducts.length > 0 ? newProducts : [
+      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    ]);
+  };
+
+  const updatePurchasingProduct = (index, field, value) => {
+    const newProducts = [...purchasingProducts];
+    newProducts[index] = { ...newProducts[index], [field]: value };
+    setPurchasingProducts(newProducts);
+  };
+
+  const updatePurchasingProductMultiple = (index, updates) => {
+    console.log('updatePurchasingProductMultiple called:', { index, updates });
+    const newProducts = [...purchasingProducts];
+    newProducts[index] = { ...newProducts[index], ...updates };
+    console.log('Purchasing products after update:', newProducts);
+    setPurchasingProducts(newProducts);
+  };
+
+  // Load stock movements data when stockActiveSubTab changes
+  useEffect(() => {
+    if (stockActiveSubTab === 'movements' || stockActiveSubTab === 'purchasing') {
+      loadStockMovementsData();
+    }
+  }, [stockActiveSubTab]);
+
+  // Stock Alert Management Functions
+  const loadStockAlerts = async () => {
+    try {
+      const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
+      
+      const alertsRef = collection(db, 'StockAlert');
+      const q = query(alertsRef, orderBy('createdAt', 'desc'));
+      const querySnapshot = await getDocs(q);
+      
+      const alerts = [];
+      querySnapshot.forEach((doc) => {
+        alerts.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate(),
+          updatedAt: doc.data().updatedAt?.toDate(),
+        });
+      });
+      
+      setStockAlerts(alerts);
+    } catch (error) {
+      console.error("Error loading stock alerts:", error);
+    }
+  };
+
+  const createStockAlert = async () => {
+    try {
+      if (!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel) {
+        alert("Please select a product and set both alert levels");
+        return;
+      }
+
+      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+
+      const alertData = {
+        productId: selectedProductForAlert.id,
+        productName: selectedProductForAlert.name,
+        alertKioskLevel: parseInt(alertKioskLevel),
+        alertAdminLevel: parseInt(alertAdminLevel),
+        stockZeroAction: stockZeroAction, // "disable" or "keepVisible"
+        isActive: true,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'StockAlert'), alertData);
+      
+      // Refresh data
+      await loadStockAlerts();
+      
+      // Reset form
+      setSelectedProductForAlert(null);
+      setAlertKioskLevel("");
+      setAlertAdminLevel("");
+      setStockZeroAction("disable");
+      setAlertProductSearch("");
+      setShowAlertProductDropdown(false);
+      
+      alert("Stock alert created successfully!");
+    } catch (error) {
+      console.error("Error creating stock alert:", error);
+      alert("Failed to create stock alert: " + error.message);
+    }
+  };
+
+  const deleteStockAlert = async (alertId) => {
+    try {
+      if (!confirm("Are you sure you want to delete this stock alert?")) {
+        return;
+      }
+
+      const { doc, deleteDoc } = await import('firebase/firestore');
+
+      await deleteDoc(doc(db, 'StockAlert', alertId));
+      await loadStockAlerts();
+      alert("Stock alert deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting stock alert:", error);
+      alert("Failed to delete stock alert: " + error.message);
+    }
+  };
+
+  // Get stock alert for a product
+  const getProductStockAlert = (productId) => {
+    return stockAlerts.find(alert => alert.productId === productId && alert.isActive);
+  };
+
+  // Get current stock level for a product - Updated to use StockMovement system
+  const getCurrentStock = (product) => {
+    // First check if we have stock calculations from StockMovement system
+    if (stockCalculations && Object.keys(stockCalculations).length > 0) {
+      // Check if product has variants
+      if (product.variants && Array.isArray(product.variants)) {
+        let totalStock = 0;
+        product.variants.forEach(variant => {
+          if (variant.options && Array.isArray(variant.options)) {
+            variant.options.forEach(option => {
+              const key = `${product.id}-${variant.id}-${option.id}`;
+              if (stockCalculations[key]) {
+                totalStock += stockCalculations[key].stock || 0;
+              }
+            });
+          }
+        });
+        return totalStock;
+      } else {
+        // Product without variants
+        const key = product.id;
+        return stockCalculations[key] ? stockCalculations[key].stock : 0;
+      }
+    }
+    
+    // Fallback to old system for backwards compatibility
+    // Check if product has variants with stock
+    if (product.variants && Array.isArray(product.variants)) {
+      let totalStock = 0;
+      product.variants.forEach(variant => {
+        if (variant.options && Array.isArray(variant.options)) {
+          variant.options.forEach(option => {
+            totalStock += option.quantity || 0;
+          });
+        }
+      });
+      return totalStock;
+    }
+    
+    // Return product quantity or 0
+    return product.quantity || 0;
+  };
 
   // Filter transactions based on selected criteria
   const filterTransactions = useCallback(() => {
@@ -3057,17 +3420,74 @@ export default function AdminPage() {
                 </button>
               )}
 
-              <button
-                onClick={() => setActiveTab("stockManagement")}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === "stockManagement"
-                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Package className="w-5 h-5 mr-3" />
-                Stock Management
-              </button>
+              <div>
+                <button
+                  onClick={() => setActiveTab("stockManagement")}
+                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "stockManagement"
+                      ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <Package className="w-5 h-5 mr-3" />
+                  Stock Management
+                  <svg 
+                    className={`w-4 h-4 ml-auto transition-transform ${
+                      activeTab === "stockManagement" ? "rotate-90" : ""
+                    }`} 
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                {/* Stock Management Submenu */}
+                {activeTab === "stockManagement" && (
+                  <div className="ml-8 mt-2 space-y-1">
+                    <button
+                      onClick={() => setStockActiveSubTab("movements")}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                        stockActiveSubTab === "movements"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                      Stock Movements
+                    </button>
+                    <button
+                      onClick={() => setStockActiveSubTab("purchasing")}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                        stockActiveSubTab === "purchasing"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                      Purchasing
+                    </button>
+                    <button
+                      onClick={() => setStockActiveSubTab("alerts")}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                        stockActiveSubTab === "alerts"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      Stock Alerts
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => setActiveTab("settings")}
@@ -3148,6 +3568,25 @@ export default function AdminPage() {
                           )}`}
                     </p>
                   </div>
+                  <button
+                    onClick={() => router.push("/admin/debug")}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      />
+                    </svg>
+                    Debug
+                  </button>
                   <button
                     onClick={() => AdminAuth.logout()}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
@@ -6742,102 +7181,850 @@ export default function AdminPage() {
               {/* Stock Management Tab */}
               {activeTab === "stockManagement" && (
                 <div className="space-y-6">
+                  
+                  {/* Stock Movements Sub-tab - Updated for StockMovement system */}
+                  {stockActiveSubTab === "movements" && (
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Stock Movements
+                        </h3>
+                        <div className="text-sm text-gray-600">
+                          Track all stock transactions (purchasing & sales)
+                        </div>
+                      </div>
+
+                      {/* Purchase Orders Section */}
+                      <div className="mb-8">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">Recent Purchase Orders</h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-blue-50">
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  PO ID
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Date & Time
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Supplier
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Items
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Total Qty
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Total Amount
+                                </th>
+                                <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                  Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {stockPurchases.length === 0 ? (
+                                <tr>
+                                  <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                    No purchase orders found.
+                                  </td>
+                                </tr>
+                              ) : (
+                                stockPurchases.slice(0, 10).map((purchase) => (
+                                  <tr key={purchase.id} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-mono text-sm">{purchase.id.slice(-8)}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="text-sm">
+                                        <div className="font-medium">
+                                          {purchase.createdAt ? new Date(purchase.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        </div>
+                                        <div className="text-gray-500">
+                                          {purchase.createdAt ? new Date(purchase.createdAt.seconds * 1000).toLocaleTimeString() : 'N/A'}
+                                        </div>
+                                      </div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium">{purchase.supplier}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium">{purchase.totalItems}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium text-green-600">{purchase.totalQuantity}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium">฿{purchase.totalAmount ? purchase.totalAmount.toFixed(2) : '0.00'}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                        {purchase.status || 'Completed'}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Individual Stock Movements Table */}
+                      <div className="mb-4">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">Individual Stock Movements</h4>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Date & Time
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Product
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Type
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Quantity
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Price
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Supplier/Source
+                              </th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                                Notes
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stockMovements.length === 0 ? (
+                              <tr>
+                                <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                  No stock movements found. Use "Purchasing" tab to add stock.
+                                </td>
+                              </tr>
+                            ) : (
+                              stockMovements.map((movement) => (
+                                <tr key={movement.id} className="hover:bg-gray-50">
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="text-sm">
+                                      <div className="font-medium">
+                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                      </div>
+                                      <div className="text-gray-500">
+                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleTimeString() : 'N/A'}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="text-sm">
+                                      <div className="font-medium">{movement.productName}</div>
+                                      {movement.variantName && (
+                                        <div className="text-gray-500">{movement.variantName}</div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      movement.status === 'purchasing' 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-red-100 text-red-800'
+                                    }`}>
+                                      {movement.status === 'purchasing' ? 'Stock In' : 'Stock Out'}
+                                    </span>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className={`font-medium ${
+                                      movement.status === 'purchasing' ? 'text-green-600' : 'text-red-600'
+                                    }`}>
+                                      {movement.status === 'purchasing' ? '+' : '-'}{movement.quantity}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="font-medium">
+                                      ฿{movement.price ? movement.price.toFixed(2) : '0.00'}
+                                    </div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="text-sm">{movement.supplier || 'N/A'}</div>
+                                  </td>
+                                  <td className="border border-gray-300 px-4 py-2">
+                                    <div className="text-sm text-gray-600">{movement.notes || '-'}</div>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Summary Statistics */}
+                      {stockMovements.length > 0 && (
+                        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <div className="text-sm font-medium text-green-800">Total Purchasing</div>
+                            <div className="text-lg font-bold text-green-900">
+                              {stockMovements.filter(m => m.status === 'purchasing').reduce((sum, m) => sum + (m.quantity || 0), 0)} items
+                            </div>
+                          </div>
+                          <div className="bg-red-50 p-4 rounded-lg">
+                            <div className="text-sm font-medium text-red-800">Total Sales</div>
+                            <div className="text-lg font-bold text-red-900">
+                              {stockMovements.filter(m => m.status === 'sales').reduce((sum, m) => sum + (m.quantity || 0), 0)} items
+                            </div>
+                          </div>
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <div className="text-sm font-medium text-blue-800">Total Value</div>
+                            <div className="text-lg font-bold text-blue-900">
+                              ฿{stockMovements.reduce((sum, m) => sum + ((m.quantity || 0) * (m.price || 0)), 0).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                {/* Purchasing Sub-tab */}
+                {stockActiveSubTab === "purchasing" && (
                   <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-semibold text-gray-900">
-                        Stock Management
+                        Purchasing Management
                       </h3>
                       <button
-                        onClick={handleAddStockIn}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                        onClick={handleAddPurchasing}
+                        disabled={!checkInputPermission()}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:bg-gray-400"
                       >
                         <Package className="w-4 h-4" />
-                        Add Stock In
+                        Add Purchase
                       </button>
                     </div>
 
-                    {/* Stock Movements Table */}
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-gray-300">
-                        <thead>
-                          <tr className="bg-gray-50">
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Date & Time
-                            </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Supplier
-                            </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Products
-                            </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Total Quantity
-                            </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Total Value
-                            </th>
-                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
-                              Actions
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stockMovements.length === 0 ? (
-                            <tr>
-                              <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
-                                No stock movements found. Click "Add Stock In" to get started.
-                              </td>
-                            </tr>
-                          ) : (
-                            stockMovements.map((movement) => (
-                              <tr key={movement.id} className="hover:bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <div className="text-sm">
-                                    <div className="font-medium">{movement.date}</div>
-                                    <div className="text-gray-500">{movement.time}</div>
-                                  </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <div className="font-medium">{movement.supplier}</div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <div className="space-y-1">
-                                    {movement.products?.map((product, index) => (
-                                      <div key={index} className="text-sm">
-                                        <div className="font-medium">{product.productName}</div>
-                                        <div className="text-gray-500">
-                                          Qty: {product.quantity} @ ฿{product.buyPrice.toFixed(2)}
-                                        </div>
+                    {/* Add Purchasing Form */}
+                    {showPurchasingForm && (
+                      <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                        <div className="flex justify-between items-center mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900">Add New Purchase</h4>
+                          <button
+                            onClick={handleCancelPurchasing}
+                            className="text-gray-500 hover:text-gray-700"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        <form onSubmit={handleSavePurchasing} className="space-y-6">
+                          {/* Supplier, Notes, Date and Time */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Supplier Name *
+                              </label>
+                              <input
+                                type="text"
+                                value={purchasingSupplier}
+                                onChange={(e) => setPurchasingSupplier(e.target.value)}
+                                placeholder="Enter supplier name"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Notes
+                              </label>
+                              <input
+                                type="text"
+                                value={purchasingNotes}
+                                onChange={(e) => setPurchasingNotes(e.target.value)}
+                                placeholder="Optional notes"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Purchase Date *
+                              </label>
+                              <input
+                                type="date"
+                                value={purchasingDate}
+                                onChange={(e) => setPurchasingDate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Purchase Time *
+                              </label>
+                              <input
+                                type="time"
+                                value={purchasingTime}
+                                onChange={(e) => setPurchasingTime(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {/* Products */}
+                          <div>
+                            <div className="flex justify-between items-center mb-4">
+                              <h5 className="text-md font-medium text-gray-900">Products</h5>
+                              <button
+                                type="button"
+                                onClick={addProductToPurchasing}
+                                className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700"
+                              >
+                                + Add Product
+                              </button>
+                            </div>
+
+                            <div className="space-y-4">
+                              {console.log('Rendering purchasing products:', purchasingProducts)}
+                              {purchasingProducts.map((product, index) => (
+                                <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border border-gray-200 rounded-lg bg-white relative">
+                                  {/* Remove Button */}
+                                  {purchasingProducts.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeProductFromPurchasing(index)}
+                                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  )}
+
+                                  {/* Product Search */}
+                                  <div className="md:col-span-2 relative">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
+                                    <input
+                                      type="text"
+                                      placeholder="Search products..."
+                                      value={product.productSearch || ""}
+                                      onChange={(e) => {
+                                        console.log('Input onChange - Current product.productSearch:', product.productSearch);
+                                        console.log('Input onChange - New value:', e.target.value);
+                                        updatePurchasingProductMultiple(index, {
+                                          productSearch: e.target.value,
+                                          showProductDropdown: true
+                                        });
+                                      }}
+                                      onFocus={() => {
+                                        console.log('Input onFocus - Current product.productSearch:', product.productSearch);
+                                        updatePurchasingProduct(index, 'showProductDropdown', true);
+                                      }}
+                                      onBlur={() => {
+                                        console.log('Input onBlur - Current product.productSearch:', product.productSearch);
+                                        // Use a longer timeout to ensure clicks register
+                                        setTimeout(() => updatePurchasingProduct(index, 'showProductDropdown', false), 500);
+                                      }}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                    />
+                                    
+                                    {/* Product Dropdown */}
+                                    {product.showProductDropdown && (
+                                      <div className="product-dropdown absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                        {products
+                                          .filter(p => 
+                                            !product.productSearch || 
+                                            `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(product.productSearch.toLowerCase())
+                                          )
+                                          .slice(0, 50)
+                                          .map(p => {
+                                            if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+                                              return p.variants.map(variant => {
+                                                if (variant.options && Array.isArray(variant.options)) {
+                                                  return variant.options.map(option => (
+                                                    <div
+                                                      key={`${p.id}-${variant.id}-${option.id}`}
+                                                      onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        console.log('Purchasing: Selecting product variant:', p.name, variant.variantName, option.name);
+                                                        updatePurchasingProductMultiple(index, {
+                                                          productId: p.id,
+                                                          productName: p.name,
+                                                          variantId: `${variant.id}-${option.id}`,
+                                                          variantName: `${variant.variantName}: ${option.name}`,
+                                                          productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`,
+                                                          showProductDropdown: false
+                                                        });
+                                                      }}
+                                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                    >
+                                                      <div className="font-medium text-gray-900">
+                                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                      </div>
+                                                      <div className="text-xs text-blue-600">
+                                                        {variant.variantName}: {option.name}
+                                                      </div>
+                                                    </div>
+                                                  ));
+                                                }
+                                                return (
+                                                  <div
+                                                    key={`${p.id}-${variant.id}`}
+                                                    onMouseDown={() => {
+                                                      console.log('Purchasing: Selecting product variant (no options):', p.name, variant.name);
+                                                      updatePurchasingProductMultiple(index, {
+                                                        productId: p.id,
+                                                        productName: p.name,
+                                                        variantId: variant.id,
+                                                        variantName: variant.name || `Variant ${variant.id}`,
+                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`,
+                                                        showProductDropdown: false
+                                                      });
+                                                    }}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                    </div>
+                                                    <div className="text-xs text-blue-600">
+                                                      {variant.name || 'Variant'}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }).flat();
+                                            } else {
+                                              return (
+                                                <div
+                                                  key={p.id}
+                                                  onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    console.log('Purchasing: Selecting product (no variants):', p.name);
+                                                    updatePurchasingProductMultiple(index, {
+                                                      productId: p.id,
+                                                      productName: p.name,
+                                                      variantId: '',
+                                                      variantName: '',
+                                                      productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`,
+                                                      showProductDropdown: false
+                                                    });
+                                                  }}
+                                                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                >
+                                                  <div className="font-medium text-gray-900">
+                                                    {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                  </div>
+                                                </div>
+                                              );
+                                            }
+                                          }).flat()}
+                                        
+                                        {product.productSearch && products.filter(p => 
+                                          `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(product.productSearch.toLowerCase())
+                                        ).length === 0 && (
+                                          <div className="px-3 py-2 text-gray-500 text-sm">
+                                            No products found matching "{product.productSearch}"
+                                          </div>
+                                        )}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <div className="font-medium">
-                                    {movement.products?.reduce((sum, p) => sum + (p.quantity || 0), 0) || 0}
+
+                                  {/* Quantity */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={product.quantity}
+                                      onChange={(e) => updatePurchasingProduct(index, 'quantity', parseInt(e.target.value) || 0)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                    />
                                   </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <div className="font-medium text-green-600">
-                                    ฿{movement.products?.reduce((sum, p) => sum + ((p.quantity || 0) * (p.buyPrice || 0)), 0).toFixed(2) || '0.00'}
+
+                                  {/* Buy Price */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Buy Price (฿)</label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={product.buyPrice}
+                                      onChange={(e) => updatePurchasingProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                    />
                                   </div>
-                                </td>
-                                <td className="border border-gray-300 px-4 py-2">
-                                  <button
-                                    onClick={() => StockService.deleteStockMovement(movement.id).then(() => loadStockMovements())}
-                                    className="text-red-600 hover:text-red-800 p-1"
-                                    title="Delete"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
+
+                                  {/* Total */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
+                                    <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-medium">
+                                      ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                                    </div>
+                                  </div>
+
+                                  {/* Current Stock */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
+                                    <div className="px-3 py-2 bg-blue-50 border border-gray-300 rounded-md text-sm font-medium text-blue-700">
+                                      {product.productId ? (() => {
+                                        const selectedProduct = products.find(p => p.id === product.productId);
+                                        return selectedProduct ? getCurrentStock(selectedProduct) : 0;
+                                      })() : 0}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Form Actions */}
+                          <div className="flex justify-end space-x-4 pt-4 border-t">
+                            <button
+                              type="button"
+                              onClick={handleCancelPurchasing}
+                              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700"
+                            >
+                              Save Purchase
+                            </button>
+                          </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Recent Purchases */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Purchases</h4>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-gray-300">
+                          <thead>
+                            <tr className="bg-gray-50">
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Date</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Supplier</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Product</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Quantity</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Price</th>
+                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {stockMovements.filter(m => m.status === 'purchasing').length === 0 ? (
+                              <tr>
+                                <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                  No purchases found. Click "Add Purchase" to get started.
                                 </td>
                               </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                            ) : (
+                              stockMovements
+                                .filter(m => m.status === 'purchasing')
+                                .slice(0, 10)
+                                .map((movement) => (
+                                  <tr key={movement.id} className="hover:bg-gray-50">
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="text-sm">
+                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                      </div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium">{movement.supplier}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="text-sm">
+                                        <div className="font-medium">{movement.productName}</div>
+                                        {movement.variantName && (
+                                          <div className="text-gray-500">{movement.variantName}</div>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium text-green-600">+{movement.quantity}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium">฿{movement.price ? movement.price.toFixed(2) : '0.00'}</div>
+                                    </td>
+                                    <td className="border border-gray-300 px-4 py-2">
+                                      <div className="font-medium text-green-600">
+                                        ฿{((movement.quantity || 0) * (movement.price || 0)).toFixed(2)}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
+                )}
+
+                {/* Stock Alerts Sub-tab */}
+                {stockActiveSubTab === "alerts" && (
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Stock Alerts Management
+                      </h3>
+                    </div>
+
+                    {/* Create New Alert Form */}
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h4 className="text-md font-medium text-gray-900 mb-4">Create New Stock Alert</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        {/* Product Selection - Searchable Dropdown */}
+                        <div className="relative">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Select Product
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Search products..."
+                            value={alertProductSearch}
+                            onChange={(e) => {
+                              setAlertProductSearch(e.target.value);
+                              setShowAlertProductDropdown(true);
+                            }}
+                            onFocus={() => setShowAlertProductDropdown(true)}
+                            onBlur={() => {
+                              // Delay hiding to allow click events to register
+                              setTimeout(() => setShowAlertProductDropdown(false), 150);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                          
+                          {/* Dropdown List */}
+                          {showAlertProductDropdown && (
+                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {products
+                                .filter(p => 
+                                  !alertProductSearch || 
+                                  `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
+                                )
+                                .slice(0, 50)
+                                .map(p => (
+                                  <div
+                                    key={p.id}
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setSelectedProductForAlert(p);
+                                      setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                      setShowAlertProductDropdown(false);
+                                    }}
+                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                  >
+                                    <div className="font-medium text-gray-900">
+                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Current Stock: {getCurrentStock(p)}
+                                    </div>
+                                  </div>
+                                ))}
+                              
+                              {alertProductSearch && products.filter(p => 
+                                `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
+                              ).length === 0 && (
+                                <div className="px-3 py-2 text-gray-500 text-sm">
+                                  No products found matching "{alertProductSearch}"
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Kiosk Alert Level */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Alert at Kiosk (qty)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={alertKioskLevel}
+                            onChange={(e) => setAlertKioskLevel(e.target.value)}
+                            placeholder="e.g., 5"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        {/* Admin Alert Level */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Alert at Admin (qty)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={alertAdminLevel}
+                            onChange={(e) => setAlertAdminLevel(e.target.value)}
+                            placeholder="e.g., 2"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          />
+                        </div>
+
+                        {/* Stock Zero Action */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            When Stock = 0
+                          </label>
+                          <select
+                            value={stockZeroAction}
+                            onChange={(e) => setStockZeroAction(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                          >
+                            <option value="disable">Disable Product</option>
+                            <option value="keepVisible">Keep Visible (Can Order)</option>
+                          </select>
+                        </div>
+
+                        {/* Create Button */}
+                        <div className="flex items-end">
+                          <button
+                            onClick={createStockAlert}
+                            disabled={!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel}
+                            className={`w-full px-4 py-2 text-white text-sm font-medium rounded-md ${
+                              !selectedProductForAlert || !alertKioskLevel || !alertAdminLevel
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-yellow-600 hover:bg-yellow-700"
+                            }`}
+                          >
+                            Create Alert
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Current Stock Display */}
+                      {selectedProductForAlert && (
+                        <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                          <p className="text-sm text-blue-800">
+                            <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert)} units
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Existing Alerts List */}
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900 mb-4">
+                        Existing Stock Alerts ({stockAlerts.length})
+                      </h4>
+                      
+                      {stockAlerts.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          No stock alerts configured yet.
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Product
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Current Stock
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Kiosk Alert
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Admin Alert
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Zero Stock Action
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Status
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Actions
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {stockAlerts.map((alert) => {
+                                const product = products.find(p => p.id === alert.productId);
+                                const currentStock = product ? getCurrentStock(product) : 0;
+                                const isKioskAlert = currentStock <= alert.alertKioskLevel;
+                                const isAdminAlert = currentStock <= alert.alertAdminLevel;
+                                
+                                return (
+                                  <tr key={alert.id} className={`${(isKioskAlert || isAdminAlert) ? 'bg-red-50' : ''}`}>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm font-medium text-gray-900">
+                                        {alert.productName || 'Unknown Product'}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        ID: {alert.productId}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className={`text-sm font-medium ${
+                                        (isKioskAlert || isAdminAlert) ? 'text-red-600' : 'text-gray-900'
+                                      }`}>
+                                        {currentStock}
+                                      </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        isKioskAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                      }`}>
+                                        {alert.alertKioskLevel}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        isAdminAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                      }`}>
+                                        {alert.alertAdminLevel}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        alert.stockZeroAction === 'disable' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+                                      }`}>
+                                        {alert.stockZeroAction === 'disable' ? 'Disable' : 'Keep Visible'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      {(isKioskAlert || isAdminAlert) ? (
+                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                          ⚠️ ALERT
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                          ✅ OK
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <button
+                                        onClick={() => deleteStockAlert(alert.id)}
+                                        className="text-red-600 hover:text-red-900 text-sm"
+                                      >
+                                        Delete
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 </div>
               )}
 
@@ -6989,75 +8176,232 @@ export default function AdminPage() {
                     </div>
 
                     <div className="space-y-3">
-                      {stockInForm.products.map((product, index) => (
-                        <div key={index} className="flex gap-3 items-end p-4 border border-gray-200 rounded-lg">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Product *
-                            </label>
-                            <select
-                              value={product.productId}
-                              onChange={(e) => updateStockInProduct(index, 'productId', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                              required
-                            >
-                              <option value="">Select Product</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} ({p.categoryName} - {p.subcategoryName})
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="w-24">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Quantity *
-                            </label>
-                            <input
-                              type="number"
-                              min="1"
-                              value={product.quantity}
-                              onChange={(e) => updateStockInProduct(index, 'quantity', parseInt(e.target.value) || 0)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                              placeholder="0"
-                              required
-                            />
-                          </div>
-                          <div className="w-32">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Buy Price (฿) *
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={product.buyPrice}
-                              onChange={(e) => updateStockInProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                              placeholder="0.00"
-                              required
-                            />
-                          </div>
-                          <div className="w-32">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Total
-                            </label>
-                            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-                              ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                      {stockInForm.products.map((product, index) => {
+                        const selectedProduct = products.find(p => p.id === product.productId);
+                        const hasVariants = selectedProduct?.hasVariants && selectedProduct?.variants?.length > 0;
+                        
+                        return (
+                          <div key={index} className="flex gap-3 items-start p-4 border border-gray-200 rounded-lg">
+                            <div className="flex-1">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Product *
+                              </label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  placeholder="Search products..."
+                                  value={product.productSearch || ""}
+                                  onChange={(e) => {
+                                    console.log('Input onChange:', e.target.value);
+                                    updateStockInProduct(index, 'productSearch', e.target.value);
+                                  }}
+                                  onFocus={() => {
+                                    console.log('Input onFocus, current product state:', product);
+                                    updateStockInProduct(index, 'showProductDropdown', true);
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                                
+                                {/* Debug display */}
+                                <div className="mt-1 text-xs text-gray-500">
+                                  Debug: productId={product.productId}, productName={product.productName}, productSearch={product.productSearch}
+                                </div>
+                                
+                                {product.showProductDropdown && (
+                                  <>
+                                    <div
+                                      className="fixed inset-0 z-10"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        updateStockInProduct(index, 'showProductDropdown', false);
+                                      }}
+                                    ></div>
+                                    <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                      {products
+                                        .filter((p) => {
+                                          const searchTerm = (product.productSearch || "").toLowerCase();
+                                          const productName = (p.name || "").toLowerCase();
+                                          const categoryName = (p.categoryName || "").toLowerCase();
+                                          const subcategoryName = (p.subcategoryName || "").toLowerCase();
+                                          return (
+                                            productName.includes(searchTerm) ||
+                                            categoryName.includes(searchTerm) ||
+                                            subcategoryName.includes(searchTerm)
+                                          );
+                                        })
+                                        .slice(0, 20)
+                                        .map((p) => {
+                                          // For products with variants, show each variant option as a separate entry
+                                          if (p.hasVariants && p.variants?.length > 0) {
+                                            return p.variants.map((variant) => {
+                                              if (variant.options && variant.options.length > 0) {
+                                                return variant.options.map((option) => (
+                                                  <div
+                                                    key={`${p.id}-${variant.id}-${option.id}`}
+                                                    onClick={(e) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      console.log('Clicking product variant:', {
+                                                        productId: p.id,
+                                                        productName: p.name,
+                                                        variantId: `${variant.id}-${option.id}`,
+                                                        variantName: `${variant.variantName}: ${option.name}`,
+                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`
+                                                      });
+                                                      
+                                                      // Update all fields at once to avoid race conditions
+                                                      updateStockInProductMultiple(index, {
+                                                        productId: p.id,
+                                                        productName: p.name,
+                                                        variantId: `${variant.id}-${option.id}`,
+                                                        variantName: `${variant.variantName}: ${option.name}`,
+                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`,
+                                                        showProductDropdown: false
+                                                      });
+                                                    }}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                    </div>
+                                                    <div className="text-blue-600 font-medium">
+                                                      {variant.variantName}: {option.name}
+                                                      {option.price && ` - ฿${option.price.toFixed(2)}`}
+                                                      {option.memberPrice && ` (Member: ฿${option.memberPrice.toFixed(2)})`}
+                                                    </div>
+                                                  </div>
+                                                ));
+                                              } else {
+                                                return (
+                                                  <div
+                                                    key={`${p.id}-${variant.id}`}
+                                                    onClick={() => {
+                                                      updateStockInProductMultiple(index, {
+                                                        productId: p.id,
+                                                        productName: p.name,
+                                                        variantId: variant.id,
+                                                        variantName: variant.name || `Variant ${variant.id}`,
+                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`,
+                                                        showProductDropdown: false
+                                                      });
+                                                    }}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                    </div>
+                                                    <div className="text-blue-600 font-medium">
+                                                      {variant.name || `Variant ${variant.id}`}
+                                                      {variant.price && ` - ฿${variant.price.toFixed(2)}`}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              }
+                                            }).flat();
+                                          } else {
+                                            // For products without variants
+                                            return (
+                                              <div
+                                                key={p.id}
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  updateStockInProductMultiple(index, {
+                                                    productId: p.id,
+                                                    productName: p.name,
+                                                    variantId: '',
+                                                    variantName: '',
+                                                    productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`,
+                                                    showProductDropdown: false
+                                                  });
+                                                }}
+                                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                              >
+                                                <div className="font-medium text-gray-900">
+                                                  {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                </div>
+                                                <div className="text-green-600 font-medium">
+                                                  Simple Product
+                                                  {p.price && ` - ฿${p.price.toFixed(2)}`}
+                                                  {p.memberPrice && ` (Member: ฿${p.memberPrice.toFixed(2)})`}
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+                                        })
+                                        .flat()}
+                                      
+                                      {products.filter((p) => {
+                                        const searchTerm = (product.productSearch || "").toLowerCase();
+                                        const productName = (p.name || "").toLowerCase();
+                                        const categoryName = (p.categoryName || "").toLowerCase();
+                                        const subcategoryName = (p.subcategoryName || "").toLowerCase();
+                                        return (
+                                          productName.includes(searchTerm) ||
+                                          categoryName.includes(searchTerm) ||
+                                          subcategoryName.includes(searchTerm)
+                                        );
+                                      }).length === 0 && (
+                                        <div className="px-3 py-2 text-gray-500 text-sm">
+                                          No products found
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             </div>
+                            <div className="w-24">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Quantity *
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={product.quantity}
+                                onChange={(e) => updateStockInProduct(index, 'quantity', parseInt(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="0"
+                                required
+                              />
+                            </div>
+                            <div className="w-32">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Buy Price (฿) *
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={product.buyPrice}
+                                onChange={(e) => updateStockInProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                placeholder="0.00"
+                                required
+                              />
+                            </div>
+                            <div className="w-32">
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Total
+                              </label>
+                              <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                                ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                              </div>
+                            </div>
+                            {stockInForm.products.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeProductFromStockIn(index)}
+                                className="text-red-600 hover:text-red-800 p-2 mt-6"
+                                title="Remove Product"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
-                          {stockInForm.products.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeProductFromStockIn(index)}
-                              className="text-red-600 hover:text-red-800 p-2"
-                              title="Remove Product"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Total Summary */}
@@ -12727,6 +14071,261 @@ export default function AdminPage() {
                     ? "Add Points"
                     : "Reduce Points"}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Stock Alert Modal */}
+        {showStockAlertModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+              <div className="mt-3">
+                {/* Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-lg font-medium text-gray-900">Stock Alert Management</h3>
+                  <button
+                    onClick={() => setShowStockAlertModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Create New Alert Form */}
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Create New Stock Alert</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Product Selection - Searchable Dropdown */}
+                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Product
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={alertProductSearch}
+                        onChange={(e) => {
+                          setAlertProductSearch(e.target.value);
+                          setShowAlertProductDropdown(true);
+                        }}
+                        onFocus={() => setShowAlertProductDropdown(true)}
+                        onBlur={() => {
+                          // Delay hiding to allow click events to register
+                          setTimeout(() => setShowAlertProductDropdown(false), 150);
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                      
+                      {/* Dropdown List */}
+                      {showAlertProductDropdown && (
+                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                          {products
+                            .filter(p => 
+                              !alertProductSearch || 
+                              `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
+                            )
+                            .slice(0, 50)
+                            .map(p => (
+                              <div
+                                key={p.id}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setSelectedProductForAlert(p);
+                                  setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                  setShowAlertProductDropdown(false);
+                                }}
+                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                              >
+                                <div className="font-medium text-gray-900">
+                                  {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Current Stock: {getCurrentStock(p)}
+                                </div>
+                              </div>
+                            ))}
+                          
+                          {alertProductSearch && products.filter(p => 
+                            `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
+                          ).length === 0 && (
+                            <div className="px-3 py-2 text-gray-500 text-sm">
+                              No products found matching "{alertProductSearch}"
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Kiosk Alert Level */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Alert at Kiosk (qty)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={alertKioskLevel}
+                        onChange={(e) => setAlertKioskLevel(e.target.value)}
+                        placeholder="e.g., 5"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+
+                    {/* Admin Alert Level */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Alert at Admin (qty)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={alertAdminLevel}
+                        onChange={(e) => setAlertAdminLevel(e.target.value)}
+                        placeholder="e.g., 2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                      />
+                    </div>
+
+                    {/* Create Button */}
+                    <div className="flex items-end">
+                      <button
+                        onClick={createStockAlert}
+                        disabled={!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel}
+                        className={`w-full px-4 py-2 text-white text-sm font-medium rounded-md ${
+                          !selectedProductForAlert || !alertKioskLevel || !alertAdminLevel
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-yellow-600 hover:bg-yellow-700"
+                        }`}
+                      >
+                        Create Alert
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Current Stock Display */}
+                  {selectedProductForAlert && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                      <p className="text-sm text-blue-800">
+                        <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert)} units
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Existing Alerts List */}
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">
+                    Existing Stock Alerts ({stockAlerts.length})
+                  </h4>
+                  
+                  {stockAlerts.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      No stock alerts configured yet.
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Product
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Current Stock
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Kiosk Alert
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Admin Alert
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {stockAlerts.map((alert) => {
+                            const product = products.find(p => p.id === alert.productId);
+                            const currentStock = product ? getCurrentStock(product) : 0;
+                            const isKioskAlert = currentStock <= alert.alertKioskLevel;
+                            const isAdminAlert = currentStock <= alert.alertAdminLevel;
+                            
+                            return (
+                              <tr key={alert.id} className={`${(isKioskAlert || isAdminAlert) ? 'bg-red-50' : ''}`}>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {alert.productName || 'Unknown Product'}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    ID: {alert.productId}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className={`text-sm font-medium ${
+                                    (isKioskAlert || isAdminAlert) ? 'text-red-600' : 'text-gray-900'
+                                  }`}>
+                                    {currentStock}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    isKioskAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {alert.alertKioskLevel}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    isAdminAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {alert.alertAdminLevel}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  {(isKioskAlert || isAdminAlert) ? (
+                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                      ⚠️ ALERT
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                      ✅ OK
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <button
+                                    onClick={() => deleteStockAlert(alert.id)}
+                                    className="text-red-600 hover:text-red-900 text-sm"
+                                  >
+                                    Delete
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-6 flex justify-end">
+                  <button
+                    onClick={() => setShowStockAlertModal(false)}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
