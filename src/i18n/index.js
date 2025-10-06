@@ -136,6 +136,15 @@ const resources = {
       addMoreItems: "Add More Items",
       cancelOrder: "Cancel Order",
       completeOrder: "Complete Order ฿{{total}}",
+      // Points usage translations
+      usePoints: "Use Points",
+      availablePoints: "Available Points",
+      pointsValue: "Points Value",
+      savingWithPoints: "Saving with Points",
+      newTotal: "New Total",
+      orderTotal: "Order Total",
+      pointsDiscount: "Points Discount",
+      finalTotal: "Final Total",
     },
   },
   th: {

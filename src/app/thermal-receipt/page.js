@@ -129,21 +129,7 @@ export default function ThermalReceiptPage() {
                   <span>Qty: {item.quantity || 1}</span>
                   <span>฿{item.price * (item.quantity || 1)}</span>
                 </div>
-                {/* Item Points - show if customer exists and points > 0 */}
-                {orderData?.customer && !orderData.customer.isNoMember && (
-                  <div
-                    style={{
-                      fontSize: "10px",
-                      color: "#666",
-                      marginTop: "1mm",
-                    }}
-                  >
-                    <span>
-                      Points: +
-                      {Math.floor(item.price * (item.quantity || 1) * 0.2)} pts
-                    </span>
-                  </div>
-                )}
+
               </div>
             ))}
             <div
@@ -153,12 +139,44 @@ export default function ThermalReceiptPage() {
 
           {/* Total */}
           <div style={{ marginBottom: "4mm" }}>
+            {/* Show original total if points were used */}
+            {orderData?.pointsUsed > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                }}
+              >
+                <span>Subtotal</span>
+                <span>฿{orderData?.originalTotal || orderData?.total}</span>
+              </div>
+            )}
+            
+            {/* Show points used if any */}
+            {orderData?.pointsUsed > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "12px",
+                  color: "#666",
+                }}
+              >
+                <span>Points Used: -{orderData.pointsUsed}</span>
+                <span>-฿{orderData.pointsUsedValue || 0}</span>
+              </div>
+            )}
+            
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 fontSize: "14px",
                 fontWeight: "bold",
+                borderTop: orderData?.pointsUsed > 0 ? "1px solid #000" : "none",
+                paddingTop: orderData?.pointsUsed > 0 ? "1mm" : "0",
+                marginTop: orderData?.pointsUsed > 0 ? "1mm" : "0",
               }}
             >
               <span>{t("total")}</span>
@@ -182,38 +200,14 @@ export default function ThermalReceiptPage() {
                 <div>
                   {t("customerLabel")}: {orderData.customer.name}
                 </div>
-                <div
-                  style={{ borderTop: "1px dashed #000", margin: "1mm 0" }}
-                ></div>
-                <div style={{ fontWeight: "bold", marginBottom: "1mm" }}>
-                  POINT BREAKDOWN:
-                </div>
-                {orderData?.items?.map((item, index) => (
-                  <div
-                    key={index}
-                    style={{ marginBottom: "1mm", fontSize: "9px" }}
-                  >
-                    <div>{item.name}</div>
-                    <div style={{ marginLeft: "2mm" }}>
-                      ฿{item.price} x {item.quantity || 1} = ฿
-                      {item.price * (item.quantity || 1)}
-                    </div>
-                    <div style={{ marginLeft: "2mm" }}>
-                      Points: +
-                      {Math.floor(item.price * (item.quantity || 1) * 0.2)}{" "}
-                      (20.0%)
+                {/* Show cashback points earned if any */}
+                {orderData?.cashbackPoints > 0 && (
+                  <div style={{ marginTop: "1mm" }}>
+                    <div style={{ fontSize: "9px" }}>
+                      Points Earned: +{orderData.cashbackPoints} (pending approval)
                     </div>
                   </div>
-                ))}
-                <div
-                  style={{ borderTop: "1px dashed #000", margin: "1mm 0" }}
-                ></div>
-                <div style={{ fontWeight: "bold" }}>
-                  TOTAL POINTS EARNED: +{orderData.cashbackPoints || 0}
-                </div>
-                <div style={{ fontSize: "9px", marginTop: "1mm" }}>
-                  (Points pending admin approval)
-                </div>
+                )}
               </div>
             )}
           </div>

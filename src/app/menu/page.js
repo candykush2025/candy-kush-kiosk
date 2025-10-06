@@ -71,6 +71,14 @@ export default function MenuPage() {
   const [showCartAnimation, setShowCartAnimation] = useState(false);
   const [animationProduct, setAnimationProduct] = useState(null);
 
+  // Points usage states
+  const [pointsUsagePercentage, setPointsUsagePercentage] = useState(0); // 0, 25, 50, 75, 100
+  const [pointsToUse, setPointsToUse] = useState(0);
+  const [pointsValue, setPointsValue] = useState(0); // Monetary value of points
+  
+  // Cashback percentages for categories
+  const [categoryPercentages, setCategoryPercentages] = useState({});
+
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -638,6 +646,83 @@ export default function MenuPage() {
     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
   };
 
+  // Points usage calculation functions
+  const calculatePointsToUse = (percentage) => {
+    if (!customer || customer.isNoMember || !customer.totalPoints) return 0;
+    const maxPoints = customer.totalPoints;
+    return Math.floor((maxPoints * percentage) / 100);
+  };
+
+  const calculatePointsValue = (points) => {
+    // Assuming 1 point = 1 baht (adjust conversion rate as needed)
+    return points;
+  };
+
+  const getMaxPointsPercentageForTotal = () => {
+    if (!customer || customer.isNoMember) return 0;
+    const totalPrice = getTotalPrice();
+    const maxPointsValue = calculatePointsValue(customer.totalPoints || 0);
+    
+    // Don't allow points to exceed the total price
+    if (maxPointsValue >= totalPrice) {
+      return Math.floor((totalPrice / maxPointsValue) * 100);
+    }
+    return 100;
+  };
+
+  const handlePointsSliderChange = (percentage) => {
+    const maxAllowedPercentage = getMaxPointsPercentageForTotal();
+    let actualPercentage = Math.min(percentage, maxAllowedPercentage);
+    
+    // Smart snapping: snap to nearest quarter increment if within threshold
+    const snapThreshold = 4; // 4% threshold for snapping
+    const snapPoints = [0, 25, 50, 75, 100];
+    
+    // Find the closest snap point
+    let closestSnapPoint = null;
+    let minDistance = Infinity;
+    
+    for (const snapPoint of snapPoints) {
+      const distance = Math.abs(actualPercentage - snapPoint);
+      if (distance <= snapThreshold && distance < minDistance) {
+        minDistance = distance;
+        closestSnapPoint = snapPoint;
+      }
+    }
+    
+    // Apply snapping if we found a close snap point
+    if (closestSnapPoint !== null) {
+      actualPercentage = Math.min(closestSnapPoint, maxAllowedPercentage);
+    }
+    
+    setPointsUsagePercentage(actualPercentage);
+    const pointsToUse = calculatePointsToUse(actualPercentage);
+    setPointsToUse(pointsToUse);
+    setPointsValue(calculatePointsValue(pointsToUse));
+  };
+
+  const getTotalPriceAfterPoints = () => {
+    return Math.max(0, getTotalPrice() - pointsValue);
+  };
+
+  // Check if current percentage is near a snap point for visual feedback
+  const isNearSnapPoint = (percentage) => {
+    const snapThreshold = 4;
+    const snapPoints = [0, 25, 50, 75, 100];
+    return snapPoints.some(snapPoint => Math.abs(percentage - snapPoint) <= snapThreshold);
+  };
+
+  // Get cashback percentage for a category
+  const getCashbackPercentageForCategory = async (categoryId) => {
+    try {
+      const percentage = await CashbackService.getCashbackPercentage(categoryId);
+      return percentage;
+    } catch (error) {
+      console.error('Error getting cashback percentage for category:', categoryId, error);
+      return 0;
+    }
+  };
+
   // Process payment
   const processPayment = async () => {
     if (cart.length === 0) return;
@@ -646,6 +731,9 @@ export default function MenuPage() {
     setError("");
 
     try {
+      const originalTotal = getTotalPrice();
+      const finalTotal = getTotalPriceAfterPoints();
+
       const transactionData = {
         customerId: customer?.id || null,
         customerName: customer
@@ -654,10 +742,15 @@ export default function MenuPage() {
             : `${customer.name} ${customer.lastName || ""}`.trim()
           : "",
         items: cart,
-        total: getTotalPrice(),
+        originalTotal: originalTotal,
+        total: finalTotal,
         paymentMethod: paymentMethod,
         cashbackEarned: customer?.isNoMember ? 0 : cashbackPoints,
         timestamp: new Date(),
+        // Points usage information
+        pointsUsed: pointsToUse,
+        pointsUsedValue: pointsValue,
+        pointsUsagePercentage: pointsUsagePercentage,
         // Add point details
         pointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
         pointDetails: customer?.isNoMember
@@ -691,36 +784,68 @@ export default function MenuPage() {
       );
 
       // Update customer points if customer exists and is not "No Member"
-      if (customer && !customer.isNoMember && cashbackPoints > 0) {
+      if (customer && !customer.isNoMember) {
         try {
-          // Create pending points instead of directly adding to customer
-          const pendingPointData = {
-            customerId: customer.id,
-            customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
-            customerCode: customer.customerCode || "",
-            pointsAmount: cashbackPoints,
-            transactionId: result.transactionId,
-            orderId: result.transactionId,
-            reason: "Purchase Cashback",
-            details: `Earned ${cashbackPoints} points from kiosk purchase`,
-            items: window.menuCashbackDetails || [],
-            pointCalculation: {
-              totalPointsEarned: cashbackPoints,
-              calculationMethod: "category-based",
-              breakdown: window.menuCashbackDetails || [],
-            },
-            purchaseAmount: getTotalPrice(),
-            paymentMethod: paymentMethod,
-            source: "kiosk",
-          };
+          // Create pending points for cashback if earned
+          if (cashbackPoints > 0) {
+            const cashbackPointData = {
+              customerId: customer.id,
+              customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
+              customerCode: customer.customerCode || "",
+              pointsAmount: cashbackPoints,
+              transactionId: result.transactionId,
+              orderId: result.transactionId,
+              reason: "Purchase Cashback",
+              details: `Earned ${cashbackPoints} points from kiosk purchase`,
+              items: window.menuCashbackDetails || [],
+              pointCalculation: {
+                totalPointsEarned: cashbackPoints,
+                calculationMethod: "category-based",
+                breakdown: window.menuCashbackDetails || [],
+              },
+              purchaseAmount: originalTotal,
+              paymentMethod: paymentMethod,
+              source: "kiosk",
+            };
 
-          await PendingPointsService.createPendingPoints(pendingPointData);
-          console.log(
-            `Created pending points (${cashbackPoints}) for customer ${customer.name} - requires admin approval`
-          );
+            await PendingPointsService.createPendingPoints(cashbackPointData);
+            console.log(
+              `Created pending points (${cashbackPoints}) for customer ${customer.name} - requires admin approval`
+            );
+          }
+
+          // Deduct used points if any (immediate deduction)
+          if (pointsToUse > 0) {
+            const pointsUsageData = {
+              customerId: customer.id,
+              customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
+              customerCode: customer.customerCode || "",
+              pointsAmount: -pointsToUse, // Negative to deduct points
+              transactionId: result.transactionId,
+              orderId: result.transactionId,
+              reason: "Points Used - Order Purchase",
+              details: `Used ${pointsUsagePercentage}% of available points (${pointsToUse} points worth $${pointsValue.toFixed(2)})`,
+              items: [{
+                description: `Points deduction for order payment`,
+                points: -pointsToUse,
+                value: pointsValue,
+                percentage: pointsUsagePercentage
+              }],
+              purchaseAmount: originalTotal,
+              finalAmount: finalTotal,
+              pointsValue: pointsValue,
+              paymentMethod: paymentMethod,
+              source: "kiosk",
+            };
+
+            await PendingPointsService.createPendingPoints(pointsUsageData);
+            console.log(
+              `Deducted ${pointsToUse} points (${pointsUsagePercentage}%, $${pointsValue.toFixed(2)}) from customer ${customer.name}`
+            );
+          }
         } catch (pointsError) {
-          console.error("Error creating pending points:", pointsError);
-          // Don't fail the transaction if pending points creation fails
+          console.error("Error updating customer points:", pointsError);
+          // Don't fail the transaction if points operations fail
         }
       }
 
@@ -729,9 +854,13 @@ export default function MenuPage() {
         id: result.transactionId,
         orderId: result.transactionId, // Use transactionId as orderId
         items: cart,
-        total: getTotalPrice(),
+        originalTotal: originalTotal,
+        total: finalTotal,
         customer: customer,
         cashbackPoints: customer?.isNoMember ? 0 : cashbackPoints,
+        pointsUsed: pointsToUse,
+        pointsUsedValue: pointsValue,
+        pointsUsagePercentage: pointsUsagePercentage,
         transactionId: result.id,
         paymentMethod: paymentMethod,
         timestamp: new Date().toISOString(),
@@ -858,6 +987,23 @@ export default function MenuPage() {
   useEffect(() => {
     calculateCashbackPoints();
   }, [cart, customer, calculateCashbackPoints]);
+
+  // Load cashback percentages for categories
+  useEffect(() => {
+    const loadCashbackPercentages = async () => {
+      if (categories.length > 0 && customer && !customer.isNoMember) {
+        const percentages = {};
+        for (const category of categories) {
+          const percentage = await getCashbackPercentageForCategory(category.id);
+          percentages[category.id] = percentage;
+        }
+        setCategoryPercentages(percentages);
+      } else {
+        setCategoryPercentages({});
+      }
+    };
+    loadCashbackPercentages();
+  }, [categories, customer]);
 
   // Cart timer - 60 second timeout when cart is open
   useEffect(() => {
@@ -1803,6 +1949,12 @@ export default function MenuPage() {
                             objectFit: "contain",
                           }}
                         />
+                        {/* Cashback Badge - only show for members */}
+                        {customer && !customer.isNoMember && categoryPercentages[category.id] > 0 && (
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg">
+                            {categoryPercentages[category.id]}%
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2761,12 +2913,37 @@ export default function MenuPage() {
               {/* Grand Total */}
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl shadow-lg p-8 mb-8 border-2 border-green-200">
                 <div className="text-center">
-                  <div className="text-lg text-gray-600 mb-2">
-                    {t("grandTotal")}
-                  </div>
-                  <div className="text-6xl font-bold text-green-600 mb-4">
-                    ฿{getTotalPrice()}
-                  </div>
+                  {/* Show breakdown if points are being used */}
+                  {pointsToUse > 0 ? (
+                    <div className="space-y-3">
+                      <div className="text-lg text-gray-600">
+                        {t("orderTotal")}
+                      </div>
+                      <div className="text-3xl font-semibold text-gray-700">
+                        ฿{getTotalPrice().toFixed(2)}
+                      </div>
+                      <div className="text-lg text-green-600">
+                        - ฿{pointsValue.toFixed(2)} ({t("pointsDiscount")})
+                      </div>
+                      <div className="border-t border-gray-300 pt-3">
+                        <div className="text-lg text-gray-600 mb-2">
+                          {t("finalTotal")}
+                        </div>
+                        <div className="text-6xl font-bold text-green-600">
+                          ฿{getTotalPriceAfterPoints().toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-lg text-gray-600 mb-2">
+                        {t("grandTotal")}
+                      </div>
+                      <div className="text-6xl font-bold text-green-600 mb-4">
+                        ฿{getTotalPrice().toFixed(2)}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Cashback Points Display */}
                   {customer && (
@@ -2850,6 +3027,110 @@ export default function MenuPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Points Usage Section - Only show for members */}
+              {customer && !customer.isNoMember && customer.totalPoints > 0 && (
+                <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-bold">
+                      {t("usePoints")}
+                    </h3>
+                    <div className="text-lg font-semibold text-green-600">
+                      -{pointsToUse} {t("points")}
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-600 mb-2">
+                      {t("availablePoints")}: {customer.totalPoints} {t("points")}
+                    </div>
+                    <div className="text-sm text-gray-600 mb-4">
+                      {t("pointsValue")}: ฿{pointsValue}
+                    </div>
+                  </div>
+
+                  {/* Slider */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Slide to adjust</span>
+                      <span className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
+                        isNearSnapPoint(pointsUsagePercentage) 
+                          ? 'bg-green-100 text-green-700' 
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
+                        {pointsUsagePercentage}%
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={pointsUsagePercentage}
+                        onChange={(e) => handlePointsSliderChange(parseInt(e.target.value))}
+                        className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-green"
+                        style={{
+                          background: `linear-gradient(to right, #10b981 0%, #10b981 ${pointsUsagePercentage}%, #e5e7eb ${pointsUsagePercentage}%, #e5e7eb 100%)`
+                        }}
+                      />
+                      {/* Tick marks for snap points */}
+                      <div className="absolute top-0 w-full h-3 pointer-events-none">
+                        {[25, 50, 75, 100].map((snapPoint) => {
+                          const isNear = Math.abs(pointsUsagePercentage - snapPoint) <= 4;
+                          return (
+                            <div
+                              key={snapPoint}
+                              className={`absolute top-1/2 transform -translate-y-1/2 w-0.5 h-3 transition-all duration-200 ${
+                                isNear 
+                                  ? 'bg-green-400 shadow-sm shadow-green-400 opacity-90' 
+                                  : 'bg-gray-400 opacity-50'
+                              }`}
+                              style={{ left: `${snapPoint}%` }}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-500 mt-2">
+                        <span>0%</span>
+                        <span>25%</span>
+                        <span>50%</span>
+                        <span>75%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick selection buttons */}
+                  <div className="grid grid-cols-5 gap-2">
+                    {[0, 25, 50, 75, 100].map((percentage) => (
+                      <button
+                        key={percentage}
+                        onClick={() => handlePointsSliderChange(percentage)}
+                        className={`py-2 px-3 text-sm font-medium rounded-lg transition-colors ${
+                          pointsUsagePercentage === percentage
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {percentage}%
+                      </button>
+                    ))}
+                  </div>
+
+                  {pointsValue > 0 && (
+                    <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="text-sm text-green-800">
+                        {t("savingWithPoints")}: ฿{pointsValue}
+                      </div>
+                      <div className="text-sm text-green-600">
+                        {t("newTotal")}: ฿{getTotalPriceAfterPoints()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Error Message */}
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -2885,7 +3166,7 @@ export default function MenuPage() {
                 >
                   {processing
                     ? t("processing")
-                    : t("completeOrder", { total: getTotalPrice() })}
+                    : t("completeOrder", { total: getTotalPriceAfterPoints() })}
                 </button>
               </div>
             </div>
@@ -2986,16 +3267,47 @@ export default function MenuPage() {
 
               {/* Total */}
               <div style={{ marginBottom: "4mm" }}>
+                {/* Show original total if points were used */}
+                {(completedOrder.pointsUsed || 0) > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <span>Subtotal</span>
+                    <span>฿{(completedOrder.originalTotal || completedOrder.total || 0).toFixed(2)}</span>
+                  </div>
+                )}
+                
+                {/* Show points usage if any */}
+                {(completedOrder.pointsUsed || 0) > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "12px",
+                      color: "#059669",
+                    }}
+                  >
+                    <span>Points Used (-{completedOrder.pointsUsed || 0})</span>
+                    <span>-฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}</span>
+                  </div>
+                )}
+
                 <div
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
                     fontSize: "14px",
                     fontWeight: "bold",
+                    borderTop: (completedOrder.pointsUsed || 0) > 0 ? "1px solid #000" : "none",
+                    paddingTop: (completedOrder.pointsUsed || 0) > 0 ? "2mm" : "0",
                   }}
                 >
                   <span>{t("total")}</span>
-                  <span>฿{completedOrder.total}</span>
+                  <span>฿{(completedOrder.total || 0).toFixed(2)}</span>
                 </div>
 
                 {/* Payment Method */}
@@ -3018,6 +3330,11 @@ export default function MenuPage() {
                       <div>
                         {t("customerLabel")}: {completedOrder.customer.name}
                       </div>
+                      {(completedOrder.pointsUsed || 0) > 0 && (
+                        <div>
+                          Points Used: {completedOrder.pointsUsed || 0} ({completedOrder.pointsUsagePercentage || 0}%)
+                        </div>
+                      )}
                       <div>
                         {t("pointsEarned")}:{" "}
                         {completedOrder.cashbackPoints || 0}
@@ -3114,6 +3431,11 @@ export default function MenuPage() {
                       <p className="text-gray-600">
                         {completedOrder.customer.name}
                       </p>
+                      {(completedOrder.pointsUsed || 0) > 0 && (
+                        <p className="text-blue-600 font-medium">
+                          Points Used: {completedOrder.pointsUsed || 0} points
+                        </p>
+                      )}
                       {completedOrder.cashbackPoints > 0 && (
                         <p className="text-green-600 font-medium">
                           Cashback: {completedOrder.cashbackPoints} points
@@ -3147,7 +3469,29 @@ export default function MenuPage() {
                     ))}
                   </div>
                   <div className="border-t border-gray-200 mt-3 pt-3">
-                    <div className="flex justify-between">
+                    {/* Show original total if points were used */}
+                    {(completedOrder.pointsUsed || 0) > 0 && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span>฿{(completedOrder.originalTotal || completedOrder.total || 0).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {/* Show points usage if any */}
+                    {(completedOrder.pointsUsed || 0) > 0 && (
+                      <>
+                        <div className="flex justify-between mb-2 text-green-600">
+                          <span>Points Used ({completedOrder.pointsUsed || 0} pts):</span>
+                          <span>-฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between mb-2 text-sm text-gray-500">
+                          <span>{completedOrder.pointsUsagePercentage || 0}% of available points</span>
+                          <span></span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="flex justify-between border-t border-gray-200 pt-2">
                       <span className="font-bold text-lg">Total:</span>
                       <span className="font-bold text-lg">
                         ฿{completedOrder.total.toFixed(2)}
