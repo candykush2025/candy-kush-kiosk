@@ -7336,7 +7336,7 @@ export default function AdminPage() {
                             {stockMovements.length === 0 ? (
                               <tr>
                                 <td colSpan="8" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
-                                  No stock movements found. Use "Purchasing" tab to add stock.
+                                  No stock movements found. Use &quot;Purchasing&quot; tab to add stock.
                                 </td>
                               </tr>
                             ) : (
@@ -7660,7 +7660,7 @@ export default function AdminPage() {
                                           `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(product.productSearch.toLowerCase())
                                         ).length === 0 && (
                                           <div className="px-3 py-2 text-gray-500 text-sm">
-                                            No products found matching "{product.productSearch}"
+                                            No products found matching &quot;{product.productSearch}&quot;
                                           </div>
                                         )}
                                       </div>
@@ -7778,7 +7778,7 @@ export default function AdminPage() {
                           if (sortedOrders.length === 0) {
                             return (
                               <div className="border border-gray-300 rounded-lg p-8 text-center text-gray-500">
-                                No purchases found. Click "Add Purchase" to get started.
+                                No purchases found. Click &quot;Add Purchase&quot; to get started.
                               </div>
                             );
                           }
@@ -7912,7 +7912,7 @@ export default function AdminPage() {
                                 `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
                               ).length === 0 && (
                                 <div className="px-3 py-2 text-gray-500 text-sm">
-                                  No products found matching "{alertProductSearch}"
+                                  No products found matching &quot;{alertProductSearch}&quot;
                                 </div>
                               )}
                             </div>
@@ -14563,7 +14563,7 @@ export default function AdminPage() {
                             `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
                           ).length === 0 && (
                             <div className="px-3 py-2 text-gray-500 text-sm">
-                              No products found matching "{alertProductSearch}"
+                              No products found matching &quot;{alertProductSearch}&quot;
                             </div>
                           )}
                         </div>
