@@ -465,6 +465,7 @@ export default function AdminPage() {
   const [productImageFile, setProductImageFile] = useState(null);
   const [shouldRemoveMainImages, setShouldRemoveMainImages] = useState(false);
   const [optionImageFile, setOptionImageFile] = useState(null);
+  const [editOptionImageFile, setEditOptionImageFile] = useState(null);
   const [isProductSaving, setIsProductSaving] = useState(false);
 
   // Form states
@@ -2754,14 +2755,6 @@ export default function AdminPage() {
   };
 
   // Stock Management handlers
-  const loadStockMovements = async () => {
-    try {
-      const movements = await StockService.getAllStockMovements();
-      setStockMovements(movements);
-    } catch (error) {
-      console.error("Error loading stock movements:", error);
-    }
-  };
 
   const handleAddStockIn = () => {
     if (!checkInputPermission()) return;
@@ -2835,7 +2828,7 @@ export default function AdminPage() {
       await StockService.addStockIn(stockInForm);
       
       // Reload stock movements and products data
-      await loadStockMovements();
+      await loadStockMovementsData();
       await loadDashboardData(); // This will refresh the products with updated stock quantities
       
       alert("Stock in added successfully!");
@@ -2944,7 +2937,7 @@ export default function AdminPage() {
   // Load stock movements when tab is accessed
   useEffect(() => {
     if (activeTab === 'stockManagement') {
-      loadStockMovements();
+      loadStockMovementsData(); // Use the new service for consistency
       loadStockAlerts();
     }
   }, [activeTab]);
@@ -3112,6 +3105,8 @@ export default function AdminPage() {
       const alertData = {
         productId: selectedProductForAlert.id,
         productName: selectedProductForAlert.name,
+        variantId: selectedProductForAlert.variantId || '',
+        variantName: selectedProductForAlert.variantName || '',
         alertKioskLevel: parseInt(alertKioskLevel),
         alertAdminLevel: parseInt(alertAdminLevel),
         stockZeroAction: stockZeroAction, // "disable" or "keepVisible"
@@ -3163,9 +3158,17 @@ export default function AdminPage() {
   };
 
   // Get current stock level for a product - Updated to use StockMovement system
-  const getCurrentStock = (product) => {
+  const getCurrentStock = (product, variantId = null) => {
+    if (!product) return 0;
+
     // First check if we have stock calculations from StockMovement system
     if (stockCalculations && Object.keys(stockCalculations).length > 0) {
+      // If variantId is provided, get stock for specific variant
+      if (variantId) {
+        const key = `${product.id}-${variantId}`;
+        return stockCalculations[key] ? stockCalculations[key].stock : 0;
+      }
+      
       // Check if product has variants
       if (product.variants && Array.isArray(product.variants)) {
         let totalStock = 0;
@@ -3188,6 +3191,23 @@ export default function AdminPage() {
     }
     
     // Fallback to old system for backwards compatibility
+    if (variantId && product.variants && Array.isArray(product.variants)) {
+      // Look for specific variant
+      for (const variant of product.variants) {
+        if (variant.options && Array.isArray(variant.options)) {
+          for (const option of variant.options) {
+            if (`${variant.id}-${option.id}` === variantId) {
+              return option.quantity || 0;
+            }
+          }
+        }
+        if (variant.id === variantId) {
+          return variant.quantity || 0;
+        }
+      }
+      return 0;
+    }
+    
     // Check if product has variants with stock
     if (product.variants && Array.isArray(product.variants)) {
       let totalStock = 0;
@@ -7964,7 +7984,12 @@ export default function AdminPage() {
                       {selectedProductForAlert && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-md">
                           <p className="text-sm text-blue-800">
-                            <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert)} units
+                            <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId)} units
+                            {selectedProductForAlert.variantName && (
+                              <span className="block text-xs text-blue-600 mt-1">
+                                Variant: {selectedProductForAlert.variantName}
+                              </span>
+                            )}
                           </p>
                         </div>
                       )}
@@ -8011,7 +8036,7 @@ export default function AdminPage() {
                             <tbody className="bg-white divide-y divide-gray-200">
                               {stockAlerts.map((alert) => {
                                 const product = products.find(p => p.id === alert.productId);
-                                const currentStock = product ? getCurrentStock(product) : 0;
+                                const currentStock = product ? getCurrentStock(product, alert.variantId) : 0;
                                 const isKioskAlert = currentStock <= alert.alertKioskLevel;
                                 const isAdminAlert = currentStock <= alert.alertAdminLevel;
                                 
@@ -8021,6 +8046,11 @@ export default function AdminPage() {
                                       <div className="text-sm font-medium text-gray-900">
                                         {alert.productName || 'Unknown Product'}
                                       </div>
+                                      {alert.variantName && (
+                                        <div className="text-xs text-blue-600">
+                                          {alert.variantName}
+                                        </div>
+                                      )}
                                       <div className="text-xs text-gray-500">
                                         ID: {alert.productId}
                                       </div>
@@ -12587,170 +12617,301 @@ export default function AdminPage() {
                           />
                         </div>
 
-                        {/* Add Option Form */}
-                        <div className="border border-gray-200 rounded-lg p-3 bg-white">
-                          <div className="grid grid-cols-1 gap-3">
-                            {/* Option Details Row */}
-                            <div className="grid grid-cols-4 gap-2">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Option Name
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="e.g., Small"
-                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                  id="edit-option-name-input"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Price (฿)
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00"
-                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                  id="edit-option-price-input"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Member Price (฿)
-                                </label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  placeholder="0.00"
-                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                  id="edit-option-member-price-input"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Unit
-                                </label>
-                                <input
-                                  type="text"
-                                  placeholder="pcs, g, ml"
-                                  className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                  id="edit-option-unit-input"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Option Image Row */}
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Option Image (optional)
-                              </label>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
-                                id="edit-option-image-input"
-                              />
-                            </div>
-
-                            {/* Add Option Button */}
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const nameEl = document.getElementById(
-                                  "edit-option-name-input"
-                                );
-                                const priceEl = document.getElementById(
-                                  "edit-option-price-input"
-                                );
-                                const memberPriceEl = document.getElementById(
-                                  "edit-option-member-price-input"
-                                );
-                                const unitEl = document.getElementById(
-                                  "edit-option-unit-input"
-                                );
-                                const imageEl = document.getElementById(
-                                  "edit-option-image-input"
-                                );
-
-                                const optionName = nameEl.value.trim();
-                                const optionPrice =
-                                  parseFloat(priceEl.value) || 0;
-                                const optionMemberPrice =
-                                  parseFloat(memberPriceEl.value) || 0;
-                                const optionUnit = unitEl.value.trim();
-                                const optionImageFile = imageEl.files[0];
-
-                                if (!optionName) {
-                                  alert("Please enter an option name");
-                                  return;
-                                }
-
-                                let optionImageUrl = null;
-                                if (optionImageFile) {
-                                  optionImageUrl =
-                                    URL.createObjectURL(optionImageFile);
-                                }
-
-                                const variantGroupName = document
-                                  .getElementById("edit-variant-group-name")
-                                  .value.trim();
-
-                                if (!variantGroupName) {
-                                  alert(
-                                    "Please enter a variant group name first"
-                                  );
-                                  return;
-                                }
-
-                                const newOption = {
-                                  name: optionName,
-                                  price: optionPrice,
-                                  memberPrice: optionMemberPrice,
-                                  unit: optionUnit,
-                                  imageUrl: optionImageUrl,
-                                  imageFile: optionImageFile,
-                                };
-
-                                const updatedVariants = [
-                                  ...(productForm.variants || []),
-                                ];
-
-                                const existingGroupIndex =
-                                  updatedVariants.findIndex(
-                                    (group) =>
-                                      group.variantName === variantGroupName
-                                  );
-
-                                if (existingGroupIndex >= 0) {
-                                  updatedVariants[
-                                    existingGroupIndex
-                                  ].options.push(newOption);
-                                } else {
-                                  updatedVariants.push({
-                                    variantName: variantGroupName,
-                                    options: [newOption],
-                                  });
-                                }
-
-                                setProductForm({
-                                  ...productForm,
-                                  variants: updatedVariants,
-                                });
-
-                                nameEl.value = "";
-                                priceEl.value = "";
-                                memberPriceEl.value = "";
-                                unitEl.value = "";
-                                imageEl.value = "";
-                              }}
-                              className="px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                              Add Option to Group
-                            </button>
+                        {/* Options for this variant group */}
+                        <div id="edit-variant-options-container">
+                          <label className="block text-xs font-medium text-gray-700 mb-2">
+                            Add Options to this Variant Group:
+                          </label>
+                          <div className="space-y-2" id="edit-variant-options-list">
+                            {/* Options will be added here dynamically */}
                           </div>
+
+                          {/* Add Option Form */}
+                          <div className="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div className="grid grid-cols-1 gap-3">
+                              {/* Option Details Row */}
+                              <div className="grid grid-cols-4 gap-2">
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Option Name
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g., Small"
+                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    id="edit-option-name-input"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Price (฿)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    id="edit-option-price-input"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Member Price (฿)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    placeholder="0.00"
+                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    id="edit-option-member-price-input"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                                    Unit
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="pcs, g, ml"
+                                    className="w-full px-2 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
+                                    id="edit-option-unit-input"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Option Image Row */}
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 mb-1">
+                                  Option Image (optional)
+                                </label>
+                                <div className="flex gap-3">
+                                  {/* Image Preview */}
+                                  {editOptionImageFile && (
+                                    <div className="relative">
+                                      <img
+                                        src={URL.createObjectURL(editOptionImageFile)}
+                                        alt="Option preview"
+                                        className="w-16 h-16 object-cover rounded border"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditOptionImageFile(null)}
+                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  )}
+
+                                  {/* Upload Button */}
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      onChange={(e) => setEditOptionImageFile(e.target.files[0])}
+                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                      id="edit-option-image-upload"
+                                    />
+                                    <label
+                                      htmlFor="edit-option-image-upload"
+                                      className={`block w-full px-3 py-2 border border-dashed rounded-md text-center cursor-pointer text-xs transition-colors ${
+                                        editOptionImageFile
+                                          ? "border-green-300 bg-green-50 text-green-600"
+                                          : "border-gray-300 bg-gray-50 text-gray-500 hover:border-gray-400"
+                                      }`}
+                                    >
+                                      {editOptionImageFile
+                                        ? "Change image"
+                                        : "Click to upload option image"}
+                                    </label>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Add Option Button */}
+                              <div className="mt-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const optionName = document
+                                      .getElementById("edit-option-name-input")
+                                      .value.trim();
+                                    const optionPrice =
+                                      parseFloat(
+                                        document.getElementById(
+                                          "edit-option-price-input"
+                                        ).value
+                                      ) || 0;
+                                    const memberPriceRaw =
+                                      document.getElementById(
+                                        "edit-option-member-price-input"
+                                      ).value;
+                                    const optionMemberPrice =
+                                      memberPriceRaw.trim() === ""
+                                        ? null
+                                        : parseFloat(memberPriceRaw) || 0;
+                                    const optionUnit = document
+                                      .getElementById("edit-option-unit-input")
+                                      .value.trim();
+
+                                    if (optionName) {
+                                      // Handle option image
+                                      let optionImageData = null;
+                                      if (editOptionImageFile) {
+                                        optionImageData = {
+                                          file: editOptionImageFile,
+                                          url: URL.createObjectURL(editOptionImageFile),
+                                          name: editOptionImageFile.name,
+                                        };
+                                      }
+
+                                      // Add to temporary options list display
+                                      const optionsList = document.getElementById(
+                                        "edit-variant-options-list"
+                                      );
+                                      const optionDiv = document.createElement("div");
+                                      optionDiv.className =
+                                        "flex items-center justify-between bg-white p-2 rounded border";
+
+                                      const imagePreview = optionImageData
+                                        ? `<img src="${optionImageData.url}" alt="${optionName}" class="w-8 h-8 object-cover rounded mr-2" />`
+                                        : '<div class="w-8 h-8 bg-gray-200 rounded mr-2 flex items-center justify-center"><svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></div>';
+
+                                      const memberSegment =
+                                        optionMemberPrice !== null
+                                          ? ` /M ฿${optionMemberPrice}`
+                                          : "";
+                                      optionDiv.innerHTML = `
+                                        <div class="flex items-center">
+                                          ${imagePreview}
+                                          <span class="text-sm">${optionName} - ฿${optionPrice}${memberSegment}${
+                                        optionUnit ? ` (${optionUnit})` : ""
+                                      }</span>
+                                        </div>
+                                        <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800 text-xs">Remove</button>
+                                      `;
+
+                                      // Store image data as a property
+                                      if (optionImageData) {
+                                        optionDiv._imageData = optionImageData;
+                                      }
+
+                                      optionsList.appendChild(optionDiv);
+
+                                      // Clear inputs
+                                      document.getElementById("edit-option-name-input").value = "";
+                                      document.getElementById("edit-option-price-input").value = "";
+                                      document.getElementById("edit-option-unit-input").value = "";
+                                      document.getElementById("edit-option-member-price-input").value = "";
+                                      setEditOptionImageFile(null);
+                                    } else {
+                                      alert("Please enter option name");
+                                    }
+                                  }}
+                                  className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+                                >
+                                  + Add Option
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Save Variant Group Button */}
+                        <div className="mt-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const groupName = document
+                                .getElementById("edit-variant-group-name")
+                                .value.trim();
+                              const optionsList = document.getElementById(
+                                "edit-variant-options-list"
+                              );
+                              const optionElements = optionsList.children;
+
+                              if (!groupName) {
+                                alert("Please enter variant group name");
+                                return;
+                              }
+
+                              if (optionElements.length === 0) {
+                                alert(
+                                  "Please add at least one option to this variant group"
+                                );
+                                return;
+                              }
+
+                              // Extract options from DOM
+                              const options = [];
+                              for (let i = 0; i < optionElements.length; i++) {
+                                const optionElement = optionElements[i];
+                                const optionText = optionElement.querySelector("span").textContent;
+                                const parts = optionText.split(" - ฿");
+                                const name = parts[0];
+                                const remainder = parts[1] || "0";
+                                
+                                let price = 0;
+                                let memberPrice = undefined;
+                                let unit = "";
+                                
+                                // Extract unit if present in parentheses at end
+                                const unitMatch = remainder.match(/\(([^)]+)\)$/);
+                                if (unitMatch) {
+                                  unit = unitMatch[1];
+                                }
+                                const remainderNoUnit = unitMatch
+                                  ? remainder.replace(unitMatch[0], "").trim()
+                                  : remainder.trim();
+                                const memberMatch = remainderNoUnit.match(/(.*) \/M ฿(.*)/);
+                                if (memberMatch) {
+                                  price = parseFloat(memberMatch[1]) || 0;
+                                  const mp = parseFloat(memberMatch[2]);
+                                  if (!isNaN(mp)) memberPrice = mp;
+                                } else {
+                                  price = parseFloat(remainderNoUnit) || 0;
+                                }
+
+                                // Get image data if exists
+                                const imageData = optionElement._imageData || null;
+
+                                options.push({
+                                  id: Date.now().toString() + i,
+                                  name: name,
+                                  price: price,
+                                  ...(memberPrice !== undefined ? { memberPrice } : {}),
+                                  unit: unit,
+                                  image: imageData ? imageData.file : null,
+                                  imageUrl: imageData ? imageData.url : "",
+                                  isActive: true,
+                                });
+                              }
+
+                              // Create new variant group
+                              const newVariantGroup = {
+                                id: Date.now().toString(),
+                                variantName: groupName,
+                                options: options,
+                                order: (productForm.variants?.length || 0) + 1,
+                              };
+
+                              // Add to product form variants
+                              setProductForm({
+                                ...productForm,
+                                variants: [...(productForm.variants || []), newVariantGroup],
+                              });
+
+                              // Clear form
+                              document.getElementById("edit-variant-group-name").value = "";
+                              document.getElementById("edit-variant-options-list").innerHTML = "";
+                              setEditOptionImageFile(null);
+                            }}
+                            className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Save Variant Group
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -14306,26 +14467,97 @@ export default function AdminPage() {
                               `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
                             )
                             .slice(0, 50)
-                            .map(p => (
-                              <div
-                                key={p.id}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setSelectedProductForAlert(p);
-                                  setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
-                                  setShowAlertProductDropdown(false);
-                                }}
-                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                              >
-                                <div className="font-medium text-gray-900">
-                                  {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  Current Stock: {getCurrentStock(p)}
-                                </div>
-                              </div>
-                            ))}
+                            .map(p => {
+                              if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
+                                return p.variants.map(variant => {
+                                  if (variant.options && Array.isArray(variant.options)) {
+                                    return variant.options.map(option => (
+                                      <div
+                                        key={`${p.id}-${variant.id}-${option.id}`}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          console.log('Stock Alert: Selecting product variant:', p.name, variant.variantName, option.name);
+                                          const productWithVariant = {
+                                            ...p,
+                                            variantId: `${variant.id}-${option.id}`,
+                                            variantName: `${variant.variantName}: ${option.name}`,
+                                            selectedVariant: variant,
+                                            selectedOption: option
+                                          };
+                                          setSelectedProductForAlert(productWithVariant);
+                                          setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
+                                          setShowAlertProductDropdown(false);
+                                        }}
+                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                      >
+                                        <div className="font-medium text-gray-900">
+                                          {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                        </div>
+                                        <div className="text-xs text-blue-600">
+                                          {variant.variantName}: {option.name}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          Current Stock: {getCurrentStock(p, `${variant.id}-${option.id}`)}
+                                        </div>
+                                      </div>
+                                    ));
+                                  }
+                                  return (
+                                    <div
+                                      key={`${p.id}-${variant.id}`}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        console.log('Stock Alert: Selecting product variant (no options):', p.name, variant.name);
+                                        const productWithVariant = {
+                                          ...p,
+                                          variantId: variant.id,
+                                          variantName: variant.name || `Variant ${variant.id}`,
+                                          selectedVariant: variant
+                                        };
+                                        setSelectedProductForAlert(productWithVariant);
+                                        setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
+                                        setShowAlertProductDropdown(false);
+                                      }}
+                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                    >
+                                      <div className="font-medium text-gray-900">
+                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                      </div>
+                                      <div className="text-xs text-blue-600">
+                                        {variant.name || 'Variant'}
+                                      </div>
+                                      <div className="text-xs text-gray-500">
+                                        Current Stock: {getCurrentStock(p, variant.id)}
+                                      </div>
+                                    </div>
+                                  );
+                                }).flat();
+                              } else {
+                                return (
+                                  <div
+                                    key={p.id}
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      console.log('Stock Alert: Selecting product (no variants):', p.name);
+                                      setSelectedProductForAlert(p);
+                                      setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                      setShowAlertProductDropdown(false);
+                                    }}
+                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                  >
+                                    <div className="font-medium text-gray-900">
+                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Current Stock: {getCurrentStock(p)}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                            }).flat()}
                           
                           {alertProductSearch && products.filter(p => 
                             `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
@@ -14388,7 +14620,12 @@ export default function AdminPage() {
                   {selectedProductForAlert && (
                     <div className="mt-4 p-3 bg-blue-50 rounded-md">
                       <p className="text-sm text-blue-800">
-                        <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert)} units
+                        <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId)} units
+                        {selectedProductForAlert.variantName && (
+                          <span className="block text-xs text-blue-600 mt-1">
+                            Variant: {selectedProductForAlert.variantName}
+                          </span>
+                        )}
                       </p>
                     </div>
                   )}
@@ -14432,7 +14669,7 @@ export default function AdminPage() {
                         <tbody className="bg-white divide-y divide-gray-200">
                           {stockAlerts.map((alert) => {
                             const product = products.find(p => p.id === alert.productId);
-                            const currentStock = product ? getCurrentStock(product) : 0;
+                            const currentStock = product ? getCurrentStock(product, alert.variantId) : 0;
                             const isKioskAlert = currentStock <= alert.alertKioskLevel;
                             const isAdminAlert = currentStock <= alert.alertAdminLevel;
                             
@@ -14442,6 +14679,11 @@ export default function AdminPage() {
                                   <div className="text-sm font-medium text-gray-900">
                                     {alert.productName || 'Unknown Product'}
                                   </div>
+                                  {alert.variantName && (
+                                    <div className="text-xs text-blue-600">
+                                      {alert.variantName}
+                                    </div>
+                                  )}
                                   <div className="text-xs text-gray-500">
                                     ID: {alert.productId}
                                   </div>
