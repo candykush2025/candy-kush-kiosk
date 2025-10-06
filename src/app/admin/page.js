@@ -31,6 +31,7 @@ import {
   NonMemberCategoriesService,
 } from "../../lib/productService";
 import { VisitService } from "../../lib/visitService";
+import { StockService } from "../../lib/stockService";
 import { countries } from "../../lib/countries";
 import {
   Users,
@@ -39,6 +40,7 @@ import {
   BarChart,
   Star,
   User,
+  Package,
   Trash2,
   TrendingUp,
   ChevronRight,
@@ -410,6 +412,18 @@ export default function AdminPage() {
   const [storeName, setStoreName] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // Stock Management states
+  const [stockMovements, setStockMovements] = useState([]);
+  const [showAddStockIn, setShowAddStockIn] = useState(false);
+  const [stockInForm, setStockInForm] = useState({
+    supplier: "",
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+    products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+  });
+  const [isStockSaving, setIsStockSaving] = useState(false);
+  const [stockSearchTerm, setStockSearchTerm] = useState("");
 
   // Complex Product Form States
   const [hasVariants, setHasVariants] = useState(false);
@@ -2694,6 +2708,134 @@ export default function AdminPage() {
     }
   };
 
+  // Stock Management handlers
+  const loadStockMovements = async () => {
+    try {
+      const movements = await StockService.getAllStockMovements();
+      setStockMovements(movements);
+    } catch (error) {
+      console.error("Error loading stock movements:", error);
+    }
+  };
+
+  const handleAddStockIn = () => {
+    if (!checkInputPermission()) return;
+    setStockInForm({
+      supplier: "",
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+      products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+    });
+    setShowAddStockIn(true);
+  };
+
+  const handleCancelStockIn = () => {
+    setShowAddStockIn(false);
+    setStockInForm({
+      supplier: "",
+      date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
+      products: [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+    });
+  };
+
+  const handleSaveStockIn = async (e) => {
+    e.preventDefault();
+
+    if (!checkInputPermission()) return;
+
+    if (isStockSaving) return;
+
+    try {
+      setIsStockSaving(true);
+
+      // Validate required fields
+      if (!stockInForm.supplier.trim()) {
+        alert("Please enter supplier name");
+        return;
+      }
+
+      if (!stockInForm.date || !stockInForm.time) {
+        alert("Please enter date and time");
+        return;
+      }
+
+      // Validate products
+      for (const product of stockInForm.products) {
+        if (!product.productId || !product.productName) {
+          alert("Please select all products");
+          return;
+        }
+        if (product.quantity <= 0) {
+          alert("Please enter valid quantities");
+          return;
+        }
+        if (product.buyPrice < 0) {
+          alert("Please enter valid buy prices");
+          return;
+        }
+      }
+
+      // Save stock in
+      await StockService.addStockIn(stockInForm);
+      
+      // Reload stock movements
+      await loadStockMovements();
+      
+      alert("Stock in added successfully!");
+      setShowAddStockIn(false);
+      
+    } catch (error) {
+      console.error("Error saving stock in:", error);
+      alert("Error saving stock in. Please try again.");
+    } finally {
+      setIsStockSaving(false);
+    }
+  };
+
+  const addProductToStockIn = () => {
+    setStockInForm({
+      ...stockInForm,
+      products: [
+        ...stockInForm.products,
+        { productId: "", productName: "", quantity: 0, buyPrice: 0 }
+      ]
+    });
+  };
+
+  const removeProductFromStockIn = (index) => {
+    const newProducts = stockInForm.products.filter((_, i) => i !== index);
+    setStockInForm({
+      ...stockInForm,
+      products: newProducts.length > 0 ? newProducts : [{ productId: "", productName: "", quantity: 0, buyPrice: 0 }]
+    });
+  };
+
+  const updateStockInProduct = (index, field, value) => {
+    const newProducts = [...stockInForm.products];
+    newProducts[index] = { ...newProducts[index], [field]: value };
+    
+    // If productId is selected, auto-fill productName
+    if (field === 'productId' && value) {
+      const selectedProduct = products.find(p => p.id === value);
+      if (selectedProduct) {
+        newProducts[index].productName = selectedProduct.name;
+      }
+    }
+    
+    setStockInForm({
+      ...stockInForm,
+      products: newProducts
+    });
+  };
+
+  // Load stock movements when tab is accessed
+  useEffect(() => {
+    if (activeTab === 'stockManagement') {
+      loadStockMovements();
+    }
+  }, [activeTab]);
+
   // Filter transactions based on selected criteria
   const filterTransactions = useCallback(() => {
     let filtered = [...transactions];
@@ -2914,6 +3056,18 @@ export default function AdminPage() {
                   Admin Management
                 </button>
               )}
+
+              <button
+                onClick={() => setActiveTab("stockManagement")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "stockManagement"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <Package className="w-5 h-5 mr-3" />
+                Stock Management
+              </button>
 
               <button
                 onClick={() => setActiveTab("settings")}
@@ -6585,6 +6739,108 @@ export default function AdminPage() {
                 </div>
               )}
 
+              {/* Stock Management Tab */}
+              {activeTab === "stockManagement" && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Stock Management
+                      </h3>
+                      <button
+                        onClick={handleAddStockIn}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2"
+                      >
+                        <Package className="w-4 h-4" />
+                        Add Stock In
+                      </button>
+                    </div>
+
+                    {/* Stock Movements Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-50">
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Date & Time
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Supplier
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Products
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Total Quantity
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Total Value
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stockMovements.length === 0 ? (
+                            <tr>
+                              <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                No stock movements found. Click "Add Stock In" to get started.
+                              </td>
+                            </tr>
+                          ) : (
+                            stockMovements.map((movement) => (
+                              <tr key={movement.id} className="hover:bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="text-sm">
+                                    <div className="font-medium">{movement.date}</div>
+                                    <div className="text-gray-500">{movement.time}</div>
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="font-medium">{movement.supplier}</div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="space-y-1">
+                                    {movement.products?.map((product, index) => (
+                                      <div key={index} className="text-sm">
+                                        <div className="font-medium">{product.productName}</div>
+                                        <div className="text-gray-500">
+                                          Qty: {product.quantity} @ ฿{product.buyPrice.toFixed(2)}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="font-medium">
+                                    {movement.products?.reduce((sum, p) => sum + (p.quantity || 0), 0) || 0}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <div className="font-medium text-green-600">
+                                    ฿{movement.products?.reduce((sum, p) => sum + ((p.quantity || 0) * (p.buyPrice || 0)), 0).toFixed(2) || '0.00'}
+                                  </div>
+                                </td>
+                                <td className="border border-gray-300 px-4 py-2">
+                                  <button
+                                    onClick={() => StockService.deleteStockMovement(movement.id).then(() => loadStockMovements())}
+                                    className="text-red-600 hover:text-red-800 p-1"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Settings Tab */}
               {activeTab === "settings" && (
                 <div className="space-y-6">
@@ -6657,6 +6913,190 @@ export default function AdminPage() {
             </div>
           </main>
         </div>
+
+        {/* Add Stock In Modal */}
+        {showAddStockIn && (
+          <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
+            <div className="relative mt-10 mb-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Add Stock In
+                  </h3>
+                  <button
+                    onClick={handleCancelStockIn}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSaveStockIn} className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Supplier *
+                      </label>
+                      <input
+                        type="text"
+                        value={stockInForm.supplier}
+                        onChange={(e) => setStockInForm({...stockInForm, supplier: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        placeholder="Enter supplier name"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Date *
+                      </label>
+                      <input
+                        type="date"
+                        value={stockInForm.date}
+                        onChange={(e) => setStockInForm({...stockInForm, date: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Time *
+                      </label>
+                      <input
+                        type="time"
+                        value={stockInForm.time}
+                        onChange={(e) => setStockInForm({...stockInForm, time: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Products Section */}
+                  <div>
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="text-md font-medium text-gray-900">Products</h4>
+                      <button
+                        type="button"
+                        onClick={addProductToStockIn}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                      >
+                        Add Product
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      {stockInForm.products.map((product, index) => (
+                        <div key={index} className="flex gap-3 items-end p-4 border border-gray-200 rounded-lg">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Product *
+                            </label>
+                            <select
+                              value={product.productId}
+                              onChange={(e) => updateStockInProduct(index, 'productId', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                              required
+                            >
+                              <option value="">Select Product</option>
+                              {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.categoryName} - {p.subcategoryName})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="w-24">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Quantity *
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={product.quantity}
+                              onChange={(e) => updateStockInProduct(index, 'quantity', parseInt(e.target.value) || 0)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                              placeholder="0"
+                              required
+                            />
+                          </div>
+                          <div className="w-32">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Buy Price (฿) *
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={product.buyPrice}
+                              onChange={(e) => updateStockInProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                              placeholder="0.00"
+                              required
+                            />
+                          </div>
+                          <div className="w-32">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Total
+                            </label>
+                            <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                              ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                            </div>
+                          </div>
+                          {stockInForm.products.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeProductFromStockIn(index)}
+                              className="text-red-600 hover:text-red-800 p-2"
+                              title="Remove Product"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Total Summary */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">Total Products:</span>
+                        <span>{stockInForm.products.reduce((sum, p) => sum + (p.quantity || 0), 0)}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-2">
+                        <span className="font-medium">Total Value:</span>
+                        <span className="text-lg font-bold text-green-600">
+                          ฿{stockInForm.products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.buyPrice || 0)), 0).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={handleCancelStockIn}
+                      className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isStockSaving}
+                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-green-400"
+                    >
+                      {isStockSaving ? "Saving..." : "Save Stock In"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Add Customer Modal */}
         {showAddCustomer && (
