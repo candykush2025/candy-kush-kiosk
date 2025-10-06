@@ -428,6 +428,10 @@ export default function AdminPage() {
   // Stock Alert Management states
   const [stockAlerts, setStockAlerts] = useState([]);
   const [showStockAlertModal, setShowStockAlertModal] = useState(false);
+
+  // Purchase Details Modal states
+  const [showPurchaseDetails, setShowPurchaseDetails] = useState(false);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState(null);
   const [selectedProductForAlert, setSelectedProductForAlert] = useState(null);
   const [alertKioskLevel, setAlertKioskLevel] = useState("");
   const [alertAdminLevel, setAlertAdminLevel] = useState("");
@@ -3073,18 +3077,20 @@ export default function AdminPage() {
   const loadStockAlerts = async () => {
     try {
       const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
-      
+      const { db } = await import('../../lib/firebase');
+
       const alertsRef = collection(db, 'StockAlert');
       const q = query(alertsRef, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       
       const alerts = [];
       querySnapshot.forEach((doc) => {
+        const data = doc.data() || {};
         alerts.push({
           id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate(),
+          ...data,
+          createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : data.createdAt || null,
+          updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : data.updatedAt || null,
         });
       });
       
@@ -7712,63 +7718,107 @@ export default function AdminPage() {
                     {/* Recent Purchases */}
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Purchases</h4>
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse border border-gray-300">
-                          <thead>
-                            <tr className="bg-gray-50">
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Date</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Supplier</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Product</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Quantity</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Price</th>
-                              <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {stockMovements.filter(m => m.status === 'purchasing').length === 0 ? (
-                              <tr>
-                                <td colSpan="6" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
-                                  No purchases found. Click "Add Purchase" to get started.
-                                </td>
-                              </tr>
-                            ) : (
-                              stockMovements
-                                .filter(m => m.status === 'purchasing')
-                                .slice(0, 10)
-                                .map((movement) => (
-                                  <tr key={movement.id} className="hover:bg-gray-50">
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="text-sm">
-                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                      <div className="space-y-4">
+                        {(() => {
+                          // Group purchases by purchase order (orderId or date+supplier+time combination)
+                          const purchaseOrders = stockMovements
+                            .filter(m => m.status === 'purchasing')
+                            .reduce((orders, movement) => {
+                              // Use orderId if available, otherwise create a key from date+supplier+time
+                              const orderKey = movement.orderId || 
+                                `${movement.supplier}-${movement.date}-${movement.time}`;
+                              
+                              if (!orders[orderKey]) {
+                                orders[orderKey] = {
+                                  id: orderKey,
+                                  orderId: movement.orderId,
+                                  supplier: movement.supplier,
+                                  date: movement.date,
+                                  time: movement.time,
+                                  createdAt: movement.createdAt,
+                                  items: [],
+                                  totalValue: 0
+                                };
+                              }
+                              
+                              orders[orderKey].items.push(movement);
+                              orders[orderKey].totalValue += (movement.quantity || 0) * (movement.price || 0);
+                              
+                              return orders;
+                            }, {});
+
+                          const sortedOrders = Object.values(purchaseOrders)
+                            .sort((a, b) => {
+                              const dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000) : new Date(a.date + ' ' + a.time);
+                              const dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000) : new Date(b.date + ' ' + b.time);
+                              return dateB - dateA;
+                            })
+                            .slice(0, 10);
+
+                          if (sortedOrders.length === 0) {
+                            return (
+                              <div className="border border-gray-300 rounded-lg p-8 text-center text-gray-500">
+                                No purchases found. Click "Add Purchase" to get started.
+                              </div>
+                            );
+                          }
+
+                          return sortedOrders.map((order) => (
+                            <div key={order.id} className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
+                              <div className="p-4">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-4 mb-2">
+                                      <h5 className="font-semibold text-gray-900">
+                                        Purchase Order #{order.orderId || order.id.substring(0, 8)}
+                                      </h5>
+                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                                      </span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                                      <div>
+                                        <span className="font-medium">Date:</span><br />
+                                        {order.createdAt ? 
+                                          new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 
+                                          order.date || 'N/A'
+                                        }
                                       </div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium">{movement.supplier}</div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="text-sm">
-                                        <div className="font-medium">{movement.productName}</div>
-                                        {movement.variantName && (
-                                          <div className="text-gray-500">{movement.variantName}</div>
-                                        )}
+                                      <div>
+                                        <span className="font-medium">Time:</span><br />
+                                        {order.createdAt ? 
+                                          new Date(order.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                                          order.time || 'N/A'
+                                        }
                                       </div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium text-green-600">+{movement.quantity}</div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium">฿{movement.price ? movement.price.toFixed(2) : '0.00'}</div>
-                                    </td>
-                                    <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium text-green-600">
-                                        ฿{((movement.quantity || 0) * (movement.price || 0)).toFixed(2)}
+                                      <div>
+                                        <span className="font-medium">Supplier:</span><br />
+                                        {order.supplier}
                                       </div>
-                                    </td>
-                                  </tr>
-                                ))
-                            )}
-                          </tbody>
-                        </table>
+                                      <div>
+                                        <span className="font-medium">Total Value:</span><br />
+                                        <span className="font-semibold text-green-600">
+                                          ฿{order.totalValue.toFixed(2)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  
+                                  <button
+                                    onClick={() => {
+                                      setSelectedPurchaseOrder(order);
+                                      setShowPurchaseDetails(true);
+                                    }}
+                                    className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                  >
+                                    View Details
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -8108,6 +8158,126 @@ export default function AdminPage() {
             </div>
           </main>
         </div>
+
+        {/* Purchase Details Modal */}
+        {showPurchaseDetails && selectedPurchaseOrder && (
+          <div className="fixed inset-0 bg-gray-600/50 z-50 flex items-start justify-center overflow-y-auto">
+            <div className="relative mt-10 mb-10 mx-auto p-5 border w-full max-w-4xl shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Purchase Order Details - #{selectedPurchaseOrder.orderId || selectedPurchaseOrder.id.substring(0, 8)}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowPurchaseDetails(false);
+                      setSelectedPurchaseOrder(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Purchase Order Summary */}
+                <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Date</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedPurchaseOrder.createdAt ? 
+                          new Date(selectedPurchaseOrder.createdAt.seconds * 1000).toLocaleDateString() : 
+                          selectedPurchaseOrder.date || 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Time</label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedPurchaseOrder.createdAt ? 
+                          new Date(selectedPurchaseOrder.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
+                          selectedPurchaseOrder.time || 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Supplier</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedPurchaseOrder.supplier}</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Total Items</label>
+                      <p className="mt-1 text-sm text-gray-900">{selectedPurchaseOrder.items.length}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Purchase Items Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse border border-gray-300">
+                    <thead>
+                      <tr className="bg-gray-50">
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Product</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Variant</th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Quantity</th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Buy Price</th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Line Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedPurchaseOrder.items.map((item, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="font-medium">{item.productName}</div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2">
+                            <div className="text-sm text-gray-600">
+                              {item.variantName || 'No variant'}
+                            </div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-right">
+                            <div className="font-medium text-green-600">+{item.quantity}</div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-right">
+                            <div className="font-medium">฿{item.price ? item.price.toFixed(2) : '0.00'}</div>
+                          </td>
+                          <td className="border border-gray-300 px-4 py-2 text-right">
+                            <div className="font-medium text-green-600">
+                              ฿{((item.quantity || 0) * (item.price || 0)).toFixed(2)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-gray-100 font-semibold">
+                        <td colSpan="4" className="border border-gray-300 px-4 py-2 text-right">
+                          Total Purchase Value:
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-right text-green-600">
+                          ฿{selectedPurchaseOrder.totalValue.toFixed(2)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="flex justify-end mt-6">
+                  <button
+                    onClick={() => {
+                      setShowPurchaseDetails(false);
+                      setSelectedPurchaseOrder(null);
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition-colors"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Add Stock In Modal */}
         {showAddStockIn && (
