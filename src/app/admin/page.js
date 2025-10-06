@@ -18,6 +18,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import AdminAuthGuard from "../../components/AdminAuthGuard";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
@@ -161,9 +162,11 @@ export default function AdminPage() {
           </svg>
         </button>
         {cat?.image && (
-          <img
+          <Image
             src={cat.image}
             alt={cat.name}
+            width={48}
+            height={48}
             className="w-12 h-12 object-cover rounded-lg border border-gray-200"
           />
         )}
@@ -4891,9 +4894,11 @@ export default function AdminPage() {
                                     </div>
                                     <div className="relative group">
                                       {category.image ? (
-                                        <img
+                                        <Image
                                           src={category.image}
                                           alt={category.name}
+                                          width={64}
+                                          height={64}
                                           className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 shadow-sm group-hover:shadow-md transition-all duration-200"
                                         />
                                       ) : (
@@ -5106,9 +5111,11 @@ export default function AdminPage() {
                                                       </svg>
                                                     </div>
                                                     {subcategory.image ? (
-                                                      <img
+                                                      <Image
                                                         src={subcategory.image}
                                                         alt={subcategory.name}
+                                                        width={48}
+                                                        height={48}
                                                         className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                                       />
                                                     ) : (
@@ -5389,13 +5396,15 @@ export default function AdminPage() {
                                                                   <div className="flex items-center space-x-3">
                                                                     <div className="relative">
                                                                       {product.mainImage ? (
-                                                                        <img
+                                                                        <Image
                                                                           src={
                                                                             product.mainImage
                                                                           }
                                                                           alt={
                                                                             product.name
                                                                           }
+                                                                          width={40}
+                                                                          height={40}
                                                                           className="w-10 h-10 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                                                         />
                                                                       ) : (
@@ -5782,13 +5791,15 @@ export default function AdminPage() {
                                                                                             >
                                                                                               <div className="flex items-center space-x-3">
                                                                                                 {optionImage && (
-                                                                                                  <img
+                                                                                                  <Image
                                                                                                     src={
                                                                                                       optionImage
                                                                                                     }
                                                                                                     alt={
                                                                                                       optionName
                                                                                                     }
+                                                                                                    width={40}
+                                                                                                    height={40}
                                                                                                     className="w-10 h-10 object-cover rounded-md border border-gray-200"
                                                                                                   />
                                                                                                 )}
@@ -5833,13 +5844,15 @@ export default function AdminPage() {
                                                                                       <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
                                                                                         <div className="flex items-center space-x-3">
                                                                                           {variant.image && (
-                                                                                            <img
+                                                                                            <Image
                                                                                               src={
                                                                                                 variant.image
                                                                                               }
                                                                                               alt={
                                                                                                 variantName
                                                                                               }
+                                                                                              width={40}
+                                                                                              height={40}
                                                                                               className="w-10 h-10 object-cover rounded-md border border-gray-200"
                                                                                             />
                                                                                           )}
@@ -6028,7 +6041,7 @@ export default function AdminPage() {
                                                             product
                                                               .images?.[0] ||
                                                             product.image ? (
-                                                              <img
+                                                              <Image
                                                                 src={
                                                                   product.mainImage ||
                                                                   product
@@ -6038,6 +6051,8 @@ export default function AdminPage() {
                                                                 alt={
                                                                   product.name
                                                                 }
+                                                                width={48}
+                                                                height={48}
                                                                 className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                                                 onError={(
                                                                   e
@@ -6370,10 +6385,12 @@ export default function AdminPage() {
                                   <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
                                       {product.mainImage && (
-                                        <img
+                                        <Image
                                           className="h-10 w-10 rounded-lg object-cover mr-4"
                                           src={product.mainImage}
                                           alt={product.name}
+                                          width={40}
+                                          height={40}
                                         />
                                       )}
                                       <div>
@@ -6709,7 +6726,7 @@ export default function AdminPage() {
                               <div className="bg-gray-50 rounded-xl p-6">
                                 <h4 className="text-lg font-semibold text-gray-900 mb-2">No Stock Alert</h4>
                                 <p className="text-sm text-gray-600 mb-3">
-                                  This product doesn't have stock alerts configured.
+                                  This product doesn&apos;t have stock alerts configured.
                                 </p>
                                 <button
                                   onClick={() => {
@@ -10706,9 +10723,11 @@ export default function AdminPage() {
                     {/* Image Preview */}
                     {categoryImageFile && (
                       <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
-                        <img
+                        <Image
                           src={URL.createObjectURL(categoryImageFile)}
                           alt="Category preview"
+                          width={400}
+                          height={192}
                           className="w-full max-h-48 object-contain rounded-md"
                         />
                         <button
@@ -10794,9 +10813,11 @@ export default function AdminPage() {
                     {/* Background Image Preview */}
                     {categoryBackgroundImageFile && (
                       <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
-                        <img
+                        <Image
                           src={URL.createObjectURL(categoryBackgroundImageFile)}
                           alt="Background preview"
+                          width={400}
+                          height={192}
                           className="w-full max-h-48 object-contain rounded-md"
                         />
                         <button
@@ -11037,9 +11058,11 @@ export default function AdminPage() {
                     {/* Image Preview (new selection) */}
                     {categoryImageFile && (
                       <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
-                        <img
+                        <Image
                           src={URL.createObjectURL(categoryImageFile)}
                           alt="Category preview"
+                          width={400}
+                          height={192}
                           className="w-full max-h-48 object-contain rounded-md"
                         />
                         <button
@@ -11057,9 +11080,11 @@ export default function AdminPage() {
                       !removeExistingCategoryImage && (
                         <div className="space-y-2">
                           <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
-                            <img
+                            <Image
                               src={editingCategory.image}
                               alt="Current category image"
+                              width={400}
+                              height={192}
                               className="w-full max-h-48 object-contain rounded-md"
                             />
                           </div>
@@ -11141,9 +11166,11 @@ export default function AdminPage() {
                   <div className="space-y-3">
                     {categoryBackgroundImageFile && (
                       <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
-                        <img
+                        <Image
                           src={URL.createObjectURL(categoryBackgroundImageFile)}
                           alt="Background preview"
+                          width={400}
+                          height={192}
                           className="w-full max-h-48 object-contain rounded-md"
                         />
                         <button
@@ -12610,9 +12637,11 @@ export default function AdminPage() {
                                     >
                                       <div className="flex items-center space-x-2">
                                         {option.imageUrl && (
-                                          <img
+                                          <Image
                                             src={option.imageUrl}
                                             alt={option.name}
+                                            width={24}
+                                            height={24}
                                             className="w-6 h-6 object-cover rounded border"
                                           />
                                         )}
@@ -12742,11 +12771,13 @@ export default function AdminPage() {
                                   {/* Image Preview */}
                                   {optionImageFile && (
                                     <div className="relative">
-                                      <img
+                                      <Image
                                         src={URL.createObjectURL(
                                           optionImageFile
                                         )}
                                         alt="Option preview"
+                                        width={64}
+                                        height={64}
                                         className="w-16 h-16 object-cover rounded border"
                                       />
                                       <button

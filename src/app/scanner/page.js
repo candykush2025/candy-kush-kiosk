@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { CustomerService } from "../../lib/customerService";
 import { VisitService } from "../../lib/visitService";
 import { useTranslation } from "react-i18next";
@@ -152,9 +153,11 @@ export default function QRScanner() {
               <div className="absolute inset-0 bg-gradient-radial from-white/20 via-transparent to-transparent"></div>
 
               {/* QR Logo */}
-              <img
+              <Image
                 src="/qrlogo.png"
                 alt="QR Logo"
+                width={240}
+                height={240}
                 className="w-60 h-60 mb-3 relative z-10"
               />
 
