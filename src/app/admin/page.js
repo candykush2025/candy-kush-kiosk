@@ -13616,13 +13616,15 @@ export default function AdminPage() {
                           name="editProductType"
                           value="simple"
                           checked={productForm.hasVariants === false}
-                          onChange={() =>
+                          onChange={() => {
                             setProductForm({
                               ...productForm,
                               hasVariants: false,
                               variants: [],
-                            })
-                          }
+                            });
+                            setVariants([]); // Clear variants state when switching to simple
+                            setHasVariants(false);
+                          }}
                           className="mr-2"
                         />
                         <div>
@@ -13640,13 +13642,14 @@ export default function AdminPage() {
                           name="editProductType"
                           value="variable"
                           checked={productForm.hasVariants === true}
-                          onChange={() =>
+                          onChange={() => {
                             setProductForm({
                               ...productForm,
                               hasVariants: true,
                               price: 0, // Clear simple price when switching to variants
-                            })
-                          }
+                            });
+                            setHasVariants(true); // Sync hasVariants state
+                          }}
                           className="mr-2"
                         />
                         <div>
@@ -13839,6 +13842,8 @@ export default function AdminPage() {
                                           ...productForm,
                                           variants: updatedVariants,
                                         });
+                                        // Sync with variants state
+                                        setVariants(updatedVariants);
                                       }}
                                       className="text-red-600 hover:text-red-800 text-sm"
                                     >
@@ -14001,6 +14006,8 @@ export default function AdminPage() {
                                                     setProductForm(
                                                       updatedProductForm
                                                     );
+                                                    // Sync with variants state
+                                                    setVariants(updated);
                                                     setEditingVariantOption(
                                                       null
                                                     );
@@ -14127,6 +14134,8 @@ export default function AdminPage() {
                                                       ...productForm,
                                                       variants: updatedVariants,
                                                     });
+                                                    // Sync with variants state
+                                                    setVariants(updatedVariants);
                                                   }}
                                                   className="text-red-600 hover:text-red-800 text-xs"
                                                 >
@@ -14445,10 +14454,13 @@ export default function AdminPage() {
                               };
 
                               // Add to product form variants
+                              const updatedVariants = [...(productForm.variants || []), newVariantGroup];
                               setProductForm({
                                 ...productForm,
-                                variants: [...(productForm.variants || []), newVariantGroup],
+                                variants: updatedVariants,
                               });
+                              // Sync with variants state
+                              setVariants(updatedVariants);
 
                               // Clear form
                               document.getElementById("edit-variant-group-name").value = "";

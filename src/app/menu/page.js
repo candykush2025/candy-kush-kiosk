@@ -50,6 +50,9 @@ export default function MenuPage() {
   const [visitRecorded, setVisitRecorded] = useState(false);
   const [showOrderComplete, setShowOrderComplete] = useState(false);
   const [completedOrder, setCompletedOrder] = useState(null);
+  const [showPersonalizedJoints, setShowPersonalizedJoints] = useState(false);
+  const [selectedJointType, setSelectedJointType] = useState(null);
+  const [showJointPopup, setShowJointPopup] = useState(false);
   const firstWindowRef = useRef(null);
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
   const [cartTimer, setCartTimer] = useState(60);
@@ -97,6 +100,25 @@ export default function MenuPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
+
+  // Personalized Joints product images mapping
+  const personalizedJointsImages = {
+    'outdoor': {
+      'sativa': '/Product/outdoor sativa king.png',
+      'hybrid': '/Product/outdoor hybrid king.png',
+      'indica': '/Product/outdoor indica king.png'
+    },
+    'indoor': {
+      'sativa': '/Product/indoor sativa king.png',
+      'hybrid': '/Product/indoor hybrid king.png',
+      'indica': '/Product/indoor indica king.png'
+    },
+    'top': {
+      'sativa': '/Product/top sativa king.png',
+      'hybrid': '/Product/top HYBRID king.png',
+      'indica': '/Product/top indica king.png'
+    }
+  };
   const [paymentError, setPaymentError] = useState(null);
   
   // Payment monitoring states
@@ -2153,6 +2175,8 @@ export default function MenuPage() {
 
   // Removed scroll buttons per request; panes will use native scroll.
 
+
+
   if (loading) {
     return (
       <div
@@ -2226,6 +2250,232 @@ export default function MenuPage() {
       </div>
     );
   }
+
+  // Show Personalized Joints page as separate layout
+  if (showPersonalizedJoints) {
+    return (
+      <div
+        className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
+        style={{
+          backgroundImage: "url(/background.jpg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* Header for Personalized Joints */}
+        <div className="p-4 flex items-center justify-between">
+          {/* Back Button */}
+          <button
+            onClick={() => {
+              setShowPersonalizedJoints(false);
+              setSelectedCategory(null);
+            }}
+            className="bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
+          >
+            <svg
+              className="w-12 h-12"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 19l-7-7 7-7"
+              ></path>
+            </svg>
+          </button>
+
+          {/* Logo - Center */}
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <Image
+                src="/logo.png"
+                alt="Candy Kush Logo"
+                width={120}
+                height={120}
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
+
+          {/* Right Section: Cart */}
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => setShowCart(true)}
+              className="relative bg-white rounded-lg border border-gray-300 hover:bg-gray-50 p-5 transition-colors duration-200"
+            >
+              <svg
+                className="w-12 h-12 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9m-9 0a2 2 0 100 4 2 2 0 000-4zm9 0a2 2 0 100 4 2 2 0 000-4z"
+                />
+              </svg>
+              {cart.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Customer Section */}
+        <CustomerSection customer={customer} />
+
+        {/* Main Personalized Joints Content */}
+        <div className="flex-1 min-h-0 p-6">
+          <div className="h-full `flex flex-col p-8">
+            {/* Title */}
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Personalized Joints</h1>
+              <p className="text-center text-gray-600">Select your preferred combination</p>
+            </div>
+
+            {/* 3x3 Grid - No Gaps, strict 220px cells */}
+            <div className="flex-1 w-full flex justify-center">
+              <div
+                className="mx-auto"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 220px)",
+                  gridTemplateRows: "repeat(4, 220px)",
+                  gap: "0px",
+                }}
+              >
+                {/* Empty corner */}
+                <div></div>
+                
+                {/* Header: Sativa, Hybrid, Indica */}
+                <div 
+                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
+                  style={{ backgroundColor: '#FDE047' }}
+                >
+                  Sativa
+                </div>
+                <div 
+                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center"
+                  style={{ backgroundColor: '#22C55E' }}
+                >
+                  Hybrid
+                </div>
+                <div 
+                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
+                  style={{ backgroundColor: '#3B82F6' }}
+                >
+                  Indica
+                </div>
+
+                {/* Outdoor Row */}
+                <div 
+                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
+                  style={{ backgroundColor: '#06B6D4' }}
+                >
+                  Outdoor
+                </div>
+                {['sativa', 'hybrid', 'indica'].map(strain => {
+                  const isSelected = selectedJointType === `outdoor-${strain}`;
+                  return (
+                    <div 
+                      key={`outdoor-${strain}`} 
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                        isSelected ? 'ring-4 ring-green-500' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedJointType(`outdoor-${strain}`);
+                        setShowJointPopup(true);
+                      }}
+                    >
+                      <Image
+                        src={personalizedJointsImages['outdoor'][strain]}
+                        alt={`Outdoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        width={220}
+                        height={220}
+                        className="w-[220px] h-[220px] object-contain"
+                      />
+                    </div>
+                  );
+                })}
+
+                {/* Indoor Row */}
+                <div 
+                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center"
+                  style={{ backgroundColor: '#6B7280' }}
+                >
+                  Indoor
+                </div>
+                {['sativa', 'hybrid', 'indica'].map(strain => {
+                  const isSelected = selectedJointType === `indoor-${strain}`;
+                  return (
+                    <div 
+                      key={`indoor-${strain}`} 
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                        isSelected ? 'ring-4 ring-green-500' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedJointType(`indoor-${strain}`);
+                        setShowJointPopup(true);
+                      }}
+                    >
+                      <Image
+                        src={personalizedJointsImages['indoor'][strain]}
+                        alt={`Indoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        width={220}
+                        height={220}
+                        className="w-[220px] h-[220px] object-contain"
+                      />
+                    </div>
+                  );
+                })}
+
+                {/* Top Quality Row */}
+                <div 
+                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-bl-[3rem]"
+                  style={{ backgroundColor: '#000000' }}
+                >
+                  Top Quality
+                </div>
+                {['sativa', 'hybrid', 'indica'].map(strain => {
+                  const isSelected = selectedJointType === `top-${strain}`;
+                  return (
+                    <div 
+                      key={`top-${strain}`} 
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                        isSelected ? 'ring-4 ring-green-500' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedJointType(`top-${strain}`);
+                        setShowJointPopup(true);
+                      }}
+                    >
+                      <Image
+                        src={personalizedJointsImages['top'][strain]}
+                        alt={`Top Quality ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        width={220}
+                        height={220}
+                        className="w-[220px] h-[220px] object-contain"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div
@@ -2589,6 +2839,25 @@ export default function MenuPage() {
               id="kiosk-left-list"
               className="flex-1 overflow-y-auto hidden-scrollbar px-2 py-4"
             >
+              {/* Personalized Joints Button */}
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    setShowPersonalizedJoints(true);
+                    setSelectedCategory(null);
+                  }}
+                  className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  <div className="flex flex-col items-center">
+                    <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z" clipRule="evenodd"/>
+                    </svg>
+                    <span className="text-lg font-bold">Personalized Joints</span>
+                  </div>
+                </button>
+              </div>
+
               {categories.map((category, index) => (
                 <div key={category.id}>
                   <div
@@ -2665,8 +2934,12 @@ export default function MenuPage() {
             </div>
           </div>
           {/* Right Pane: Subcategories + Products */}
-          <div className="flex-1 h-full bg-white rounded-3xl shadow-lg flex flex-col">
-            {selectedCategory ? (
+          <div className="flex-1 h-full">
+            {showPersonalizedJoints ? (
+              renderPersonalizedJoints()
+            ) : (
+              <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col">
+                {selectedCategory ? (
               <div
                 id="kiosk-right-list"
                 className="p-6 overflow-y-auto flex-1 custom-scrollbar"
@@ -2882,6 +3155,8 @@ export default function MenuPage() {
                     products
                   </p>
                 </div>
+              </div>
+            )}
               </div>
             )}
           </div>
