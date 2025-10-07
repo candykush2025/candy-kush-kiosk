@@ -1949,10 +1949,8 @@ export default function MenuPage() {
                 ฿{product.price}
               </span>
               <div className="text-lg text-orange-600 text-center">
-                <span className="line-through">฿{product.price}</span>
-                <span className="ml-1">→ ฿{product.memberPrice}</span>
+                <span className="ml-1">฿{product.memberPrice} : MEMBER</span>
               </div>
-              <span className="text-base text-orange-600">with membership</span>
             </div>
           );
         } else {
