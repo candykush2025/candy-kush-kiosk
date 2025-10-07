@@ -93,6 +93,7 @@ export default function AdminPage() {
     price: "",
     memberPrice: "",
     unit: "",
+    imageUrl: "",
   });
   const [editingCashback, setEditingCashback] = useState(null);
   // Category Order tab state
@@ -104,6 +105,19 @@ export default function AdminPage() {
   // Non-Member Categories state
   const [nonMemberCategories, setNonMemberCategories] = useState([]);
   const [savingNonMemberCategories, setSavingNonMemberCategories] = useState(false);
+
+  // Helper function to upload a single variant option image
+  const uploadSingleVariantImage = async (file, productId, variantId, optionId) => {
+    try {
+      const imagePath = `products/${productId}/variants/${variantId}/${optionId}_${file.name}`;
+      const imageUrl = await CategoryService.uploadImage(file, imagePath);
+      console.log(`Uploaded variant option image: ${imagePath} -> ${imageUrl}`);
+      return imageUrl;
+    } catch (error) {
+      console.error("Error uploading variant option image:", error);
+      throw error;
+    }
+  };
 
   // Initialize order list when categories loaded
   useEffect(() => {
@@ -1815,6 +1829,8 @@ export default function AdminPage() {
 
         return updatedVariants;
       };
+
+
 
       if (editingProduct) {
         // Handle editing existing product
@@ -14142,6 +14158,79 @@ export default function AdminPage() {
                                                     Unit
                                                   </span>
                                                 </div>
+                                                <div className="flex flex-col">
+                                                  <div className="flex gap-2 items-start">
+                                                    {/* Image Preview */}
+                                                    {editingVariantValues.imageUrl && (
+                                                      <div className="relative">
+                                                        <Image
+                                                          src={editingVariantValues.imageUrl}
+                                                          alt="Option preview"
+                                                          width={48}
+                                                          height={48}
+                                                          className="w-12 h-12 object-cover rounded border"
+                                                        />
+                                                        <button
+                                                          type="button"
+                                                          onClick={() => 
+                                                            setEditingVariantValues(v => ({
+                                                              ...v,
+                                                              imageUrl: ""
+                                                            }))
+                                                          }
+                                                          className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
+                                                        >
+                                                          ×
+                                                        </button>
+                                                      </div>
+                                                    )}
+
+                                                    {/* Upload Button */}
+                                                    <div className="relative flex-1">
+                                                      <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        onChange={async (e) => {
+                                                          const file = e.target.files[0];
+                                                          if (file) {
+                                                            try {
+                                                              const imageUrl = await uploadSingleVariantImage(
+                                                                file, 
+                                                                editingProduct.id, 
+                                                                variantGroup.id, 
+                                                                editingVariantOption.id
+                                                              );
+                                                              setEditingVariantValues(v => ({
+                                                                ...v,
+                                                                imageUrl: imageUrl
+                                                              }));
+                                                            } catch (error) {
+                                                              console.error('Error uploading image:', error);
+                                                              alert('Failed to upload image. Please try again.');
+                                                            }
+                                                          }
+                                                        }}
+                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                        id={`variant-option-image-upload-${editingVariantOption.id}`}
+                                                      />
+                                                      <label
+                                                        htmlFor={`variant-option-image-upload-${editingVariantOption.id}`}
+                                                        className={`block w-full px-2 py-1 border border-dashed rounded text-center cursor-pointer text-xs transition-colors ${
+                                                          editingVariantValues.imageUrl
+                                                            ? "border-green-300 bg-green-50 text-green-600"
+                                                            : "border-gray-300 bg-gray-50 text-gray-500 hover:border-gray-400"
+                                                        }`}
+                                                      >
+                                                        {editingVariantValues.imageUrl
+                                                          ? "Change"
+                                                          : "Upload"}
+                                                      </label>
+                                                    </div>
+                                                  </div>
+                                                  <span className="text-[10px] text-gray-400 mt-1">
+                                                    Image
+                                                  </span>
+                                                </div>
                                                 <button
                                                   type="button"
                                                   onClick={async () => {
@@ -14166,6 +14255,7 @@ export default function AdminPage() {
                                                               editingVariantValues.memberPrice
                                                             ) || 0,
                                                       unit: editingVariantValues.unit.trim(),
+                                                      imageUrl: editingVariantValues.imageUrl.trim(),
                                                     };
                                                     const updatedProductForm = {
                                                       ...productForm,
@@ -14278,6 +14368,7 @@ export default function AdminPage() {
                                                           ? ""
                                                           : option.memberPrice.toString(),
                                                       unit: option.unit || "",
+                                                      imageUrl: option.imageUrl || "",
                                                     });
                                                   }}
                                                   className="text-blue-600 hover:text-blue-800 text-xs"

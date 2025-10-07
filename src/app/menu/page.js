@@ -98,6 +98,13 @@ export default function MenuPage() {
   
   // Payment processing states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  
+  // Non member payment settings
+  const [nonMemberPaymentSettings, setNonMemberPaymentSettings] = useState({
+    cash: true,
+    card: true,
+    crypto: true
+  });
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
 
@@ -176,7 +183,7 @@ export default function MenuPage() {
     return usdAmount / bathToUsdRate;
   };
 
-  // Load Bath to USD rate from settings
+  // Load Bath to USD rate and non-member payment settings from settings
   const loadBathToUsdRate = async () => {
     try {
       const { collection, getDocs, query, limit } = await import('firebase/firestore');
@@ -186,10 +193,22 @@ export default function MenuPage() {
       if (!settingsDoc.empty) {
         const settings = settingsDoc.docs[0].data();
         setBathToUsdRate(settings.bathToUsdRate || 0.029);
+        
+        // Load non-member payment settings
+        setNonMemberPaymentSettings({
+          cash: settings.nonMemberPaymentCash !== undefined ? settings.nonMemberPaymentCash : true,
+          card: settings.nonMemberPaymentCard !== undefined ? settings.nonMemberPaymentCard : true,
+          crypto: settings.nonMemberPaymentCrypto !== undefined ? settings.nonMemberPaymentCrypto : true
+        });
       }
     } catch (error) {
-      console.error("Error loading Bath to USD rate:", error);
+      console.error("Error loading settings:", error);
       setBathToUsdRate(0.029); // Fallback to default
+      setNonMemberPaymentSettings({
+        cash: true,
+        card: true,
+        crypto: true
+      });
     }
   };
 
@@ -664,6 +683,11 @@ export default function MenuPage() {
   useEffect(() => {
     loadBathToUsdRate();
   }, []);
+
+  // Set default payment method when customer or settings change
+  useEffect(() => {
+    setDefaultPaymentMethod();
+  }, [customer, nonMemberPaymentSettings]);
 
   // Record visit when menu page loads (only once per session)
   useEffect(() => {
@@ -1248,9 +1272,59 @@ export default function MenuPage() {
     }
   };
 
+  // Helper function to get available payment methods based on customer type and settings
+  const getAvailablePaymentMethods = () => {
+    // If customer is a member (not no member), show all payment methods
+    if (customer && !customer.isNoMember) {
+      return {
+        cash: true,
+        card: true,
+        crypto: true
+      };
+    }
+    
+    // If no customer or customer is no member, use non-member settings
+    return nonMemberPaymentSettings;
+  };
+
+  // Helper function to automatically set default payment method when settings change
+  const setDefaultPaymentMethod = () => {
+    const availableMethods = getAvailablePaymentMethods();
+    
+    // If current payment method is not available, switch to first available
+    if (!availableMethods[paymentMethod]) {
+      if (availableMethods.cash) {
+        setPaymentMethod("cash");
+      } else if (availableMethods.card) {
+        setPaymentMethod("card");
+      } else if (availableMethods.crypto) {
+        setPaymentMethod("crypto");
+      }
+    }
+  };
+
+  // Helper function to get the complete order button text
+  const getCompleteOrderButtonText = () => {
+    const availableMethods = getAvailablePaymentMethods();
+    const hasAnyMethod = availableMethods.cash || availableMethods.card || availableMethods.crypto;
+    return hasAnyMethod 
+      ? t("completeOrder", { total: getTotalPriceAfterPoints() })
+      : "Complete Order - ฿" + getTotalPriceAfterPoints().toFixed(2);
+  };
+
   // Process payment
   const processPayment = async () => {
     if (cart.length === 0) return;
+
+    // Check available payment methods
+    const availablePaymentMethods = getAvailablePaymentMethods();
+    const hasAnyPaymentMethod = availablePaymentMethods.cash || availablePaymentMethods.card || availablePaymentMethods.crypto;
+    
+    // If no payment methods are available (for non-members), proceed without payment method validation
+    let finalPaymentMethod = paymentMethod;
+    if (!hasAnyPaymentMethod) {
+      finalPaymentMethod = ""; // Empty payment method for non-members when all methods are disabled
+    }
 
     // Check if crypto payment is selected but no currency is chosen
     if (paymentMethod === "crypto" && !selectedCryptoCurrency) {
@@ -1282,7 +1356,7 @@ export default function MenuPage() {
         items: cart,
         originalTotal: originalTotal,
         total: finalTotal,
-        paymentMethod: paymentMethod,
+        paymentMethod: finalPaymentMethod,
         cashbackEarned: customer?.isNoMember ? 0 : cashbackPoints,
         timestamp: new Date(),
         // Points usage information
@@ -2974,12 +3048,25 @@ export default function MenuPage() {
                   <div className="mb-8 space-y-4">
                     {getFilteredSubcategories().map((subcategory) => (
                       <div key={subcategory.id} className="pb-2">
-                        <h5
-                          className="font-medium text-lg text-start mb-2"
-                          style={{ color: "#959595" }}
-                        >
-                          {subcategory.name}
-                        </h5>
+                        <div className="flex items-center mb-2">
+                          {subcategory.image && (
+                            <div className="w-16 h-16 mr-3 relative flex-shrink-0">
+                              <Image
+                                src={subcategory.image}
+                                alt={subcategory.name}
+                                fill
+                                className="object-contain rounded"
+                                sizes="32px"
+                              />
+                            </div>
+                          )}
+                          <h5
+                            className="font-medium text-lg"
+                            style={{ color: "#959595" }}
+                          >
+                            {subcategory.name}
+                          </h5>
+                        </div>
                         <div className="grid grid-cols-4 gap-4">
                           {getFilteredProducts()
                             .filter((p) => p.subcategoryId === subcategory.id)
@@ -3982,89 +4069,104 @@ export default function MenuPage() {
                 </div>
               </div>
               {/* Payment Methods */}
-              <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
-                <h3 className="text-2xl font-bold mb-6">
-                  {t("paymentMethod")}
-                </h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <button
-                    onClick={() => setPaymentMethod("cash")}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      paymentMethod === "cash"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-4xl mb-2">💵</div>
-                      <div className="text-xl font-semibold">{t("cash")}</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setPaymentMethod("card")}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      paymentMethod === "card"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-4xl mb-2">💳</div>
-                      <div className="text-xl font-semibold">{t("card")}</div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setPaymentMethod("crypto");
-                      setShowCryptoModal(true);
-                      loadCryptoData();
-                    }}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      paymentMethod === "crypto"
-                        ? "border-green-500 bg-green-50"
-                        : "border-gray-200 hover:border-gray-300"
-                    }`}
-                  >
-                    <div className="text-center">
-                      <div className="text-4xl mb-2">₿</div>
-                      <div className="text-xl font-semibold">{t("crypto")}</div>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Selected Cryptocurrency Display */}
-                {paymentMethod === "crypto" && selectedCryptoCurrency && (
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 mr-3">
-                        <img
-                          src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(selectedCryptoCurrency)}.svg`}
-                          alt={selectedCryptoCurrency.name}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                        <div 
-                          className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                          style={{ display: 'none' }}
+              {(() => {
+                const availablePaymentMethods = getAvailablePaymentMethods();
+                const hasAnyPaymentMethod = availablePaymentMethods.cash || availablePaymentMethods.card || availablePaymentMethods.crypto;
+                
+                if (!hasAnyPaymentMethod) return null;
+                
+                return (
+                  <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+                    <h3 className="text-2xl font-bold mb-6">
+                      {t("paymentMethod")}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      {availablePaymentMethods.cash && (
+                        <button
+                          onClick={() => setPaymentMethod("cash")}
+                          className={`p-6 rounded-xl border-2 transition-all ${
+                            paymentMethod === "cash"
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
                         >
-                          {((selectedCryptoCurrency.code || selectedCryptoCurrency.currency).charAt(0).toUpperCase())}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-blue-800">
-                          Selected: {(selectedCryptoCurrency.code || selectedCryptoCurrency.currency).toUpperCase()}
-                        </div>
-                        <div className="text-sm text-blue-600">
-                          {selectedCryptoCurrency.name || 'Cryptocurrency Payment'}
-                        </div>
-                      </div>
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">💵</div>
+                            <div className="text-xl font-semibold">{t("cash")}</div>
+                          </div>
+                        </button>
+                      )}
+                      {availablePaymentMethods.card && (
+                        <button
+                          onClick={() => setPaymentMethod("card")}
+                          className={`p-6 rounded-xl border-2 transition-all ${
+                            paymentMethod === "card"
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">💳</div>
+                            <div className="text-xl font-semibold">{t("card")}</div>
+                          </div>
+                        </button>
+                      )}
+                      {availablePaymentMethods.crypto && (
+                        <button
+                          onClick={() => {
+                            setPaymentMethod("crypto");
+                            setShowCryptoModal(true);
+                            loadCryptoData();
+                          }}
+                          className={`p-6 rounded-xl border-2 transition-all ${
+                            paymentMethod === "crypto"
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="text-center">
+                            <div className="text-4xl mb-2">₿</div>
+                            <div className="text-xl font-semibold">{t("crypto")}</div>
+                          </div>
+                        </button>
+                      )}
                     </div>
+
+                    {/* Selected Cryptocurrency Display */}
+                    {paymentMethod === "crypto" && selectedCryptoCurrency && (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 mr-3">
+                            <img
+                              src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(selectedCryptoCurrency)}.svg`}
+                              alt={selectedCryptoCurrency.name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                            />
+                            <div 
+                              className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                              style={{ display: 'none' }}
+                            >
+                              {((selectedCryptoCurrency.code || selectedCryptoCurrency.currency).charAt(0).toUpperCase())}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="font-semibold text-blue-800">
+                              Selected: {(selectedCryptoCurrency.code || selectedCryptoCurrency.currency).toUpperCase()}
+                            </div>
+                            <div className="text-sm text-blue-600">
+                              {selectedCryptoCurrency.name || 'Cryptocurrency Payment'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                );
+              })()}
 
               {/* Points Usage Section - Only show for members */}
               {customer && !customer.isNoMember && customer.totalPoints > 0 && (
@@ -4204,7 +4306,7 @@ export default function MenuPage() {
                 >
                   {processing
                     ? t("processing")
-                    : t("completeOrder", { total: getTotalPriceAfterPoints() })}
+                    : getCompleteOrderButtonText()}
                 </button>
               </div>
             </div>
