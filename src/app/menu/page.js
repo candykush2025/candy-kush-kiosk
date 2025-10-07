@@ -126,6 +126,9 @@ export default function MenuPage() {
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
+  // Dev mode state to show/hide Personalized Joints button
+  const [isDev, setIsDev] = useState(false);
+
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -640,6 +643,13 @@ export default function MenuPage() {
       setStockCalculationsLoaded(false);
     }
   };
+
+  // Check for dev parameter in URL on page mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const devParam = urlParams.get('dev');
+    setIsDev(devParam === 'true');
+  }, []);
 
   // Ensure language is loaded from localStorage on page mount
   useEffect(() => {
@@ -2839,24 +2849,26 @@ export default function MenuPage() {
               id="kiosk-left-list"
               className="flex-1 overflow-y-auto hidden-scrollbar px-2 py-4"
             >
-              {/* Personalized Joints Button */}
-              <div className="mb-4">
-                <button
-                  onClick={() => {
-                    setShowPersonalizedJoints(true);
-                    setSelectedCategory(null);
-                  }}
-                  className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                >
-                  <div className="flex flex-col items-center">
-                    <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z" clipRule="evenodd"/>
-                    </svg>
-                    <span className="text-lg font-bold">Personalized Joints</span>
-                  </div>
-                </button>
-              </div>
+              {/* Personalized Joints Button - Only show in dev mode */}
+              {isDev && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => {
+                      setShowPersonalizedJoints(true);
+                      setSelectedCategory(null);
+                    }}
+                    className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                  >
+                    <div className="flex flex-col items-center">
+                      <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z" clipRule="evenodd"/>
+                      </svg>
+                      <span className="text-lg font-bold">Personalized Joints</span>
+                    </div>
+                  </button>
+                </div>
+              )}
 
               {categories.map((category, index) => (
                 <div key={category.id}>
