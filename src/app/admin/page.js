@@ -414,6 +414,7 @@ export default function AdminPage() {
   // Settings states
   const [transactionPrefix, setTransactionPrefix] = useState("");
   const [storeName, setStoreName] = useState("");
+  const [bathToUsdRate, setBathToUsdRate] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
@@ -447,6 +448,14 @@ export default function AdminPage() {
   const [showEditAlertForm, setShowEditAlertForm] = useState(false);
   const [editAlertProductSearch, setEditAlertProductSearch] = useState("");
   const [showEditAlertProductDropdown, setShowEditAlertProductDropdown] = useState(false);
+
+  // Crypto Payments states
+  const [cryptoPayments, setCryptoPayments] = useState([]);
+  const [loadingCryptoPayments, setLoadingCryptoPayments] = useState(false);
+  const [selectedCryptoPayment, setSelectedCryptoPayment] = useState(null);
+  const [showCryptoPaymentModal, setShowCryptoPaymentModal] = useState(false);
+  const [cryptoPaymentStatusFilter, setCryptoPaymentStatusFilter] = useState("all");
+  const [checkingCryptoStatus, setCheckingCryptoStatus] = useState(false);
   const [editSelectedProductForAlert, setEditSelectedProductForAlert] = useState(null);
   const [editAlertKioskLevel, setEditAlertKioskLevel] = useState("");
   const [editAlertAdminLevel, setEditAlertAdminLevel] = useState("");
@@ -957,6 +966,13 @@ export default function AdminPage() {
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, []);
+
+  // Load crypto payments when tab is active
+  useEffect(() => {
+    if (activeTab === 'cryptoPayments') {
+      loadCryptoPayments();
+    }
+  }, [activeTab, cryptoPaymentStatusFilter]);
 
   // Initialize productForm when editing a product
   useEffect(() => {
@@ -2636,15 +2652,18 @@ export default function AdminPage() {
         const settings = settingsDoc.data();
         setTransactionPrefix(settings.transactionPrefix || "TRX");
         setStoreName(settings.storeName || "Candy Kush Dispensary");
+        setBathToUsdRate(settings.bathToUsdRate || "0.029");
       } else {
         setTransactionPrefix("TRX");
         setStoreName("Candy Kush Dispensary");
+        setBathToUsdRate("0.029");
       }
     } catch (error) {
       console.error("Error loading settings:", error);
       // Set defaults on error
       setTransactionPrefix("TRX");
       setStoreName("Candy Kush Dispensary");
+      setBathToUsdRate("0.029");
     } finally {
       setLoadingSettings(false);
     }
@@ -2661,6 +2680,7 @@ export default function AdminPage() {
       const settingsData = {
         transactionPrefix,
         storeName,
+        bathToUsdRate: parseFloat(bathToUsdRate) || 0.029,
         updatedAt: new Date().toISOString(),
       };
 
@@ -3472,6 +3492,90 @@ export default function AdminPage() {
     return product.quantity || 0;
   };
 
+  // Load crypto payments from Firebase
+  const loadCryptoPayments = async () => {
+    setLoadingCryptoPayments(true);
+    try {
+      const { collection, getDocs, query, orderBy, where } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+
+      let paymentsQuery = query(
+        collection(db, 'crypto_payments'),
+        orderBy('created_at', 'desc')
+      );
+
+      // Apply status filter
+      if (cryptoPaymentStatusFilter !== 'all') {
+        paymentsQuery = query(
+          collection(db, 'crypto_payments'),
+          where('payment_status', '==', cryptoPaymentStatusFilter),
+          orderBy('created_at', 'desc')
+        );
+      }
+
+      const querySnapshot = await getDocs(paymentsQuery);
+      const payments = [];
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        payments.push({
+          id: doc.id,
+          ...data,
+          created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
+          updated_at: data.updated_at?.toDate ? data.updated_at.toDate() : new Date(data.updated_at),
+          expiration_date: data.expiration_date?.toDate ? data.expiration_date.toDate() : (data.expiration_date ? new Date(data.expiration_date) : null)
+        });
+      });
+
+      setCryptoPayments(payments);
+      console.log('Loaded crypto payments:', payments.length);
+    } catch (error) {
+      console.error('Error loading crypto payments:', error);
+    } finally {
+      setLoadingCryptoPayments(false);
+    }
+  };
+
+  // Check crypto payment status via API
+  const checkCryptoPaymentStatus = async (paymentId) => {
+    setCheckingCryptoStatus(true);
+    try {
+      const response = await fetch(`/api/crypto/payment/${paymentId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to check payment status');
+      }
+
+      const statusData = await response.json();
+      console.log('Payment status from API:', statusData);
+
+      // Update the payment in local state
+      setCryptoPayments(prev => 
+        prev.map(payment => 
+          payment.payment_id === paymentId 
+            ? { 
+                ...payment, 
+                payment_status: statusData.payment_status,
+                actually_paid: statusData.actually_paid,
+                outcome_amount: statusData.outcome_amount,
+                outcome_currency: statusData.outcome_currency,
+                payin_hash: statusData.payin_hash,
+                payout_hash: statusData.payout_hash,
+                updated_at: new Date(statusData.updated_at)
+              }
+            : payment
+        )
+      );
+
+      return statusData;
+    } catch (error) {
+      console.error('Error checking crypto payment status:', error);
+      throw error;
+    } finally {
+      setCheckingCryptoStatus(false);
+    }
+  };
+
   // Filter transactions based on selected criteria
   const filterTransactions = useCallback(() => {
     let filtered = [...transactions];
@@ -3786,6 +3890,20 @@ export default function AdminPage() {
                 <User className="w-5 h-5 mr-3" />
                 Settings
               </button>
+
+              <button
+                onClick={() => setActiveTab("cryptoPayments")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "cryptoPayments"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Payment Crypto
+              </button>
             </div>
           </nav>
         </div>
@@ -3815,6 +3933,8 @@ export default function AdminPage() {
                       ? "Admin Management"
                       : activeTab === "settings"
                       ? "Settings"
+                      : activeTab === "cryptoPayments"
+                      ? "Crypto Payments"
                       : activeTab}
                   </h1>
                   <p className="text-gray-600 mt-1">
@@ -3836,6 +3956,8 @@ export default function AdminPage() {
                       ? "Manage admin accounts and permissions"
                       : activeTab === "settings"
                       ? "System configuration and preferences"
+                      : activeTab === "cryptoPayments"
+                      ? "Monitor and manage cryptocurrency payments from kiosk"
                       : "Admin management"}
                   </p>
                 </div>
@@ -9379,6 +9501,29 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Bath to USD Exchange Rate */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Bath to USD Exchange Rate
+                        </label>
+                        <div className="space-y-2">
+                          <input
+                            type="number"
+                            step="0.001"
+                            value={bathToUsdRate}
+                            onChange={(e) => setBathToUsdRate(parseFloat(e.target.value) || 0)}
+                            placeholder={
+                              loadingSettings ? "Loading..." : "Enter USD value for 1 Bath"
+                            }
+                            disabled={loadingSettings}
+                            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          />
+                          <p className="text-sm text-gray-500">
+                            How much USD is equal to 1 Thai Bath (e.g., 0.029 means 1 Bath = $0.029 USD)
+                          </p>
+                        </div>
+                      </div>
+
                       {/* Save Button */}
                       <div className="flex justify-start">
                         <button
@@ -9394,6 +9539,182 @@ export default function AdminPage() {
                         </button>
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Crypto Payments Tab */}
+              {activeTab === "cryptoPayments" && (
+                <div className="space-y-6">
+                  {/* Header with Filters */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Crypto Payment Management
+                      </h3>
+                      
+                      <div className="flex items-center gap-4">
+                        {/* Status Filter */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Filter by Status
+                          </label>
+                          <select
+                            value={cryptoPaymentStatusFilter}
+                            onChange={(e) => setCryptoPaymentStatusFilter(e.target.value)}
+                            className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                          >
+                            <option value="all">All Statuses</option>
+                            <option value="waiting">Waiting</option>
+                            <option value="confirming">Confirming</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="sending">Sending</option>
+                            <option value="finished">Finished</option>
+                            <option value="failed">Failed</option>
+                            <option value="expired">Expired</option>
+                            <option value="refunded">Refunded</option>
+                          </select>
+                        </div>
+
+                        {/* Refresh Button */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            &nbsp;
+                          </label>
+                          <button
+                            onClick={() => loadCryptoPayments()}
+                            disabled={loadingCryptoPayments}
+                            className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
+                          >
+                            {loadingCryptoPayments ? '🔄' : '↻'} Refresh
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Crypto Payments Table */}
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                    {loadingCryptoPayments ? (
+                      <div className="p-8 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-4"></div>
+                        <p className="text-gray-600">Loading crypto payments...</p>
+                      </div>
+                    ) : cryptoPayments.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <div className="text-gray-400 text-4xl mb-4">₿</div>
+                        <p className="text-gray-600">No crypto payments found</p>
+                        <p className="text-gray-500 text-sm mt-2">
+                          Payments made through the kiosk will appear here
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Payment Info
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Customer
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Amount
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Date
+                              </th>
+                              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {cryptoPayments.map((payment) => (
+                              <tr key={payment.id} className="hover:bg-gray-50">
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      ID: {payment.payment_id}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      Order: {payment.order_id}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {payment.pay_currency?.toUpperCase()} Payment
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {payment.customer_name || 'No Member'}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    Items: {payment.cart_items?.length || 0}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900">
+                                      ฿{payment.total_bath?.toFixed(2)}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      ${payment.total_usd?.toFixed(2)} USD
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {payment.pay_amount} {payment.pay_currency?.toUpperCase()}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                    payment.payment_status === 'finished' || payment.payment_status === 'confirmed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : payment.payment_status === 'waiting'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : payment.payment_status === 'confirming' || payment.payment_status === 'sending'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {payment.payment_status}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  <div>
+                                    {payment.created_at?.toLocaleDateString()}
+                                  </div>
+                                  <div>
+                                    {payment.created_at?.toLocaleTimeString()}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedCryptoPayment(payment);
+                                      setShowCryptoPaymentModal(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900"
+                                  >
+                                    View Details
+                                  </button>
+                                  <button
+                                    onClick={() => checkCryptoPaymentStatus(payment.payment_id)}
+                                    disabled={checkingCryptoStatus}
+                                    className="text-green-600 hover:text-green-900 disabled:opacity-50"
+                                  >
+                                    {checkingCryptoStatus ? '🔄' : '↻'} Check Status
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -15977,6 +16298,246 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+      {/* Crypto Payment Details Modal */}
+      {showCryptoPaymentModal && selectedCryptoPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto m-4">
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                  <svg className="w-6 h-6 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Crypto Payment Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCryptoPaymentModal(false);
+                    setSelectedCryptoPayment(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-6">
+              {/* Payment Status Banner */}
+              <div className={`p-4 rounded-lg border ${
+                selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
+                  ? 'bg-green-50 border-green-200'
+                  : selectedCryptoPayment.payment_status === 'waiting'
+                  ? 'bg-yellow-50 border-yellow-200'
+                  : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
+                  ? 'bg-blue-50 border-blue-200'
+                  : 'bg-red-50 border-red-200'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className={`w-3 h-3 rounded-full mr-3 ${
+                      selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
+                        ? 'bg-green-500'
+                        : selectedCryptoPayment.payment_status === 'waiting'
+                        ? 'bg-yellow-500'
+                        : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
+                        ? 'bg-blue-500 animate-pulse'
+                        : 'bg-red-500'
+                    }`}></div>
+                    <span className={`font-semibold capitalize ${
+                      selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
+                        ? 'text-green-800'
+                        : selectedCryptoPayment.payment_status === 'waiting'
+                        ? 'text-yellow-800'
+                        : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
+                        ? 'text-blue-800'
+                        : 'text-red-800'
+                    }`}>
+                      {selectedCryptoPayment.payment_status}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)}
+                    disabled={checkingCryptoStatus}
+                    className="px-3 py-1 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 text-sm"
+                  >
+                    {checkingCryptoStatus ? '🔄 Checking...' : '↻ Refresh Status'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Payment Information Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Basic Payment Info */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Payment Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Payment ID:</span>
+                      <span className="font-mono text-gray-900">{selectedCryptoPayment.payment_id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Order ID:</span>
+                      <span className="font-mono text-gray-900">{selectedCryptoPayment.order_id}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Created:</span>
+                      <span className="text-gray-900">{selectedCryptoPayment.created_at?.toLocaleString()}</span>
+                    </div>
+                    {selectedCryptoPayment.expiration_date && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Expires:</span>
+                        <span className="text-gray-900">{selectedCryptoPayment.expiration_date?.toLocaleString()}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Customer Info */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Name:</span>
+                      <span className="text-gray-900">{selectedCryptoPayment.customer_name || 'No Member'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Items:</span>
+                      <span className="text-gray-900">{selectedCryptoPayment.cart_items?.length || 0} items</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Information */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                <h4 className="font-semibold text-gray-900 mb-3">Amount Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="text-center">
+                    <div className="text-gray-600">Thai Baht</div>
+                    <div className="text-2xl font-bold text-green-600">฿{selectedCryptoPayment.total_bath?.toFixed(2)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-600">USD Amount</div>
+                    <div className="text-2xl font-bold text-blue-600">${selectedCryptoPayment.total_usd?.toFixed(2)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-gray-600">{selectedCryptoPayment.pay_currency?.toUpperCase()}</div>
+                    <div className="text-2xl font-bold text-purple-600">{selectedCryptoPayment.pay_amount}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Crypto Details */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Cryptocurrency Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <div className="text-gray-600 mb-1">Payment Address:</div>
+                    <div className="font-mono bg-white p-2 rounded border text-xs break-all">
+                      {selectedCryptoPayment.pay_address || 'N/A'}
+                    </div>
+                  </div>
+                  {selectedCryptoPayment.payin_hash && (
+                    <div>
+                      <div className="text-gray-600 mb-1">Transaction Hash:</div>
+                      <div className="font-mono bg-white p-2 rounded border text-xs break-all">
+                        {selectedCryptoPayment.payin_hash}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCryptoPayment.actually_paid && (
+                    <div>
+                      <div className="text-gray-600 mb-1">Actually Paid:</div>
+                      <div className="font-mono bg-white p-2 rounded border">
+                        {selectedCryptoPayment.actually_paid} {selectedCryptoPayment.pay_currency?.toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                  {selectedCryptoPayment.outcome_amount && (
+                    <div>
+                      <div className="text-gray-600 mb-1">Outcome Amount:</div>
+                      <div className="font-mono bg-white p-2 rounded border">
+                        {selectedCryptoPayment.outcome_amount} {selectedCryptoPayment.outcome_currency?.toUpperCase()}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cart Items */}
+              {selectedCryptoPayment.cart_items && selectedCryptoPayment.cart_items.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-gray-900 mb-3">Order Items</h4>
+                  <div className="space-y-2">
+                    {selectedCryptoPayment.cart_items.map((item, index) => (
+                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                        <div>
+                          <div className="font-medium text-gray-900">{item.name}</div>
+                          {item.variant && (
+                            <div className="text-sm text-gray-600">{item.variant}</div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="text-gray-900">Qty: {item.quantity}</div>
+                          <div className="text-sm text-gray-600">฿{(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Raw Payment Data (for debugging) */}
+              <details className="border border-gray-200 rounded-lg">
+                <summary className="p-3 cursor-pointer bg-gray-50 font-medium text-gray-700 hover:bg-gray-100">
+                  Raw Payment Data (Debug)
+                </summary>
+                <div className="p-3 bg-gray-900 text-green-400 font-mono text-xs overflow-auto max-h-64">
+                  <pre>{JSON.stringify(selectedCryptoPayment, null, 2)}</pre>
+                </div>
+              </details>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+              <button
+                onClick={() => checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)}
+                disabled={checkingCryptoStatus}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+              >
+                {checkingCryptoStatus ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh Status
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCryptoPaymentModal(false);
+                  setSelectedCryptoPayment(null);
+                }}
+                className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminAuthGuard>
   );
 }

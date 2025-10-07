@@ -85,6 +85,25 @@ export default function MenuPage() {
   const [stockCalculations, setStockCalculations] = useState({});
   const [stockCalculationsLoaded, setStockCalculationsLoaded] = useState(false);
 
+  // Crypto payment states
+  const [showCryptoModal, setShowCryptoModal] = useState(false);
+  const [availableCurrencies, setAvailableCurrencies] = useState([]);
+  const [currencyMinimums, setCurrencyMinimums] = useState({});
+  const [loadingCrypto, setLoadingCrypto] = useState(false);
+  const [selectedCryptoCurrency, setSelectedCryptoCurrency] = useState(null);
+  const [bathToUsdRate, setBathToUsdRate] = useState(0.029); // Default rate, will be loaded from settings
+  
+  // Payment processing states
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [paymentDetails, setPaymentDetails] = useState(null);
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState(null);
+  
+  // Payment monitoring states
+  const [paymentStatusTimer, setPaymentStatusTimer] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
+
   const router = useRouter();
   const { t } = useTranslation();
 
@@ -121,6 +140,406 @@ export default function MenuPage() {
     localStorage.setItem("i18nextLng", lng);
     setShowLanguageDropdown(false);
     console.log(`Menu page: Language changed to ${lng}`);
+  };
+
+  // Bath to USD conversion helper
+  const convertBathToUsd = (bathAmount) => {
+    return bathAmount * bathToUsdRate;
+  };
+
+  const convertUsdToBath = (usdAmount) => {
+    return usdAmount / bathToUsdRate;
+  };
+
+  // Load Bath to USD rate from settings
+  const loadBathToUsdRate = async () => {
+    try {
+      const { collection, getDocs, query, limit } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      
+      const settingsDoc = await getDocs(query(collection(db, "settings"), limit(1)));
+      if (!settingsDoc.empty) {
+        const settings = settingsDoc.docs[0].data();
+        setBathToUsdRate(settings.bathToUsdRate || 0.029);
+      }
+    } catch (error) {
+      console.error("Error loading Bath to USD rate:", error);
+      setBathToUsdRate(0.029); // Fallback to default
+    }
+  };
+
+  // Crypto API functions
+  const fetchAvailableCurrencies = async () => {
+    try {
+      const response = await fetch('/api/crypto/currencies');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch currencies');
+      }
+      
+      const data = await response.json();
+      console.log('Crypto API Response:', data);
+      
+      // The NOWPayments API might return currencies in different formats
+      // Let's handle both possible structures
+      let currencies = [];
+      if (data.currencies && Array.isArray(data.currencies)) {
+        currencies = data.currencies;
+      } else if (Array.isArray(data)) {
+        currencies = data;
+      }
+      
+      console.log('Processed currencies:', currencies.slice(0, 5)); // Log first 5 for debugging
+      
+      return currencies;
+    } catch (error) {
+      console.error('Error fetching currencies:', error);
+      return [];
+    }
+  };
+
+  const fetchMinimumAmount = async (currencyFrom, totalUsd) => {
+    try {
+      const response = await fetch(
+        `/api/crypto/min-amount?currency_from=${currencyFrom}&currency_to=trx&fiat_equivalent=usd&is_fixed_rate=false&is_fee_paid_by_user=false`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch minimum amount');
+      }
+      
+      const data = await response.json();
+      return {
+        minAmount: data.min_amount || 0,
+        fiatEquivalent: data.fiat_equivalent || 0
+      };
+    } catch (error) {
+      console.error('Error fetching minimum amount:', error);
+      return { minAmount: 0, fiatEquivalent: 0 };
+    }
+  };
+
+  // Helper function to get standardized crypto symbol for icons
+  const getCryptoIconSymbol = (currency) => {
+    const code = (currency.code || currency.currency).toLowerCase();
+    
+    // Map some currencies to their standard icon names
+    const iconMapping = {
+      'usdt': 'usdt',
+      'usdttrc20': 'usdt',
+      'usdterc20': 'usdt',
+      'usdcbsc': 'usdc',
+      'usdcsol': 'usdc',
+      'usdtbsc': 'usdt',
+      'bnbbsc': 'bnb',
+      'maticmainnet': 'matic',
+      'avaxc': 'avax'
+    };
+    
+    return iconMapping[code] || code;
+  };
+
+  const loadCryptoData = async () => {
+    setLoadingCrypto(true);
+    try {
+      // Fetch available currencies
+      const currencies = await fetchAvailableCurrencies();
+      setAvailableCurrencies(currencies);
+
+      // Calculate total: Bath -> USD conversion
+      const totalOrderInBath = getTotalPrice();
+      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
+      
+      console.log('Order totals:', {
+        bathAmount: totalOrderInBath.toFixed(2),
+        usdAmount: totalOrderInUsd.toFixed(2),
+        exchangeRate: bathToUsdRate
+      });
+
+      // Fetch minimum amounts for popular currencies
+      const popularCurrencies = ['btc', 'eth', 'ltc', 'usdt', 'bnb', 'ada', 'xrp', 'doge'];
+      const minimums = {};
+
+      for (const currency of popularCurrencies) {
+        const currencyData = currencies.find(c => 
+          (c.code && c.code.toLowerCase() === currency) || 
+          (c.currency && c.currency.toLowerCase() === currency)
+        );
+        if (currencyData) {
+          const minData = await fetchMinimumAmount(currency, totalOrderInUsd);
+          minimums[currency] = {
+            minAmount: minData.minAmount,
+            minAmountInBath: convertUsdToBath(minData.fiatEquivalent),
+            fiatEquivalent: minData.fiatEquivalent
+          };
+          
+          console.log(`${currency.toUpperCase()} minimum:`, {
+            minAmountCrypto: minData.minAmount,
+            minAmountUsd: minData.fiatEquivalent?.toFixed(2),
+            minAmountBath: convertUsdToBath(minData.fiatEquivalent)?.toFixed(2),
+            orderMeetsMinimum: totalOrderInUsd >= minData.fiatEquivalent
+          });
+        }
+      }
+
+      setCurrencyMinimums(minimums);
+    } catch (error) {
+      console.error('Error loading crypto data:', error);
+    } finally {
+      setLoadingCrypto(false);
+    }
+  };
+
+  // Create crypto payment
+  const createCryptoPayment = async (selectedCurrency) => {
+    setCreatingPayment(true);
+    setPaymentError(null);
+    
+    try {
+      const totalOrderInBath = getTotalPrice();
+      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
+      const currencyCode = (selectedCurrency.code || selectedCurrency.currency).toLowerCase();
+      
+      // Create order ID
+      const orderId = `CK-${Date.now()}`;
+      
+      const paymentRequest = {
+        price_amount: totalOrderInUsd,
+        price_currency: 'usd',
+        pay_currency: currencyCode,
+        order_id: orderId,
+        order_description: `Candy Kush Order - ${cart.length} items`,
+        ipn_callback_url: `${window.location.origin}/api/crypto/callback`,
+        is_fixed_rate: true,
+        is_fee_paid_by_user: false
+      };
+
+      console.log('Creating payment request:', paymentRequest);
+
+      const response = await fetch('/api/crypto/payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(paymentRequest)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create payment');
+      }
+
+      const paymentData = await response.json();
+      console.log('Payment created:', paymentData);
+      
+      // Save payment to Firebase for history
+      await saveCryptoPaymentToFirebase(paymentData, selectedCurrency);
+      
+      setPaymentDetails(paymentData);
+      setPaymentStatus(paymentData);
+      setShowPaymentModal(true);
+      
+      // Start monitoring payment status
+      startPaymentMonitoring(paymentData.payment_id);
+      
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      setPaymentError(error.message);
+    } finally {
+      setCreatingPayment(false);
+    }
+  };
+
+  // Save crypto payment to Firebase
+  const saveCryptoPaymentToFirebase = async (paymentData, selectedCurrency) => {
+    try {
+      const { collection, addDoc } = await import('firebase/firestore');
+      const { db } = await import('../../lib/firebase');
+      
+      const cryptoPaymentData = {
+        payment_id: paymentData.payment_id,
+        order_id: paymentData.order_id,
+        payment_status: paymentData.payment_status,
+        pay_address: paymentData.pay_address,
+        price_amount: paymentData.price_amount,
+        price_currency: paymentData.price_currency,
+        pay_amount: paymentData.pay_amount,
+        pay_currency: paymentData.pay_currency,
+        customer_id: customer?.id || null,
+        customer_name: customer ? (customer.isNoMember ? "No Member" : `${customer.name} ${customer.lastName || ""}`.trim()) : "",
+        cart_items: cart,
+        total_bath: getTotalPrice(),
+        total_usd: convertBathToUsd(getTotalPrice()),
+        selected_currency: selectedCurrency,
+        created_at: new Date(),
+        updated_at: new Date(),
+        expiration_date: paymentData.expiration_estimate_date ? new Date(paymentData.expiration_estimate_date) : null
+      };
+
+      const docRef = await addDoc(collection(db, 'crypto_payments'), cryptoPaymentData);
+      console.log('Crypto payment saved to Firebase:', docRef.id);
+      
+    } catch (error) {
+      console.error('Error saving crypto payment to Firebase:', error);
+    }
+  };
+
+  // Start payment monitoring
+  const startPaymentMonitoring = (paymentId) => {
+    // Clear existing timer
+    if (paymentStatusTimer) {
+      clearInterval(paymentStatusTimer);
+    }
+
+    // Check immediately
+    checkPaymentStatus(paymentId);
+
+    // Set up interval to check every 5 seconds
+    const timer = setInterval(() => {
+      checkPaymentStatus(paymentId);
+    }, 5000);
+
+    setPaymentStatusTimer(timer);
+  };
+
+  // Check payment status
+  const checkPaymentStatus = async (paymentId) => {
+    if (checkingStatus) return; // Prevent multiple simultaneous checks
+    
+    setCheckingStatus(true);
+    try {
+      const response = await fetch(`/api/crypto/payment/${paymentId}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to check payment status');
+      }
+
+      const statusData = await response.json();
+      console.log('Payment status update:', statusData);
+      
+      setPaymentStatus(statusData);
+
+      // Update payment details with latest status
+      setPaymentDetails(prev => ({
+        ...prev,
+        payment_status: statusData.payment_status,
+        actually_paid: statusData.actually_paid,
+        outcome_amount: statusData.outcome_amount,
+        outcome_currency: statusData.outcome_currency
+      }));
+
+      // If payment is completed, process the transaction
+      if (statusData.payment_status === 'finished' || statusData.payment_status === 'confirmed') {
+        await completeCryptoTransaction(statusData);
+      }
+
+      // Stop monitoring if payment is final
+      if (['finished', 'failed', 'refunded', 'expired'].includes(statusData.payment_status)) {
+        if (paymentStatusTimer) {
+          clearInterval(paymentStatusTimer);
+          setPaymentStatusTimer(null);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
+
+  // Complete crypto transaction
+  const completeCryptoTransaction = async (statusData) => {
+    try {
+      const originalTotal = getTotalPrice();
+      const finalTotal = getTotalPriceAfterPoints();
+
+      const transactionData = {
+        customerId: customer?.id || null,
+        customerName: customer
+          ? customer.isNoMember
+            ? "No Member"
+            : `${customer.name} ${customer.lastName || ""}`.trim()
+          : "",
+        items: cart,
+        originalTotal: originalTotal,
+        total: finalTotal,
+        paymentMethod: "crypto",
+        cashbackEarned: customer?.isNoMember ? 0 : cashbackPoints,
+        timestamp: new Date(),
+        pointsUsed: pointsToUse,
+        pointsUsedValue: pointsValue,
+        pointsUsagePercentage: pointsUsagePercentage,
+        pointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
+        pointDetails: customer?.isNoMember ? [] : window.menuCashbackDetails || [],
+        pointCalculation: {
+          totalPointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
+          calculationMethod: customer?.isNoMember ? "none" : "category-based",
+          items: customer?.isNoMember ? [] : window.menuCashbackDetails || [],
+          totalPointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
+        },
+        // Crypto specific details
+        cryptoDetails: {
+          payment_id: statusData.payment_id,
+          pay_currency: statusData.pay_currency,
+          pay_amount: statusData.pay_amount,
+          actually_paid: statusData.actually_paid,
+          pay_address: statusData.pay_address,
+          price_amount_usd: statusData.price_amount,
+          outcome_amount: statusData.outcome_amount,
+          outcome_currency: statusData.outcome_currency,
+          payin_hash: statusData.payin_hash,
+          payout_hash: statusData.payout_hash,
+          payment_status: statusData.payment_status,
+          created_at: statusData.created_at,
+          updated_at: statusData.updated_at
+        }
+      };
+
+      console.log("🔍 Processing crypto transaction with data:", transactionData);
+
+      const { TransactionService } = await import("../../lib/transactionService");
+      const transactionId = await TransactionService.createTransaction(transactionData);
+
+      if (transactionId) {
+        console.log("✅ Crypto transaction successful, transaction ID:", transactionId);
+
+        // Handle points transactions (same as regular payments)
+        if (pointsToUse > 0 && customer && !customer.isNoMember) {
+          const { CustomerService } = await import("../../lib/customerService");
+          await CustomerService.deductPoints(customer.id, pointsToUse, {
+            transactionId: transactionId,
+            description: `Points deduction for order payment`,
+            originalAmount: originalTotal,
+            pointsUsed: pointsToUse,
+            finalAmount: finalTotal,
+            paymentMethod: "crypto",
+          });
+        }
+
+        // Clear payment monitoring
+        if (paymentStatusTimer) {
+          clearInterval(paymentStatusTimer);
+          setPaymentStatusTimer(null);
+        }
+
+        // Show success and redirect
+        setShowPaymentModal(false);
+        setShowOrderComplete(true);
+        setCompletedOrder({
+          id: transactionId,
+          ...transactionData,
+          customer: customer,
+        });
+
+      } else {
+        throw new Error("Failed to create transaction record");
+      }
+
+    } catch (error) {
+      console.error("Crypto transaction error:", error);
+      setPaymentError("Transaction completed but failed to record. Please contact support.");
+    }
   };
 
   // Load stock alerts from Firebase
@@ -207,6 +626,11 @@ export default function MenuPage() {
       i18n.changeLanguage(storedLanguage);
       console.log(`Menu page: Language changed to ${storedLanguage}`);
     }
+  }, []);
+
+  // Load Bath to USD rate from settings on page mount
+  useEffect(() => {
+    loadBathToUsdRate();
   }, []);
 
   // Record visit when menu page loads (only once per session)
@@ -796,6 +1220,19 @@ export default function MenuPage() {
   const processPayment = async () => {
     if (cart.length === 0) return;
 
+    // Check if crypto payment is selected but no currency is chosen
+    if (paymentMethod === "crypto" && !selectedCryptoCurrency) {
+      setShowCryptoModal(true);
+      loadCryptoData();
+      return;
+    }
+
+    // If crypto payment, create the payment and show modal
+    if (paymentMethod === "crypto" && selectedCryptoCurrency) {
+      await createCryptoPayment(selectedCryptoCurrency);
+      return;
+    }
+
     setProcessing(true);
     setError("");
 
@@ -1301,6 +1738,15 @@ export default function MenuPage() {
       setSessionTimer(60); // Reset to 60 seconds
     }
   }, [showCart]);
+
+  // Cleanup payment monitoring on component unmount
+  useEffect(() => {
+    return () => {
+      if (paymentStatusTimer) {
+        clearInterval(paymentStatusTimer);
+      }
+    };
+  }, [paymentStatusTimer]);
 
   // Handle quantity change
   const handleQuantityChange = (change) => {
@@ -3270,7 +3716,11 @@ export default function MenuPage() {
                     </div>
                   </button>
                   <button
-                    onClick={() => setPaymentMethod("crypto")}
+                    onClick={() => {
+                      setPaymentMethod("crypto");
+                      setShowCryptoModal(true);
+                      loadCryptoData();
+                    }}
                     className={`p-6 rounded-xl border-2 transition-all ${
                       paymentMethod === "crypto"
                         ? "border-green-500 bg-green-50"
@@ -3283,6 +3733,39 @@ export default function MenuPage() {
                     </div>
                   </button>
                 </div>
+
+                {/* Selected Cryptocurrency Display */}
+                {paymentMethod === "crypto" && selectedCryptoCurrency && (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="w-8 h-8 mr-3">
+                        <img
+                          src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(selectedCryptoCurrency)}.svg`}
+                          alt={selectedCryptoCurrency.name}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div 
+                          className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                          style={{ display: 'none' }}
+                        >
+                          {((selectedCryptoCurrency.code || selectedCryptoCurrency.currency).charAt(0).toUpperCase())}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="font-semibold text-blue-800">
+                          Selected: {(selectedCryptoCurrency.code || selectedCryptoCurrency.currency).toUpperCase()}
+                        </div>
+                        <div className="text-sm text-blue-600">
+                          {selectedCryptoCurrency.name || 'Cryptocurrency Payment'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Points Usage Section - Only show for members */}
@@ -4016,6 +4499,410 @@ export default function MenuPage() {
               }
             }
           `}</style>
+        </div>
+      )}
+
+      {/* Crypto Payment Modal */}
+      {showCryptoModal && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800">
+                Select Cryptocurrency
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCryptoModal(false);
+                  setPaymentMethod("cash"); // Reset to cash if modal is closed
+                }}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            {loadingCrypto ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
+                <div className="text-lg text-gray-600">Loading available cryptocurrencies...</div>
+              </div>
+            ) : creatingPayment ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <div className="text-lg text-gray-600">Creating payment...</div>
+                <div className="text-sm text-gray-500 mt-2">Please wait while we generate your payment details</div>
+              </div>
+            ) : (
+              <div>
+                {/* Payment Error */}
+                {paymentError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center">
+                      <div className="text-red-600 text-2xl mr-3">⚠️</div>
+                      <div>
+                        <div className="font-semibold text-red-800">Payment Creation Failed</div>
+                        <div className="text-red-600 text-sm">{paymentError}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Order Summary */}
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold">Order Total:</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-600">฿{getTotalPrice().toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Currency Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {availableCurrencies
+                    .filter(currency => {
+                      const code = currency.code || currency.currency;
+                      if (!code || !['btc', 'eth', 'ltc', 'usdt', 'bnb', 'ada', 'xrp', 'doge'].includes(code.toLowerCase())) {
+                        return false;
+                      }
+                      
+                      // Check minimum requirement - convert Bath to USD first
+                      const currencyCode = code.toLowerCase();
+                      const minimum = currencyMinimums[currencyCode];
+                      
+                      if (!minimum) {
+                        return true; // If no minimum data, show the currency
+                      }
+                      
+                      // Convert total order from Bath to USD
+                      const totalOrderInBath = getTotalPrice();
+                      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
+                      
+                      // Check if order meets minimum requirement in USD
+                      const meetsMinimum = totalOrderInUsd >= minimum.fiatEquivalent;
+                      
+                      console.log(`Currency ${currencyCode.toUpperCase()}:`, {
+                        totalOrderInBath: totalOrderInBath.toFixed(2),
+                        totalOrderInUsd: totalOrderInUsd.toFixed(2),
+                        minimumUsd: minimum.fiatEquivalent?.toFixed(2),
+                        meetsMinimum
+                      });
+                      
+                      return meetsMinimum;
+                    })
+                    .map((currency) => {
+                      const currencyCode = (currency.code || currency.currency).toLowerCase();
+                      const minimum = currencyMinimums[currencyCode];
+                      const totalOrderInBath = getTotalPrice();
+                      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
+                      const canAfford = !minimum || totalOrderInUsd >= minimum.fiatEquivalent;
+
+                      return (
+                        <button
+                          key={currency.code || currency.currency}
+                          onClick={() => {
+                            setSelectedCryptoCurrency(currency);
+                            setShowCryptoModal(false);
+                            console.log('Selected crypto currency:', currency);
+                          }}
+                          className="p-4 rounded-lg border-2 transition-all border-gray-200 hover:border-green-500 hover:bg-green-50 cursor-pointer"
+                        >
+                          <div className="text-center">
+                            {/* Currency Logo */}
+                            <div className="w-12 h-12 mx-auto mb-2 relative">
+                              <img
+                                src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(currency)}.svg`}
+                                alt={currency.name || currencyCode.toUpperCase()}
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  // First fallback: try original currency code
+                                  if (!e.target.src.includes(currencyCode) && getCryptoIconSymbol(currency) !== currencyCode) {
+                                    e.target.src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${currencyCode}.svg`;
+                                  }
+                                  // Second fallback: NOWPayments logo if available
+                                  else if (currency.logo_url && !e.target.src.includes('nowpayments')) {
+                                    e.target.src = `https://api.nowpayments.io${currency.logo_url}`;
+                                  }
+                                  // Final fallback: text icon
+                                  else {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }
+                                }}
+                              />
+                              <div 
+                                className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg"
+                                style={{ display: 'none' }}
+                              >
+                                {currencyCode.charAt(0).toUpperCase()}
+                              </div>
+                            </div>
+                            
+                            {/* Currency Info */}
+                            <div className="font-semibold text-lg">{(currency.code || currency.currency).toUpperCase()}</div>
+                            <div className="text-sm text-gray-600 mb-2">{currency.name || currencyCode.toUpperCase()}</div>
+                            
+                            {/* Minimum Amount - Optional display */}
+                            {minimum && (
+                              <div className="text-xs text-green-600">
+                                Min: ฿{minimum.minAmountInBath?.toFixed(2) || 'N/A'}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+
+                {/* Information Note */}
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <div className="text-sm text-blue-800">
+                    <div className="font-semibold mb-2">📝 Important Notes:</div>
+                    <ul className="list-disc list-inside space-y-1">
+                      <li>All prices are displayed in Thai Baht (฿)</li>
+                      <li>Minimum payment amounts are required for each cryptocurrency</li>
+                      <li>Transaction fees may apply depending on the selected currency</li>
+                      <li>Payment processing may take a few minutes to confirm</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Details Modal */}
+      {showPaymentModal && paymentDetails && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 m-4 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                Complete Your Payment
+              </h3>
+              <div className="text-lg text-green-600 font-semibold">
+                {(selectedCryptoCurrency?.code || selectedCryptoCurrency?.currency || '').toUpperCase()} Payment
+              </div>
+            </div>
+
+            {/* Payment Status */}
+            <div className={`rounded-lg p-4 mb-6 ${
+              paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
+                ? 'bg-green-50 border border-green-200'
+                : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
+                ? 'bg-red-50 border border-red-200'
+                : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
+                ? 'bg-blue-50 border border-blue-200'
+                : 'bg-yellow-50 border border-yellow-200'
+            }`}>
+              <div className="flex items-center justify-center">
+                <div className={`text-2xl mr-3 ${
+                  paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
+                    ? 'text-green-600'
+                    : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
+                    ? 'text-red-600'
+                    : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
+                    ? 'text-blue-600'
+                    : 'text-yellow-600'
+                }`}>
+                  {paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
+                    ? '✅'
+                    : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
+                    ? '❌'
+                    : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
+                    ? '🔄'
+                    : '⏳'
+                  }
+                </div>
+                <div>
+                  <div className={`font-semibold ${
+                    paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
+                      ? 'text-green-800'
+                      : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
+                      ? 'text-red-800'
+                      : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
+                      ? 'text-blue-800'
+                      : 'text-yellow-800'
+                  }`}>
+                    Payment Status: {paymentStatus?.payment_status || paymentDetails.payment_status}
+                  </div>
+                  <div className={`text-sm ${
+                    paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
+                      ? 'text-green-700'
+                      : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
+                      ? 'text-red-700'
+                      : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
+                      ? 'text-blue-700'
+                      : 'text-yellow-700'
+                  }`}>
+                    {paymentStatus?.payment_status === 'finished' 
+                      ? 'Payment completed successfully!'
+                      : paymentStatus?.payment_status === 'confirmed'
+                      ? 'Payment confirmed, processing...'
+                      : paymentStatus?.payment_status === 'confirming'
+                      ? 'Transaction being processed on blockchain...'
+                      : paymentStatus?.payment_status === 'sending'
+                      ? 'Funds being sent to wallet...'
+                      : paymentStatus?.payment_status === 'failed'
+                      ? 'Payment failed. Please try again.'
+                      : paymentStatus?.payment_status === 'expired'
+                      ? 'Payment expired. Please create a new payment.'
+                      : paymentStatus?.payment_status === 'refunded'
+                      ? 'Payment has been refunded.'
+                      : 'Waiting for your payment...'
+                    }
+                  </div>
+                  {checkingStatus && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      🔄 Checking status...
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Order Summary */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-gray-800 mb-3">Order Summary</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span>Order ID:</span>
+                  <span className="font-mono text-sm">{paymentDetails.order_id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total Amount:</span>
+                  <span className="font-semibold">฿{getTotalPrice().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>USD Equivalent:</span>
+                  <span>${paymentDetails.price_amount}</span>
+                </div>
+                <div className="flex justify-between font-semibold text-lg border-t pt-2">
+                  <span>Pay Amount:</span>
+                  <span className="text-green-600">{paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* QR Code and Payment Address */}
+            <div className="text-center mb-6">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200 inline-block mb-4">
+                <div className="w-48 h-48 mx-auto bg-gray-100 flex items-center justify-center rounded-lg">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${paymentDetails.pay_address}`}
+                    alt="Payment QR Code"
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm" style={{ display: 'none' }}>
+                    QR Code unavailable
+                  </div>
+                </div>
+              </div>
+              
+              <div className="text-sm text-gray-600 mb-2">Payment Address:</div>
+              <div className="bg-gray-100 p-3 rounded-lg border">
+                <div className="font-mono text-sm break-all">{paymentDetails.pay_address}</div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(paymentDetails.pay_address);
+                    // You could add a toast notification here
+                  }}
+                  className="mt-2 px-3 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors"
+                >
+                  Copy Address
+                </button>
+              </div>
+            </div>
+
+            {/* Payment Instructions */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
+              <ol className="list-decimal list-inside text-blue-700 text-sm space-y-1">
+                <li>Scan the QR code with your crypto wallet</li>
+                <li>Or copy the payment address above</li>
+                <li>Send exactly <strong>{paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</strong></li>
+                <li>Wait for payment confirmation</li>
+              </ol>
+            </div>
+
+            {/* Important Notes */}
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <h4 className="font-semibold text-red-800 mb-2">⚠️ Important:</h4>
+              <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
+                <li>Send only {paymentDetails.pay_currency.toUpperCase()} to this address</li>
+                <li>Send the exact amount: {paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</li>
+                <li>Payment expires on: {new Date(paymentDetails.expiration_estimate_date).toLocaleString()}</li>
+                <li>Do not send from an exchange - use your personal wallet</li>
+              </ul>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-4">
+              {(paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed') ? (
+                <button
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    // Transaction is already processed by completeCryptoTransaction
+                  }}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+                >
+                  ✅ Payment Complete - Continue
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      // Clear payment monitoring
+                      if (paymentStatusTimer) {
+                        clearInterval(paymentStatusTimer);
+                        setPaymentStatusTimer(null);
+                      }
+                      setShowPaymentModal(false);
+                      setPaymentDetails(null);
+                      setPaymentStatus(null);
+                      setSelectedCryptoCurrency(null);
+                      setPaymentMethod("cash"); // Reset to cash
+                    }}
+                    className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 px-6 rounded-lg font-medium transition-colors"
+                  >
+                    Cancel Payment
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (paymentDetails?.payment_id) {
+                        checkPaymentStatus(paymentDetails.payment_id);
+                      }
+                    }}
+                    disabled={checkingStatus}
+                    className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
+                      checkingStatus
+                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                    }`}
+                  >
+                    {checkingStatus ? '🔄 Checking...' : '🔍 Check Status Now'}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Auto-refresh indicator */}
+            <div className="text-center mt-4">
+              <div className="text-xs text-gray-500">
+                {paymentStatusTimer ? (
+                  <>
+                    🔄 Auto-checking every 5 seconds • Last check: {new Date().toLocaleTimeString()}
+                  </>
+                ) : (
+                  'Monitoring stopped'
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </>
