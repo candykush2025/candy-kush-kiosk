@@ -1980,7 +1980,7 @@ export default function MenuPage() {
               <span className="text-green-600 font-semibold text-lg">
                 ฿{product.price}
               </span>
-              <div className="text-lg text-orange-600 text-center">
+              <div className="text-lg text-gray-500 text-center">
                 <span className="ml-1">฿{product.memberPrice} : MEMBER</span>
               </div>
             </div>
@@ -1990,9 +1990,22 @@ export default function MenuPage() {
           return `฿${product.price}`;
         }
       } else if (customer && !customer.isNoMember) {
-        // Regular member - show member price if available, otherwise regular price
-        const price = product.memberPrice ? product.memberPrice : product.price;
-        return `฿${price}`;
+        // Regular member - show member price prominently with crossed out regular price if different
+        if (product.memberPrice && product.memberPrice !== product.price) {
+          return (
+            <div className="flex flex-col items-center">
+              <span className="text-green-600 font-semibold text-lg">
+                ฿{product.memberPrice}
+              </span>
+              <div className="text-gray-500 text-lg">
+                <span className="line-through">฿{product.price}</span>
+              </div>
+            </div>
+          );
+        } else {
+          // No member price available or same price, just show regular price
+          return `฿${product.price}`;
+        }
       } else {
         // Fallback - show regular price
         return `฿${product.price}`;
@@ -3300,7 +3313,7 @@ export default function MenuPage() {
                                 {option.memberPrice &&
                                   option.memberPrice < option.price && (
                                     <>
-                                      <div className="text-lg text-orange-600 text-center">
+                                      <div className="text-lg text-gray-500 text-center">
                                         <span className="line-through">
                                           ฿{option.price}
                                         </span>
@@ -3308,7 +3321,7 @@ export default function MenuPage() {
                                           → ฿{option.memberPrice}
                                         </span>
                                       </div>
-                                      <span className="text-base text-orange-600">
+                                      <span className="text-base text-gray-500">
                                         with membership
                                       </span>
                                     </>

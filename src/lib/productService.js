@@ -99,6 +99,7 @@ export class CategoryService {
         categoryId: categoryId,
         name: categoryData.name,
         description: categoryData.description || "",
+        specialPage: categoryData.specialPage || "",
         textColor: categoryData.textColor || "#000000",
         image: imageUrl,
         imagePath: imagePath,
@@ -219,6 +220,7 @@ export class CategoryService {
       let updateData = {
         name: categoryData.name,
         description: categoryData.description,
+        specialPage: categoryData.specialPage || "",
         textColor: categoryData.textColor || currentData.textColor || "#000000",
         backgroundFit: categoryData.backgroundFit || "contain",
         isActive: categoryData.isActive,

@@ -456,10 +456,19 @@ export default function AdminPage() {
   const [showCryptoPaymentModal, setShowCryptoPaymentModal] = useState(false);
   const [cryptoPaymentStatusFilter, setCryptoPaymentStatusFilter] = useState("all");
   const [checkingCryptoStatus, setCheckingCryptoStatus] = useState(false);
+  const [refreshingAllPayments, setRefreshingAllPayments] = useState(false);
   const [editSelectedProductForAlert, setEditSelectedProductForAlert] = useState(null);
   const [editAlertKioskLevel, setEditAlertKioskLevel] = useState("");
   const [editAlertAdminLevel, setEditAlertAdminLevel] = useState("");
   const [editStockZeroAction, setEditStockZeroAction] = useState("disable");
+
+  // Non Member Payment Settings states
+  const [nonMemberPaymentSettings, setNonMemberPaymentSettings] = useState({
+    cash: true,
+    card: true,
+    crypto: true
+  });
+  const [savingNonMemberPaymentSettings, setSavingNonMemberPaymentSettings] = useState(false);
 
   // Stock submenu state - updated to include purchasing
   const [stockActiveSubTab, setStockActiveSubTab] = useState("overview");
@@ -556,6 +565,7 @@ export default function AdminPage() {
   const [newCategory, setNewCategory] = useState({
     name: "",
     description: "",
+    specialPage: "",
     backgroundImage: "",
     backgroundFit: "contain",
     textColor: "#000000",
@@ -605,6 +615,7 @@ export default function AdminPage() {
   const [categoryForm, setCategoryForm] = useState({
     name: "",
     description: "",
+    specialPage: "",
     backgroundImage: "",
     backgroundFit: "contain",
     textColor: "#000000",
@@ -1018,6 +1029,7 @@ export default function AdminPage() {
       setCategoryForm({
         name: editingCategory.name || "",
         description: editingCategory.description || "",
+        specialPage: editingCategory.specialPage || "",
         backgroundImage: editingCategory.backgroundImage || "",
         backgroundFit: editingCategory.backgroundFit || "contain",
         textColor: editingCategory.textColor || "#000000",
@@ -2097,6 +2109,7 @@ export default function AdminPage() {
       setNewCategory({
         name: "",
         description: "",
+        specialPage: "",
         backgroundImage: "",
         backgroundFit: "contain",
         textColor: "#000000",
@@ -2231,6 +2244,7 @@ export default function AdminPage() {
       setCategoryForm({
         name: "",
         description: "",
+        specialPage: "",
         backgroundImage: "",
         backgroundFit: "contain",
         textColor: "#000000",
@@ -2653,10 +2667,24 @@ export default function AdminPage() {
         setTransactionPrefix(settings.transactionPrefix || "TRX");
         setStoreName(settings.storeName || "Candy Kush Dispensary");
         setBathToUsdRate(settings.bathToUsdRate || "0.029");
+        
+        // Load non-member payment settings
+        setNonMemberPaymentSettings({
+          cash: settings.nonMemberPaymentCash !== undefined ? settings.nonMemberPaymentCash : true,
+          card: settings.nonMemberPaymentCard !== undefined ? settings.nonMemberPaymentCard : true,
+          crypto: settings.nonMemberPaymentCrypto !== undefined ? settings.nonMemberPaymentCrypto : true
+        });
       } else {
         setTransactionPrefix("TRX");
         setStoreName("Candy Kush Dispensary");
         setBathToUsdRate("0.029");
+        
+        // Default non-member payment settings
+        setNonMemberPaymentSettings({
+          cash: true,
+          card: true,
+          crypto: true
+        });
       }
     } catch (error) {
       console.error("Error loading settings:", error);
@@ -2664,6 +2692,11 @@ export default function AdminPage() {
       setTransactionPrefix("TRX");
       setStoreName("Candy Kush Dispensary");
       setBathToUsdRate("0.029");
+      setNonMemberPaymentSettings({
+        cash: true,
+        card: true,
+        crypto: true
+      });
     } finally {
       setLoadingSettings(false);
     }
@@ -2681,6 +2714,9 @@ export default function AdminPage() {
         transactionPrefix,
         storeName,
         bathToUsdRate: parseFloat(bathToUsdRate) || 0.029,
+        nonMemberPaymentCash: nonMemberPaymentSettings.cash,
+        nonMemberPaymentCard: nonMemberPaymentSettings.card,
+        nonMemberPaymentCrypto: nonMemberPaymentSettings.crypto,
         updatedAt: new Date().toISOString(),
       };
 
@@ -3549,23 +3585,8 @@ export default function AdminPage() {
       const statusData = await response.json();
       console.log('Payment status from API:', statusData);
 
-      // Update the payment in local state
-      setCryptoPayments(prev => 
-        prev.map(payment => 
-          payment.payment_id === paymentId 
-            ? { 
-                ...payment, 
-                payment_status: statusData.payment_status,
-                actually_paid: statusData.actually_paid,
-                outcome_amount: statusData.outcome_amount,
-                outcome_currency: statusData.outcome_currency,
-                payin_hash: statusData.payin_hash,
-                payout_hash: statusData.payout_hash,
-                updated_at: new Date(statusData.updated_at)
-              }
-            : payment
-        )
-      );
+      // Reload the payments list to get updated data from Firebase
+      await loadCryptoPayments();
 
       return statusData;
     } catch (error) {
@@ -3573,6 +3594,35 @@ export default function AdminPage() {
       throw error;
     } finally {
       setCheckingCryptoStatus(false);
+    }
+  };
+
+  // Check all crypto payment statuses and update Firebase
+  const refreshAllPaymentStatuses = async () => {
+    setRefreshingAllPayments(true);
+    try {
+      const response = await fetch('/api/crypto/payments/refresh-all', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh payment statuses');
+      }
+
+      const result = await response.json();
+      console.log('Bulk refresh result:', result);
+
+      // Reload the crypto payments list to reflect updated data
+      await loadCryptoPayments();
+      
+      // Show success message
+      alert(`✅ Payment Status Refresh Complete!\n\nTotal checked: ${result.results.total}\nUpdated: ${result.results.updated}\nNo changes: ${result.results.skipped}\nErrors: ${result.results.errors}`);
+      
+    } catch (error) {
+      console.error('Error refreshing all payment statuses:', error);
+      alert('❌ Failed to refresh payment statuses. Please try again.');
+    } finally {
+      setRefreshingAllPayments(false);
     }
   };
 
@@ -9524,6 +9574,69 @@ export default function AdminPage() {
                         </div>
                       </div>
 
+                      {/* Non Member Payment Settings */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Non Member Payment Methods
+                        </label>
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              id="nonMemberCash"
+                              checked={nonMemberPaymentSettings.cash}
+                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
+                                ...prev,
+                                cash: e.target.checked
+                              }))}
+                              disabled={loadingSettings}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
+                            />
+                            <label htmlFor="nonMemberCash" className="text-sm text-gray-700">
+                              💵 Cash Payment
+                            </label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              id="nonMemberCard"
+                              checked={nonMemberPaymentSettings.card}
+                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
+                                ...prev,
+                                card: e.target.checked
+                              }))}
+                              disabled={loadingSettings}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
+                            />
+                            <label htmlFor="nonMemberCard" className="text-sm text-gray-700">
+                              💳 Card Payment
+                            </label>
+                          </div>
+                          
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              id="nonMemberCrypto"
+                              checked={nonMemberPaymentSettings.crypto}
+                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
+                                ...prev,
+                                crypto: e.target.checked
+                              }))}
+                              disabled={loadingSettings}
+                              className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
+                            />
+                            <label htmlFor="nonMemberCrypto" className="text-sm text-gray-700">
+                              ₿ Crypto Payment
+                            </label>
+                          </div>
+                          
+                          <p className="text-sm text-gray-500">
+                            Select which payment methods are available for non-members. Members will always have access to all payment methods.
+                          </p>
+                        </div>
+                      </div>
+
                       {/* Save Button */}
                       <div className="flex justify-start">
                         <button
@@ -9576,18 +9689,32 @@ export default function AdminPage() {
                           </select>
                         </div>
 
-                        {/* Refresh Button */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            &nbsp;
-                          </label>
-                          <button
-                            onClick={() => loadCryptoPayments()}
-                            disabled={loadingCryptoPayments}
-                            className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
-                          >
-                            {loadingCryptoPayments ? '🔄' : '↻'} Refresh
-                          </button>
+                        {/* Refresh Buttons */}
+                        <div className="flex gap-2">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              &nbsp;
+                            </label>
+                            <button
+                              onClick={() => loadCryptoPayments()}
+                              disabled={loadingCryptoPayments || refreshingAllPayments}
+                              className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
+                            >
+                              {loadingCryptoPayments ? '🔄' : '↻'} Refresh List
+                            </button>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              &nbsp;
+                            </label>
+                            <button
+                              onClick={refreshAllPaymentStatuses}
+                              disabled={refreshingAllPayments || loadingCryptoPayments}
+                              className="px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
+                            >
+                              {refreshingAllPayments ? '🔄' : '🔍'} Check All Payments
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -11125,6 +11252,26 @@ export default function AdminPage() {
                   />
                 </div>
 
+                {/* Special Page */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Special Page (Optional)
+                  </label>
+                  <select
+                    value={newCategory.specialPage || ""}
+                    onChange={(e) =>
+                      setNewCategory({
+                        ...newCategory,
+                        specialPage: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">None</option>
+                    <option value="Prerolled Page">Prerolled Page</option>
+                  </select>
+                </div>
+
                 {/* Background Image */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -11269,9 +11416,9 @@ export default function AdminPage() {
                     setNewCategory({
                       name: "",
                       description: "",
+                      specialPage: "",
                       backgroundImage: "",
                       backgroundFit: "contain",
-                      textColor: "#000000",
                       textColor: "#000000",
                       isActive: true,
                     });
@@ -11369,6 +11516,26 @@ export default function AdminPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     placeholder="Enter category description"
                   />
+                </div>
+
+                {/* Special Page */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Special Page (Optional)
+                  </label>
+                  <select
+                    value={categoryForm.specialPage || ""}
+                    onChange={(e) =>
+                      setCategoryForm({
+                        ...categoryForm,
+                        specialPage: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">None</option>
+                    <option value="Prerolled Page">Prerolled Page</option>
+                  </select>
                 </div>
 
                 <div>
@@ -11691,6 +11858,7 @@ export default function AdminPage() {
                       setCategoryForm({
                         name: "",
                         description: "",
+                        specialPage: "",
                         backgroundImage: "",
                         backgroundFit: "contain",
                         textColor: "#000000",

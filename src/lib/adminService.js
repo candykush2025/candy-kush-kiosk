@@ -228,4 +228,34 @@ export class AdminService {
       throw error;
     }
   }
+
+  // Get non-member payment settings
+  static async getNonMemberPaymentSettings() {
+    try {
+      const settingsDoc = await getDoc(doc(db, "settings", "general"));
+      if (settingsDoc.exists()) {
+        const settings = settingsDoc.data();
+        return {
+          cash: settings.nonMemberPaymentCash !== undefined ? settings.nonMemberPaymentCash : true,
+          card: settings.nonMemberPaymentCard !== undefined ? settings.nonMemberPaymentCard : true,
+          crypto: settings.nonMemberPaymentCrypto !== undefined ? settings.nonMemberPaymentCrypto : true
+        };
+      } else {
+        // Return defaults if no settings found
+        return {
+          cash: true,
+          card: true,
+          crypto: true
+        };
+      }
+    } catch (error) {
+      console.error("Error loading non-member payment settings:", error);
+      // Return defaults on error
+      return {
+        cash: true,
+        card: true,
+        crypto: true
+      };
+    }
+  }
 }
