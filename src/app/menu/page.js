@@ -53,6 +53,15 @@ export default function MenuPage() {
   const [showPersonalizedJoints, setShowPersonalizedJoints] = useState(false);
   const [selectedJointType, setSelectedJointType] = useState(null);
   const [showJointPopup, setShowJointPopup] = useState(false);
+
+  // Image zoom states
+  const [zoomedImage, setZoomedImage] = useState(null);
+
+  // Selected size for preroll popup
+  const [selectedSize, setSelectedSize] = useState(null);
+
+  // Track previous section for cart navigation
+  const [previousSection, setPreviousSection] = useState("main"); // 'main' or 'prerolls'
   const firstWindowRef = useRef(null);
   const [firstWindowHeight, setFirstWindowHeight] = useState(null);
   const [cartTimer, setCartTimer] = useState(60);
@@ -79,10 +88,10 @@ export default function MenuPage() {
   const [pointsUsagePercentage, setPointsUsagePercentage] = useState(0); // 0, 25, 50, 75, 100
   const [pointsToUse, setPointsToUse] = useState(0);
   const [pointsValue, setPointsValue] = useState(0); // Monetary value of points
-  
+
   // Cashback percentages for categories
   const [categoryPercentages, setCategoryPercentages] = useState({});
-  
+
   // Stock alerts
   const [stockAlerts, setStockAlerts] = useState([]);
   const [stockCalculations, setStockCalculations] = useState({});
@@ -95,39 +104,39 @@ export default function MenuPage() {
   const [loadingCrypto, setLoadingCrypto] = useState(false);
   const [selectedCryptoCurrency, setSelectedCryptoCurrency] = useState(null);
   const [bathToUsdRate, setBathToUsdRate] = useState(0.029); // Default rate, will be loaded from settings
-  
+
   // Payment processing states
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  
+
   // Non member payment settings
   const [nonMemberPaymentSettings, setNonMemberPaymentSettings] = useState({
     cash: true,
     card: true,
-    crypto: true
+    crypto: true,
   });
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
 
   // Personalized Joints product images mapping
   const personalizedJointsImages = {
-    'outdoor': {
-      'sativa': '/Product/outdoor sativa king.png',
-      'hybrid': '/Product/outdoor hybrid king.png',
-      'indica': '/Product/outdoor indica king.png'
+    outdoor: {
+      sativa: "/Product/outdoor sativa king.png",
+      hybrid: "/Product/outdoor hybrid king.png",
+      indica: "/Product/outdoor indica king.png",
     },
-    'indoor': {
-      'sativa': '/Product/indoor sativa king.png',
-      'hybrid': '/Product/indoor hybrid king.png',
-      'indica': '/Product/indoor indica king.png'
+    indoor: {
+      sativa: "/Product/indoor sativa king.png",
+      hybrid: "/Product/indoor hybrid king.png",
+      indica: "/Product/indoor indica king.png",
     },
-    'top': {
-      'sativa': '/Product/top sativa king.png',
-      'hybrid': '/Product/top HYBRID king.png',
-      'indica': '/Product/top indica king.png'
-    }
+    top: {
+      sativa: "/Product/top sativa king.png",
+      hybrid: "/Product/top HYBRID king.png",
+      indica: "/Product/top indica king.png",
+    },
   };
   const [paymentError, setPaymentError] = useState(null);
-  
+
   // Payment monitoring states
   const [paymentStatusTimer, setPaymentStatusTimer] = useState(null);
   const [paymentStatus, setPaymentStatus] = useState(null);
@@ -186,19 +195,32 @@ export default function MenuPage() {
   // Load Bath to USD rate and non-member payment settings from settings
   const loadBathToUsdRate = async () => {
     try {
-      const { collection, getDocs, query, limit } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
-      
-      const settingsDoc = await getDocs(query(collection(db, "settings"), limit(1)));
+      const { collection, getDocs, query, limit } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
+
+      const settingsDoc = await getDocs(
+        query(collection(db, "settings"), limit(1))
+      );
       if (!settingsDoc.empty) {
         const settings = settingsDoc.docs[0].data();
         setBathToUsdRate(settings.bathToUsdRate || 0.029);
-        
+
         // Load non-member payment settings
         setNonMemberPaymentSettings({
-          cash: settings.nonMemberPaymentCash !== undefined ? settings.nonMemberPaymentCash : true,
-          card: settings.nonMemberPaymentCard !== undefined ? settings.nonMemberPaymentCard : true,
-          crypto: settings.nonMemberPaymentCrypto !== undefined ? settings.nonMemberPaymentCrypto : true
+          cash:
+            settings.nonMemberPaymentCash !== undefined
+              ? settings.nonMemberPaymentCash
+              : true,
+          card:
+            settings.nonMemberPaymentCard !== undefined
+              ? settings.nonMemberPaymentCard
+              : true,
+          crypto:
+            settings.nonMemberPaymentCrypto !== undefined
+              ? settings.nonMemberPaymentCrypto
+              : true,
         });
       }
     } catch (error) {
@@ -207,7 +229,7 @@ export default function MenuPage() {
       setNonMemberPaymentSettings({
         cash: true,
         card: true,
-        crypto: true
+        crypto: true,
       });
     }
   };
@@ -215,15 +237,15 @@ export default function MenuPage() {
   // Crypto API functions
   const fetchAvailableCurrencies = async () => {
     try {
-      const response = await fetch('/api/crypto/currencies');
-      
+      const response = await fetch("/api/crypto/currencies");
+
       if (!response.ok) {
-        throw new Error('Failed to fetch currencies');
+        throw new Error("Failed to fetch currencies");
       }
-      
+
       const data = await response.json();
-      console.log('Crypto API Response:', data);
-      
+      console.log("Crypto API Response:", data);
+
       // The NOWPayments API might return currencies in different formats
       // Let's handle both possible structures
       let currencies = [];
@@ -232,12 +254,12 @@ export default function MenuPage() {
       } else if (Array.isArray(data)) {
         currencies = data;
       }
-      
-      console.log('Processed currencies:', currencies.slice(0, 5)); // Log first 5 for debugging
-      
+
+      console.log("Processed currencies:", currencies.slice(0, 5)); // Log first 5 for debugging
+
       return currencies;
     } catch (error) {
-      console.error('Error fetching currencies:', error);
+      console.error("Error fetching currencies:", error);
       return [];
     }
   };
@@ -247,18 +269,18 @@ export default function MenuPage() {
       const response = await fetch(
         `/api/crypto/min-amount?currency_from=${currencyFrom}&currency_to=trx&fiat_equivalent=usd&is_fixed_rate=false&is_fee_paid_by_user=false`
       );
-      
+
       if (!response.ok) {
-        throw new Error('Failed to fetch minimum amount');
+        throw new Error("Failed to fetch minimum amount");
       }
-      
+
       const data = await response.json();
       return {
         minAmount: data.min_amount || 0,
-        fiatEquivalent: data.fiat_equivalent || 0
+        fiatEquivalent: data.fiat_equivalent || 0,
       };
     } catch (error) {
-      console.error('Error fetching minimum amount:', error);
+      console.error("Error fetching minimum amount:", error);
       return { minAmount: 0, fiatEquivalent: 0 };
     }
   };
@@ -266,20 +288,20 @@ export default function MenuPage() {
   // Helper function to get standardized crypto symbol for icons
   const getCryptoIconSymbol = (currency) => {
     const code = (currency.code || currency.currency).toLowerCase();
-    
+
     // Map some currencies to their standard icon names
     const iconMapping = {
-      'usdt': 'usdt',
-      'usdttrc20': 'usdt',
-      'usdterc20': 'usdt',
-      'usdcbsc': 'usdc',
-      'usdcsol': 'usdc',
-      'usdtbsc': 'usdt',
-      'bnbbsc': 'bnb',
-      'maticmainnet': 'matic',
-      'avaxc': 'avax'
+      usdt: "usdt",
+      usdttrc20: "usdt",
+      usdterc20: "usdt",
+      usdcbsc: "usdc",
+      usdcsol: "usdc",
+      usdtbsc: "usdt",
+      bnbbsc: "bnb",
+      maticmainnet: "matic",
+      avaxc: "avax",
     };
-    
+
     return iconMapping[code] || code;
   };
 
@@ -293,42 +315,52 @@ export default function MenuPage() {
       // Calculate total: Bath -> USD conversion
       const totalOrderInBath = getTotalPrice();
       const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
-      
-      console.log('Order totals:', {
+
+      console.log("Order totals:", {
         bathAmount: totalOrderInBath.toFixed(2),
         usdAmount: totalOrderInUsd.toFixed(2),
-        exchangeRate: bathToUsdRate
+        exchangeRate: bathToUsdRate,
       });
 
       // Fetch minimum amounts for popular currencies
-      const popularCurrencies = ['btc', 'eth', 'ltc', 'usdt', 'bnb', 'ada', 'xrp', 'doge'];
+      const popularCurrencies = [
+        "btc",
+        "eth",
+        "ltc",
+        "usdt",
+        "bnb",
+        "ada",
+        "xrp",
+        "doge",
+      ];
       const minimums = {};
 
       for (const currency of popularCurrencies) {
-        const currencyData = currencies.find(c => 
-          (c.code && c.code.toLowerCase() === currency) || 
-          (c.currency && c.currency.toLowerCase() === currency)
+        const currencyData = currencies.find(
+          (c) =>
+            (c.code && c.code.toLowerCase() === currency) ||
+            (c.currency && c.currency.toLowerCase() === currency)
         );
         if (currencyData) {
           const minData = await fetchMinimumAmount(currency, totalOrderInUsd);
           minimums[currency] = {
             minAmount: minData.minAmount,
             minAmountInBath: convertUsdToBath(minData.fiatEquivalent),
-            fiatEquivalent: minData.fiatEquivalent
+            fiatEquivalent: minData.fiatEquivalent,
           };
-          
+
           console.log(`${currency.toUpperCase()} minimum:`, {
             minAmountCrypto: minData.minAmount,
             minAmountUsd: minData.fiatEquivalent?.toFixed(2),
             minAmountBath: convertUsdToBath(minData.fiatEquivalent)?.toFixed(2),
-            orderMeetsMinimum: totalOrderInUsd >= minData.fiatEquivalent
+            orderMeetsMinimum: totalOrderInUsd >= minData.fiatEquivalent,
           });
         }
       }
 
       setCurrencyMinimums(minimums);
     } catch (error) {
-      console.error('Error loading crypto data:', error);
+      console.error("Error loading crypto data:", error);
     } finally {
       setLoadingCrypto(false);
     }
@@ -338,56 +370,57 @@ export default function MenuPage() {
   const createCryptoPayment = async (selectedCurrency) => {
     setCreatingPayment(true);
     setPaymentError(null);
-    
+
     try {
       const totalOrderInBath = getTotalPrice();
       const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
-      const currencyCode = (selectedCurrency.code || selectedCurrency.currency).toLowerCase();
-      
+      const currencyCode = (
+        selectedCurrency.code || selectedCurrency.currency
+      ).toLowerCase();
+
       // Create order ID
       const orderId = `CK-${Date.now()}`;
-      
+
       const paymentRequest = {
         price_amount: totalOrderInUsd,
-        price_currency: 'usd',
+        price_currency: "usd",
         pay_currency: currencyCode,
         order_id: orderId,
         order_description: `Candy Kush Order - ${cart.length} items`,
         ipn_callback_url: `${window.location.origin}/api/crypto/callback`,
         is_fixed_rate: true,
-        is_fee_paid_by_user: false
+        is_fee_paid_by_user: false,
       };
 
-      console.log('Creating payment request:', paymentRequest);
+      console.log("Creating payment request:", paymentRequest);
 
-      const response = await fetch('/api/crypto/payment', {
-        method: 'POST',
+      const response = await fetch("/api/crypto/payment", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(paymentRequest)
+        body: JSON.stringify(paymentRequest),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create payment');
+        throw new Error(errorData.error || "Failed to create payment");
       }
 
       const paymentData = await response.json();
-      console.log('Payment created:', paymentData);
-      
+      console.log("Payment created:", paymentData);
+
       // Save payment to Firebase for history
       await saveCryptoPaymentToFirebase(paymentData, selectedCurrency);
-      
+
       setPaymentDetails(paymentData);
       setPaymentStatus(paymentData);
       setShowPaymentModal(true);
-      
+
       // Start monitoring payment status
       startPaymentMonitoring(paymentData.payment_id);
-      
     } catch (error) {
-      console.error('Error creating payment:', error);
+      console.error("Error creating payment:", error);
       setPaymentError(error.message);
     } finally {
       setCreatingPayment(false);
@@ -397,9 +430,9 @@ export default function MenuPage() {
   // Save crypto payment to Firebase
   const saveCryptoPaymentToFirebase = async (paymentData, selectedCurrency) => {
     try {
-      const { collection, addDoc } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
-      
+      const { collection, addDoc } = await import("firebase/firestore");
+      const { db } = await import("../../lib/firebase");
+
       const cryptoPaymentData = {
         payment_id: paymentData.payment_id,
         order_id: paymentData.order_id,
@@ -410,21 +443,29 @@ export default function MenuPage() {
         pay_amount: paymentData.pay_amount,
         pay_currency: paymentData.pay_currency,
         customer_id: customer?.id || null,
-        customer_name: customer ? (customer.isNoMember ? "No Member" : `${customer.name} ${customer.lastName || ""}`.trim()) : "",
+        customer_name: customer
+          ? customer.isNoMember
+            ? "No Member"
+            : `${customer.name} ${customer.lastName || ""}`.trim()
+          : "",
         cart_items: cart,
         total_bath: getTotalPrice(),
         total_usd: convertBathToUsd(getTotalPrice()),
         selected_currency: selectedCurrency,
         created_at: new Date(),
         updated_at: new Date(),
-        expiration_date: paymentData.expiration_estimate_date ? new Date(paymentData.expiration_estimate_date) : null
+        expiration_date: paymentData.expiration_estimate_date
+          ? new Date(paymentData.expiration_estimate_date)
+          : null,
       };
 
-      const docRef = await addDoc(collection(db, 'crypto_payments'), cryptoPaymentData);
-      console.log('Crypto payment saved to Firebase:', docRef.id);
-      
+      const docRef = await addDoc(
+        collection(db, "crypto_payments"),
+        cryptoPaymentData
+      );
+      console.log("Crypto payment saved to Firebase:", docRef.id);
     } catch (error) {
-      console.error('Error saving crypto payment to Firebase:', error);
+      console.error("Error saving crypto payment to Firebase:", error);
     }
   };
 
@@ -449,44 +490,50 @@ export default function MenuPage() {
   // Check payment status
   const checkPaymentStatus = async (paymentId) => {
     if (checkingStatus) return; // Prevent multiple simultaneous checks
-    
+
     setCheckingStatus(true);
     try {
       const response = await fetch(`/api/crypto/payment/${paymentId}`);
-      
+
       if (!response.ok) {
-        throw new Error('Failed to check payment status');
+        throw new Error("Failed to check payment status");
       }
 
       const statusData = await response.json();
-      console.log('Payment status update:', statusData);
-      
+      console.log("Payment status update:", statusData);
+
       setPaymentStatus(statusData);
 
       // Update payment details with latest status
-      setPaymentDetails(prev => ({
+      setPaymentDetails((prev) => ({
         ...prev,
         payment_status: statusData.payment_status,
         actually_paid: statusData.actually_paid,
         outcome_amount: statusData.outcome_amount,
-        outcome_currency: statusData.outcome_currency
+        outcome_currency: statusData.outcome_currency,
       }));
 
       // If payment is completed, process the transaction
-      if (statusData.payment_status === 'finished' || statusData.payment_status === 'confirmed') {
+      if (
+        statusData.payment_status === "finished" ||
+        statusData.payment_status === "confirmed"
+      ) {
         await completeCryptoTransaction(statusData);
       }
 
       // Stop monitoring if payment is final
-      if (['finished', 'failed', 'refunded', 'expired'].includes(statusData.payment_status)) {
+      if (
+        ["finished", "failed", "refunded", "expired"].includes(
+          statusData.payment_status
+        )
+      ) {
         if (paymentStatusTimer) {
           clearInterval(paymentStatusTimer);
           setPaymentStatusTimer(null);
         }
       }
-
     } catch (error) {
-      console.error('Error checking payment status:', error);
+      console.error("Error checking payment status:", error);
     } finally {
       setCheckingStatus(false);
     }
@@ -515,7 +562,9 @@ export default function MenuPage() {
         pointsUsedValue: pointsValue,
         pointsUsagePercentage: pointsUsagePercentage,
         pointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
-        pointDetails: customer?.isNoMember ? [] : window.menuCashbackDetails || [],
+        pointDetails: customer?.isNoMember
+          ? []
+          : window.menuCashbackDetails || [],
         pointCalculation: {
           totalPointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
           calculationMethod: customer?.isNoMember ? "none" : "category-based",
@@ -536,17 +585,27 @@ export default function MenuPage() {
           payout_hash: statusData.payout_hash,
           payment_status: statusData.payment_status,
           created_at: statusData.created_at,
-          updated_at: statusData.updated_at
-        }
+          updated_at: statusData.updated_at,
+        },
       };
 
-      console.log("🔍 Processing crypto transaction with data:", transactionData);
+      console.log(
+        "🔍 Processing crypto transaction with data:",
+        transactionData
+      );
 
-      const { TransactionService } = await import("../../lib/transactionService");
-      const transactionId = await TransactionService.createTransaction(transactionData);
+      const { TransactionService } = await import(
+        "../../lib/transactionService"
+      );
+      const transactionId = await TransactionService.createTransaction(
+        transactionData
+      );
 
       if (transactionId) {
-        console.log("✅ Crypto transaction successful, transaction ID:", transactionId);
+        console.log(
+          "✅ Crypto transaction successful, transaction ID:",
+          transactionId
+        );
 
         // Handle points transactions (same as regular payments)
         if (pointsToUse > 0 && customer && !customer.isNoMember) {
@@ -575,38 +634,46 @@ export default function MenuPage() {
           ...transactionData,
           customer: customer,
         });
-
       } else {
         throw new Error("Failed to create transaction record");
       }
-
     } catch (error) {
       console.error("Crypto transaction error:", error);
-      setPaymentError("Transaction completed but failed to record. Please contact support.");
+      setPaymentError(
+        "Transaction completed but failed to record. Please contact support."
+      );
     }
   };
 
   // Load stock alerts from Firebase
   const loadStockAlerts = async () => {
     try {
-      const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, getDocs, query, orderBy } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
 
-      const alertsRef = collection(db, 'StockAlert');
-      const q = query(alertsRef, orderBy('createdAt', 'desc'));
+      const alertsRef = collection(db, "StockAlert");
+      const q = query(alertsRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      
+
       const alerts = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() || {};
         alerts.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : data.createdAt || null,
-          updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : data.updatedAt || null,
+          createdAt:
+            data.createdAt && data.createdAt.toDate
+              ? data.createdAt.toDate()
+              : data.createdAt || null,
+          updatedAt:
+            data.updatedAt && data.updatedAt.toDate
+              ? data.updatedAt.toDate()
+              : data.updatedAt || null,
         });
       });
-      
+
       setStockAlerts(alerts);
       console.log("📊 Stock alerts loaded:", alerts.length);
     } catch (error) {
@@ -617,23 +684,26 @@ export default function MenuPage() {
   // Load stock calculations from StockMovement collection (same as admin panel)
   const loadStockCalculations = async () => {
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, getDocs } = await import("firebase/firestore");
+      const { db } = await import("../../lib/firebase");
 
       // Get all stock movements
-      const querySnapshot = await getDocs(collection(db, 'StockMovement'));
+      const querySnapshot = await getDocs(collection(db, "StockMovement"));
       const stockSummary = {};
-      
-      console.log('📊 Menu: Total StockMovement documents found:', querySnapshot.size);
+
+      console.log(
+        "📊 Menu: Total StockMovement documents found:",
+        querySnapshot.size
+      );
 
       // Process each stock movement
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const productId = data.productId;
-        const variantId = data.variantId || '';
+        const variantId = data.variantId || "";
         const quantity = data.quantity || 0;
         const status = data.status;
-        
+
         // Create key for this product/variant combination
         const key = variantId ? `${productId}-${variantId}` : productId;
 
@@ -643,22 +713,25 @@ export default function MenuPage() {
         }
 
         // Calculate stock: add "purchasing", subtract "sales"
-        if (status === 'purchasing') {
+        if (status === "purchasing") {
           stockSummary[key].stock += quantity;
-        } else if (status === 'sales') {
+        } else if (status === "sales") {
           stockSummary[key].stock -= quantity;
         }
       });
 
-      console.log('✅ Menu: Final stock calculations:', stockSummary);
-      console.log('📋 Menu: Stock calculation keys:', Object.keys(stockSummary));
-      
+      console.log("✅ Menu: Final stock calculations:", stockSummary);
+      console.log(
+        "📋 Menu: Stock calculation keys:",
+        Object.keys(stockSummary)
+      );
+
       // Update state with calculated stock
       setStockCalculations(stockSummary);
       setStockCalculationsLoaded(true);
-      console.log('🔄 Menu: Stock calculations state updated');
+      console.log("🔄 Menu: Stock calculations state updated");
     } catch (error) {
-      console.error('❌ Menu: Error loading stock calculations:', error);
+      console.error("❌ Menu: Error loading stock calculations:", error);
       setStockCalculationsLoaded(false);
     }
   };
@@ -666,8 +739,8 @@ export default function MenuPage() {
   // Check for dev parameter in URL on page mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const devParam = urlParams.get('dev');
-    setIsDev(devParam === 'true');
+    const devParam = urlParams.get("dev");
+    setIsDev(devParam === "true");
   }, []);
 
   // Ensure language is loaded from localStorage on page mount
@@ -751,15 +824,23 @@ export default function MenuPage() {
 
         // Filter categories based on customer permissions
         let allowedCategoryIds = [];
-        
-        if (customerData && customerData.allowedCategories && !customerData.isNoMember) {
+
+        if (
+          customerData &&
+          customerData.allowedCategories &&
+          !customerData.isNoMember
+        ) {
           // Member: Use customer's allowed categories
           allowedCategoryIds = customerData.allowedCategories;
           console.log("🔐 Member categories:", allowedCategoryIds);
-        } else if (noMember === "true" || (customerData && customerData.isNoMember)) {
+        } else if (
+          noMember === "true" ||
+          (customerData && customerData.isNoMember)
+        ) {
           // Non-member: Use NonMemberCategories from admin settings
           try {
-            allowedCategoryIds = await NonMemberCategoriesService.getNonMemberCategories();
+            allowedCategoryIds =
+              await NonMemberCategoriesService.getNonMemberCategories();
             console.log("👤 Non-member categories:", allowedCategoryIds);
           } catch (error) {
             console.error("Error loading non-member categories:", error);
@@ -772,25 +853,23 @@ export default function MenuPage() {
         }
 
         // Filter categories to only show allowed ones
-        const filteredCategoriesData = categoriesData.filter(category => 
+        const filteredCategoriesData = categoriesData.filter((category) =>
           allowedCategoryIds.includes(category.id)
         );
 
-
-
-
-
         // Transform filtered categories data for display
-        const transformedCategories = filteredCategoriesData.map((category) => ({
-          id: category.id,
-          categoryId: category.categoryId,
-          name: category.name,
-          description: category.description,
-          image: category.image,
-          backgroundImage: category.backgroundImage,
-          backgroundFit: category.backgroundFit || "contain",
-          textColor: category.textColor || "#000000",
-        }));
+        const transformedCategories = filteredCategoriesData.map(
+          (category) => ({
+            id: category.id,
+            categoryId: category.categoryId,
+            name: category.name,
+            description: category.description,
+            image: category.image,
+            backgroundImage: category.backgroundImage,
+            backgroundFit: category.backgroundFit || "contain",
+            textColor: category.textColor || "#000000",
+          })
+        );
 
         setCategories(transformedCategories);
 
@@ -815,11 +894,8 @@ export default function MenuPage() {
               : product.categoryId,
           };
 
-
-
           return mappedProduct;
         });
-
 
         setProducts(productsWithCategoryId);
 
@@ -838,8 +914,6 @@ export default function MenuPage() {
 
           setFilteredSubcategories(firstCategorySubcategories);
           setFilteredProducts(firstCategoryProducts);
-
-
         }
 
         // Load cart from session storage
@@ -847,7 +921,7 @@ export default function MenuPage() {
         if (savedCart) {
           setCart(JSON.parse(savedCart));
         }
-        
+
         // Load stock alerts and stock calculations
         await loadStockAlerts();
         await loadStockCalculations();
@@ -967,7 +1041,7 @@ export default function MenuPage() {
   const handleSessionContinue = () => {
     setShowSessionExpiryModal(false);
     setSessionModalCountdown(60);
-    
+
     // Clear existing timers
     if (sessionTimerRef.current) {
       clearTimeout(sessionTimerRef.current);
@@ -978,11 +1052,11 @@ export default function MenuPage() {
     if (cartTimerRef.current) {
       clearTimeout(cartTimerRef.current);
     }
-    
+
     // If cart is open, restart cart timer
     if (showCart) {
       setCartTimer(60);
-      
+
       // Start cart countdown interval
       const countdownInterval = setInterval(() => {
         setCartTimer((prev) => {
@@ -1009,7 +1083,7 @@ export default function MenuPage() {
     } else {
       // Restart the session timer for main menu
       setSessionTimer(60);
-      
+
       // Start new countdown interval
       sessionCountdownRef.current = setInterval(() => {
         setSessionTimer((prev) => {
@@ -1050,6 +1124,7 @@ export default function MenuPage() {
   const handleCart = () => {
     resetSessionTimer(); // Reset session timer on user interaction
     if (cart.length > 0) {
+      setPreviousSection("main");
       setShowCart(true);
     }
   };
@@ -1195,6 +1270,62 @@ export default function MenuPage() {
     sessionStorage.setItem("cart", JSON.stringify(updatedCart));
   };
 
+  // Image zoom handlers
+  const handleImageClick = (imageKey) => {
+    resetSessionTimer(); // Reset session timer on user interaction
+    setZoomedImage(zoomedImage === imageKey ? null : imageKey);
+    // Also trigger the joint popup for selection
+    setSelectedJointType(imageKey);
+    setSelectedSize(null); // Reset selected size when opening popup
+    setShowJointPopup(true);
+  };
+
+  // Handle preroll size selection and add to cart
+  const handlePrerollSizeSelect = (size) => {
+    resetSessionTimer(); // Reset session timer on user interaction
+    setSelectedSize(size);
+  };
+
+  const handleAddPrerollToCart = () => {
+    if (!selectedJointType || !selectedSize) return;
+
+    const [quality, strain] = selectedJointType.split("-");
+
+    // Get the appropriate image based on size
+    const sizeImageMap = {
+      small: `/Product/${quality} ${strain} small.png`,
+      normal: `/Product/${quality} ${strain} normal.png`,
+      king: `/Product/${quality} ${strain} king.png`,
+    };
+
+    // Price mapping for different sizes
+    const priceMap = {
+      small: 100,
+      normal: 150,
+      king: 200,
+    };
+
+    const prerollItem = {
+      id: `${selectedJointType}_${selectedSize}_${Date.now()}`,
+      name: `Prerolls - ${
+        quality.charAt(0).toUpperCase() + quality.slice(1)
+      } - ${strain.charAt(0).toUpperCase() + strain.slice(1)} - ${
+        selectedSize.charAt(0).toUpperCase() + selectedSize.slice(1)
+      }`,
+      price: priceMap[selectedSize],
+      quantity: 1,
+      image: sizeImageMap[selectedSize],
+      categoryId: "prerolls",
+      size: selectedSize,
+    };
+
+    const newCart = [...cart, prerollItem];
+    setCart(newCart);
+    sessionStorage.setItem("cart", JSON.stringify(newCart));
+    setShowJointPopup(false);
+    setSelectedSize(null);
+  };
+
   // Points usage calculation functions
   const calculatePointsToUse = (percentage) => {
     if (!customer || customer.isNoMember || !customer.totalPoints) return 0;
@@ -1211,7 +1342,7 @@ export default function MenuPage() {
     if (!customer || customer.isNoMember) return 0;
     const totalPrice = getTotalPrice();
     const maxPointsValue = calculatePointsValue(customer.totalPoints || 0);
-    
+
     // Don't allow points to exceed the total price
     if (maxPointsValue >= totalPrice) {
       return Math.floor((totalPrice / maxPointsValue) * 100);
@@ -1222,15 +1353,15 @@ export default function MenuPage() {
   const handlePointsSliderChange = (percentage) => {
     const maxAllowedPercentage = getMaxPointsPercentageForTotal();
     let actualPercentage = Math.min(percentage, maxAllowedPercentage);
-    
+
     // Smart snapping: snap to nearest quarter increment if within threshold
     const snapThreshold = 4; // 4% threshold for snapping
     const snapPoints = [0, 25, 50, 75, 100];
-    
+
     // Find the closest snap point
     let closestSnapPoint = null;
     let minDistance = Infinity;
-    
+
     for (const snapPoint of snapPoints) {
       const distance = Math.abs(actualPercentage - snapPoint);
       if (distance <= snapThreshold && distance < minDistance) {
@@ -1238,12 +1369,12 @@ export default function MenuPage() {
         closestSnapPoint = snapPoint;
       }
     }
-    
+
     // Apply snapping if we found a close snap point
     if (closestSnapPoint !== null) {
       actualPercentage = Math.min(closestSnapPoint, maxAllowedPercentage);
     }
-    
+
     setPointsUsagePercentage(actualPercentage);
     const pointsToUse = calculatePointsToUse(actualPercentage);
     setPointsToUse(pointsToUse);
@@ -1258,16 +1389,24 @@ export default function MenuPage() {
   const isNearSnapPoint = (percentage) => {
     const snapThreshold = 4;
     const snapPoints = [0, 25, 50, 75, 100];
-    return snapPoints.some(snapPoint => Math.abs(percentage - snapPoint) <= snapThreshold);
+    return snapPoints.some(
+      (snapPoint) => Math.abs(percentage - snapPoint) <= snapThreshold
+    );
   };
 
   // Get cashback percentage for a category
   const getCashbackPercentageForCategory = async (categoryId) => {
     try {
-      const percentage = await CashbackService.getCashbackPercentage(categoryId);
+      const percentage = await CashbackService.getCashbackPercentage(
+        categoryId
+      );
       return percentage;
     } catch (error) {
-      console.error('Error getting cashback percentage for category:', categoryId, error);
+      console.error(
+        "Error getting cashback percentage for category:",
+        categoryId,
+        error
+      );
       return 0;
     }
   };
@@ -1279,10 +1418,10 @@ export default function MenuPage() {
       return {
         cash: true,
         card: true,
-        crypto: true
+        crypto: true,
       };
     }
-    
+
     // If no customer or customer is no member, use non-member settings
     return nonMemberPaymentSettings;
   };
@@ -1290,7 +1429,7 @@ export default function MenuPage() {
   // Helper function to automatically set default payment method when settings change
   const setDefaultPaymentMethod = () => {
     const availableMethods = getAvailablePaymentMethods();
-    
+
     // If current payment method is not available, switch to first available
     if (!availableMethods[paymentMethod]) {
       if (availableMethods.cash) {
@@ -1306,8 +1445,9 @@ export default function MenuPage() {
   // Helper function to get the complete order button text
   const getCompleteOrderButtonText = () => {
     const availableMethods = getAvailablePaymentMethods();
-    const hasAnyMethod = availableMethods.cash || availableMethods.card || availableMethods.crypto;
-    return hasAnyMethod 
+    const hasAnyMethod =
+      availableMethods.cash || availableMethods.card || availableMethods.crypto;
+    return hasAnyMethod
       ? t("completeOrder", { total: getTotalPriceAfterPoints() })
       : "Complete Order - ฿" + getTotalPriceAfterPoints().toFixed(2);
   };
@@ -1318,8 +1458,11 @@ export default function MenuPage() {
 
     // Check available payment methods
     const availablePaymentMethods = getAvailablePaymentMethods();
-    const hasAnyPaymentMethod = availablePaymentMethods.cash || availablePaymentMethods.card || availablePaymentMethods.crypto;
-    
+    const hasAnyPaymentMethod =
+      availablePaymentMethods.cash ||
+      availablePaymentMethods.card ||
+      availablePaymentMethods.crypto;
+
     // If no payment methods are available (for non-members), proceed without payment method validation
     let finalPaymentMethod = paymentMethod;
     if (!hasAnyPaymentMethod) {
@@ -1399,25 +1542,37 @@ export default function MenuPage() {
       try {
         for (const item of cart) {
           // Find the product document to get the correct document ID
-          const product = products.find(p => p.productId === item.productId);
+          const product = products.find((p) => p.productId === item.productId);
           if (product) {
             const stockMovementData = {
               productId: product.id, // Use document ID for stock movement system
               productName: item.name,
-              variantId: item.isVariant && item.variants ? Object.keys(item.variants)[0] : '',
-              variantName: item.isVariant && item.variants ? Object.values(item.variants).map(v => v.name).join(', ') : '',
+              variantId:
+                item.isVariant && item.variants
+                  ? Object.keys(item.variants)[0]
+                  : "",
+              variantName:
+                item.isVariant && item.variants
+                  ? Object.values(item.variants)
+                      .map((v) => v.name)
+                      .join(", ")
+                  : "",
               quantity: item.quantity,
               price: item.price,
-              status: 'sales',
+              status: "sales",
               notes: `Kiosk sale - Transaction: ${result.transactionId}`,
-              createdBy: 'kiosk-system',
-              skipStockUpdate: true // Let admin system handle stock calculations
+              createdBy: "kiosk-system",
+              skipStockUpdate: true, // Let admin system handle stock calculations
             };
 
             await StockMovementService.addStockMovement(stockMovementData);
-            console.log(`📦 Stock movement created for product ${product.id} (PRD: ${item.productId}), quantity: -${item.quantity}`);
+            console.log(
+              `📦 Stock movement created for product ${product.id} (PRD: ${item.productId}), quantity: -${item.quantity}`
+            );
           } else {
-            console.warn(`⚠️ Product not found for productId: ${item.productId}`);
+            console.warn(
+              `⚠️ Product not found for productId: ${item.productId}`
+            );
           }
         }
       } catch (stockError) {
@@ -1432,7 +1587,9 @@ export default function MenuPage() {
           if (cashbackPoints > 0) {
             const cashbackPointData = {
               customerId: customer.id,
-              customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
+              customerName: `${customer.name} ${
+                customer.lastName || ""
+              }`.trim(),
               customerCode: customer.customerCode || "",
               pointsAmount: cashbackPoints,
               transactionId: result.transactionId,
@@ -1460,19 +1617,25 @@ export default function MenuPage() {
           if (pointsToUse > 0) {
             const pointsUsageData = {
               customerId: customer.id,
-              customerName: `${customer.name} ${customer.lastName || ""}`.trim(),
+              customerName: `${customer.name} ${
+                customer.lastName || ""
+              }`.trim(),
               customerCode: customer.customerCode || "",
               pointsAmount: -pointsToUse, // Negative to deduct points
               transactionId: result.transactionId,
               orderId: result.transactionId,
               reason: "Points Used - Order Purchase",
-              details: `Used ${pointsUsagePercentage}% of available points (${pointsToUse} points worth $${pointsValue.toFixed(2)})`,
-              items: [{
-                description: `Points deduction for order payment`,
-                points: -pointsToUse,
-                value: pointsValue,
-                percentage: pointsUsagePercentage
-              }],
+              details: `Used ${pointsUsagePercentage}% of available points (${pointsToUse} points worth $${pointsValue.toFixed(
+                2
+              )})`,
+              items: [
+                {
+                  description: `Points deduction for order payment`,
+                  points: -pointsToUse,
+                  value: pointsValue,
+                  percentage: pointsUsagePercentage,
+                },
+              ],
               purchaseAmount: originalTotal,
               finalAmount: finalTotal,
               pointsValue: pointsValue,
@@ -1482,7 +1645,9 @@ export default function MenuPage() {
 
             await PendingPointsService.createPendingPoints(pointsUsageData);
             console.log(
-              `Deducted ${pointsToUse} points (${pointsUsagePercentage}%, $${pointsValue.toFixed(2)}) from customer ${customer.name}`
+              `Deducted ${pointsToUse} points (${pointsUsagePercentage}%, $${pointsValue.toFixed(
+                2
+              )}) from customer ${customer.name}`
             );
           }
         } catch (pointsError) {
@@ -1639,7 +1804,9 @@ export default function MenuPage() {
       if (categories.length > 0 && customer && !customer.isNoMember) {
         const percentages = {};
         for (const category of categories) {
-          const percentage = await getCashbackPercentageForCategory(category.id);
+          const percentage = await getCashbackPercentageForCategory(
+            category.id
+          );
           percentages[category.id] = percentage;
         }
         setCategoryPercentages(percentages);
@@ -1817,7 +1984,7 @@ export default function MenuPage() {
   // Session expiry modal countdown timer
   useEffect(() => {
     let modalCountdownInterval;
-    
+
     if (showSessionExpiryModal) {
       modalCountdownInterval = setInterval(() => {
         setSessionModalCountdown((prev) => {
@@ -1857,12 +2024,15 @@ export default function MenuPage() {
   // Handle quantity change
   const handleQuantityChange = (change) => {
     const newQuantity = quantity + change;
-    
+
     if (newQuantity < 1) return; // Don't allow quantity below 1
 
     // If increasing quantity, check stock limits
     if (change > 0 && selectedProduct) {
-      const stockCheck = canAddToCart(selectedProduct, newQuantity - getProductCartQuantity(selectedProduct));
+      const stockCheck = canAddToCart(
+        selectedProduct,
+        newQuantity - getProductCartQuantity(selectedProduct)
+      );
       if (!stockCheck.canAdd) {
         alert(`Cannot increase quantity: ${stockCheck.reason}`);
         return;
@@ -2152,30 +2322,40 @@ export default function MenuPage() {
 
   // Stock alert helper functions
   const getProductStockAlert = (productId) => {
-    return stockAlerts.find(alert => alert.productId === productId && alert.isActive);
+    return stockAlerts.find(
+      (alert) => alert.productId === productId && alert.isActive
+    );
   };
 
   const getCurrentStock = (product, variantId = null) => {
     if (!product) return 0;
 
     // If stock calculations are loaded, use them (same logic as admin panel)
-    if (stockCalculationsLoaded && stockCalculations && Object.keys(stockCalculations).length > 0) {
+    if (
+      stockCalculationsLoaded &&
+      stockCalculations &&
+      Object.keys(stockCalculations).length > 0
+    ) {
       // If variantId is provided, get stock for specific variant
       if (variantId) {
         const key = `${product.id}-${variantId}`;
         const stockData = stockCalculations[key];
-        return stockData ? (stockData.stock || 0) : 0;
+        return stockData ? stockData.stock || 0 : 0;
       }
-      
+
       // Check if product has variants - sum all variant stock
-      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      if (
+        product.variants &&
+        Array.isArray(product.variants) &&
+        product.variants.length > 0
+      ) {
         let totalStock = 0;
-        product.variants.forEach(variant => {
+        product.variants.forEach((variant) => {
           if (variant.options && Array.isArray(variant.options)) {
-            variant.options.forEach(option => {
+            variant.options.forEach((option) => {
               const key = `${product.id}-${variant.id}-${option.id}`;
               const stockData = stockCalculations[key];
-              const variantStock = stockData ? (stockData.stock || 0) : 0;
+              const variantStock = stockData ? stockData.stock || 0 : 0;
               totalStock += variantStock;
             });
           }
@@ -2185,8 +2365,12 @@ export default function MenuPage() {
         // Product without variants (or empty variants array)
         const key = product.id;
         const stockData = stockCalculations[key];
-        const stock = stockData ? (stockData.stock || 0) : 0;
-        console.log(`📦 Stock lookup for ${product.name}: key=${key}, stockData=`, stockData, `stock=${stock}`);
+        const stock = stockData ? stockData.stock || 0 : 0;
+        console.log(
+          `📦 Stock lookup for ${product.name}: key=${key}, stockData=`,
+          stockData,
+          `stock=${stock}`
+        );
         return stock;
       }
     }
@@ -2194,48 +2378,52 @@ export default function MenuPage() {
     // Fallback to old system if stock calculations not loaded
     if (variantId && product.variants && Array.isArray(product.variants)) {
       // For variant products, get specific variant stock
-      const [vId, oId] = variantId.split('-');
-      
+      const [vId, oId] = variantId.split("-");
+
       // Find the variant
-      const variant = product.variants.find(v => v.id === vId);
+      const variant = product.variants.find((v) => v.id === vId);
       if (!variant) return 0;
 
       // If variant has options, find the specific option
       if (variant.options && Array.isArray(variant.options) && oId) {
-        const option = variant.options.find(o => o.id === oId);
-        return option ? (option.quantity || 0) : 0;
+        const option = variant.options.find((o) => o.id === oId);
+        return option ? option.quantity || 0 : 0;
       }
-      
+
       // If no options, use variant quantity directly
       return variant.quantity || 0;
     }
-    
+
     // For simple products or when no variant is specified
     return product.quantity || 0;
   };
 
   const getStockWarningText = (product) => {
     const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
-    
+
     console.log(`🔍 STOCK DEBUG for ${product.name}:`);
     console.log(`  - Product ID: ${product.productId}`);
     console.log(`  - Document ID: ${product.id}`);
     console.log(`  - Stock Alert Found:`, stockAlert);
     console.log(`  - Stock Calculations Loaded:`, stockCalculationsLoaded);
     console.log(`  - Stock Calculations Keys:`, Object.keys(stockCalculations));
-    
+
     if (!stockAlert) {
       console.log(`  ❌ No stock alert found for document ID ${product.id}`);
       return null;
     }
 
     const currentStock = getCurrentStock(product);
-    
+
     console.log(`  - Current Stock: ${currentStock}`);
     console.log(`  - Kiosk Alert Level: ${stockAlert.alertKioskLevel}`);
     console.log(`  - Admin Alert Level: ${stockAlert.alertAdminLevel}`);
-    console.log(`  - Should show warning: ${currentStock <= stockAlert.alertKioskLevel && currentStock > 0}`);
-    
+    console.log(
+      `  - Should show warning: ${
+        currentStock <= stockAlert.alertKioskLevel && currentStock > 0
+      }`
+    );
+
     if (currentStock <= stockAlert.alertKioskLevel && currentStock > 0) {
       console.log(`  ✅ Showing warning: Stock ${currentStock} left!`);
       return `Stock ${currentStock} left!`;
@@ -2246,7 +2434,7 @@ export default function MenuPage() {
 
   const canAddToCart = (product, requestedQuantity = 1, variantId = null) => {
     const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
-    
+
     // If no stock alert, allow unlimited
     if (!stockAlert) {
       return { canAdd: true, reason: null };
@@ -2261,9 +2449,9 @@ export default function MenuPage() {
     }
 
     if (totalRequestedQty > currentStock) {
-      return { 
-        canAdd: false, 
-        reason: `Only ${currentStock} available (${currentCartQty} already in cart)` 
+      return {
+        canAdd: false,
+        reason: `Only ${currentStock} available (${currentCartQty} already in cart)`,
       };
     }
 
@@ -2271,8 +2459,6 @@ export default function MenuPage() {
   };
 
   // Removed scroll buttons per request; panes will use native scroll.
-
-
 
   if (loading) {
     return (
@@ -2385,41 +2571,166 @@ export default function MenuPage() {
             </svg>
           </button>
 
-          {/* Logo - Center */}
-          <div className="flex flex-col items-center">
+          {/* Logo with Smoke Effect - Center */}
+          <div className="ml-20 flex flex-col items-center">
             <div className="relative">
+              {/* Smoke SVG Animation */}
+              <svg
+                version="1.1"
+                id="Layer_1"
+                xmlns="http://www.w3.org/2000/svg"
+                xmlnsXlink="http://www.w3.org/1999/xlink"
+                x="0px"
+                y="0px"
+                viewBox="0 0 94.62 192.14"
+                enableBackground="new 0 0 94.62 192.14"
+                xmlSpace="preserve"
+                className="absolute w-16 h-16 top-10 -left-3 smoke-container"
+              >
+                <defs>
+                  <filter id="smokeFilter">
+                    <feTurbulence
+                      baseFrequency="0.02 0.1"
+                      numOctaves="3"
+                      result="turbulence"
+                    />
+                    <feDisplacementMap
+                      in="SourceGraphic"
+                      in2="turbulence"
+                      scale="2"
+                    />
+                  </filter>
+                </defs>
+                <g id="Layer_1">
+                  <g>
+                    <g>
+                      <path
+                        fill="#FFFFFF"
+                        filter="url(#smokeFilter)"
+                        d="M75.25,176.65c-1.7,1.31-5.55-0.58-7.11-1.49c-2.12-1.23-4.1-2.93-5.51-4.95 c-2.21-3.19-3.13-7.06-4.23-10.77c-0.96-3.23-2.11-6.43-3.65-9.44c-1.56-3.06-3.88-5.45-5.64-8.34 c-0.01-0.01,2.57,0.18,2.84,0.25c0.84,0.23,1.67,0.57,2.46,0.93c1.67,0.76,3.21,1.79,4.59,2.99c2.84,2.49,5,5.75,6.29,9.29 c1.69,4.64,2.05,9.76,4.33,14.14C71.1,172.09,73.62,174.02,75.25,176.65z"
+                        className="smoke-path-1"
+                      />
+                      <path
+                        fill="#FFFFFF"
+                        filter="url(#smokeFilter)"
+                        d="M32.97,140.33c-1.99,0.35-4.27-4.02-5.02-5.32c-1.46-2.52-2.58-5.24-3.17-8.1 c-0.91-4.42-0.5-9.17,1.59-13.17c2.55-4.88,7.2-8.11,10.36-12.53c1.71-2.39,2.84-5.13,3.67-7.94c0.8-2.69,0.9-5.88,1.95-8.42 c1.91,3.13,2.59,8.08,2.72,11.7c0.14,4.09-0.82,8.13-3.08,11.57c-2.25,3.41-5.59,6.05-7.58,9.62c-1.68,3.01-2.29,6.51-2.3,9.95 c-0.01,3.6,0.66,7.1,1.24,10.63C33.58,139.69,33.38,140.25,32.97,140.33z"
+                        className="smoke-path-2"
+                      />
+                      <path
+                        fill="#FFFFFF"
+                        filter="url(#smokeFilter)"
+                        d="M14.35,88.29c1.35-3.51,4.36-6.23,6.51-9.25c2.23-3.14,3.32-7.08,2.97-10.92 c-0.53-5.86-4.07-10.79-6.54-15.95c-2.57-5.37-4.23-11.41-3.27-17.39c0.76-4.77,3.29-9.14,6.88-12.36 c2.57-2.3,9.11-6.09,12.57-5.63c-1.14,2.51-4.27,4.09-6.22,5.97c-3.18,3.05-5.13,7.34-5.35,11.74 c-0.54,10.93,8.97,20.17,9.53,31.09c0.27,5.17-1.65,10.21-4.75,14.29c-1.59,2.1-3.61,4.11-5.71,5.69 C19.18,86.91,16.65,88.4,14.35,88.29z"
+                        className="smoke-path-3"
+                      />
+                    </g>
+                  </g>
+                </g>
+              </svg>
+
+              {/* Logo */}
               <Image
                 src="/logo.png"
-                alt="Candy Kush Logo"
-                width={120}
-                height={120}
-                className="object-contain"
-                priority
+                alt="Logo"
+                width={150}
+                height={150}
+                className="cursor-pointer object-cover"
               />
+            </div>
+
+            {/* Session Timer */}
+            <div className="mt-2">
+              <div className="inline-flex items-center rounded-lg px-3 py-1 transition-colors duration-200 bg-red-100 border border-red-300">
+                <svg
+                  className="w-4 h-4 mr-2 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="font-medium text-sm text-red-800">
+                  Session expires: {Math.floor(sessionTimer / 60)}:
+                  {String(sessionTimer % 60).padStart(2, "0")}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Right Section: Cart */}
+          {/* Right Section: Language and Cart */}
           <div className="flex items-center space-x-4">
+            {/* Language Selector */}
+            <div className="relative">
+              <button
+                onClick={toggleLanguageDropdown}
+                className="flex items-center justify-center px-5 py-5 bg-white rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors duration-200"
+              >
+                <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+                  <ReactCountryFlag
+                    countryCode={getLanguageData(selectedLanguage).countryCode}
+                    svg
+                    style={{
+                      display: "inline-block",
+                      width: "100%",
+                      height: "100%",
+                      verticalAlign: "middle",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              </button>
+              {/* Language Dropdown */}
+              {showLanguageDropdown && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="py-2">
+                    {supportedLanguages.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => selectLanguage(lang.code)}
+                        className={`w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center ${
+                          selectedLanguage === lang.code
+                            ? "bg-green-50 text-green-700"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        <ReactCountryFlag
+                          countryCode={getLanguageData(lang.code).countryCode}
+                          svg
+                          style={{
+                            width: "1.5rem",
+                            height: "1.5rem",
+                            marginRight: "0.5rem",
+                          }}
+                        />
+                        {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Cart Button */}
             <button
-              onClick={() => setShowCart(true)}
-              className="relative bg-white rounded-lg border border-gray-300 hover:bg-gray-50 p-5 transition-colors duration-200"
+              onClick={() => {
+                setPreviousSection("prerolls");
+                setShowCart(true);
+              }}
+              className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
             >
               <svg
-                className="w-12 h-12 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                className="w-12 h-12"
+                fill="currentColor"
+                viewBox="0 0 20 20"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h9m-9 0a2 2 0 100 4 2 2 0 000-4zm9 0a2 2 0 100 4 2 2 0 000-4z"
-                />
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
               </svg>
               {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
                   {cart.reduce((sum, item) => sum + item.quantity, 0)}
                 </span>
               )}
@@ -2435,7 +2746,9 @@ export default function MenuPage() {
           <div className="h-full `flex flex-col p-8">
             {/* Title */}
             <div className="mb-8">
-              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Prerolls</h1>
+              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">
+                Prerolls
+              </h1>
             </div>
 
             {/* 4x4 Grid - header row 150px, image cells 220px */}
@@ -2451,50 +2764,53 @@ export default function MenuPage() {
               >
                 {/* Empty corner */}
                 <div></div>
-                
+
                 {/* Header: Sativa, Hybrid, Indica */}
-                <div 
+                <div
                   className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
-                  style={{ backgroundColor: '#FDE047' }}
+                  style={{ backgroundColor: "#FDE047" }}
                 >
                   Sativa
                 </div>
-                <div 
+                <div
                   className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center"
-                  style={{ backgroundColor: '#22C55E' }}
+                  style={{ backgroundColor: "#22C55E" }}
                 >
                   Hybrid
                 </div>
-                <div 
+                <div
                   className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
-                  style={{ backgroundColor: '#3B82F6' }}
+                  style={{ backgroundColor: "#3B82F6" }}
                 >
                   Indica
                 </div>
 
                 {/* Outdoor Row */}
-                <div 
+                <div
                   className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
-                  style={{ backgroundColor: '#06B6D4' }}
+                  style={{ backgroundColor: "#06B6D4" }}
                 >
                   Outdoor
                 </div>
-                {['sativa', 'hybrid', 'indica'].map(strain => {
-                  const isSelected = selectedJointType === `outdoor-${strain}`;
+                {["sativa", "hybrid", "indica"].map((strain) => {
+                  const itemKey = `outdoor-${strain}`;
+                  const isSelected = selectedJointType === itemKey;
+                  const isZoomed = zoomedImage === itemKey;
                   return (
-                    <div 
-                      key={`outdoor-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
-                        isSelected ? 'ring-4 ring-green-500' : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedJointType(`outdoor-${strain}`);
-                        setShowJointPopup(true);
-                      }}
+                    <div
+                      key={itemKey}
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                        isSelected || isZoomed
+                          ? "ring-4 ring-green-500 shadow-2xl z-10"
+                          : ""
+                      } ${isZoomed ? "scale-110" : "scale-100"}`}
+                      onClick={() => handleImageClick(itemKey)}
                     >
                       <Image
-                        src={personalizedJointsImages['outdoor'][strain]}
-                        alt={`Outdoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        src={personalizedJointsImages["outdoor"][strain]}
+                        alt={`Outdoor ${
+                          strain.charAt(0).toUpperCase() + strain.slice(1)
+                        }`}
                         width={196}
                         height={196}
                         className="w-full h-full object-contain"
@@ -2504,28 +2820,31 @@ export default function MenuPage() {
                 })}
 
                 {/* Indoor Row */}
-                <div 
+                <div
                   className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center"
-                  style={{ backgroundColor: '#6B7280' }}
+                  style={{ backgroundColor: "#6B7280" }}
                 >
                   Indoor
                 </div>
-                {['sativa', 'hybrid', 'indica'].map(strain => {
-                  const isSelected = selectedJointType === `indoor-${strain}`;
+                {["sativa", "hybrid", "indica"].map((strain) => {
+                  const itemKey = `indoor-${strain}`;
+                  const isSelected = selectedJointType === itemKey;
+                  const isZoomed = zoomedImage === itemKey;
                   return (
-                    <div 
-                      key={`indoor-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
-                        isSelected ? 'ring-4 ring-green-500' : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedJointType(`indoor-${strain}`);
-                        setShowJointPopup(true);
-                      }}
+                    <div
+                      key={itemKey}
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                        isSelected || isZoomed
+                          ? "ring-4 ring-green-500 shadow-2xl z-10"
+                          : ""
+                      } ${isZoomed ? "scale-110" : "scale-100"}`}
+                      onClick={() => handleImageClick(itemKey)}
                     >
                       <Image
-                        src={personalizedJointsImages['indoor'][strain]}
-                        alt={`Indoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        src={personalizedJointsImages["indoor"][strain]}
+                        alt={`Indoor ${
+                          strain.charAt(0).toUpperCase() + strain.slice(1)
+                        }`}
                         width={196}
                         height={196}
                         className="w-full h-full object-contain"
@@ -2535,28 +2854,31 @@ export default function MenuPage() {
                 })}
 
                 {/* Top Quality Row */}
-                <div 
+                <div
                   className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-bl-[3rem]"
-                  style={{ backgroundColor: '#000000' }}
+                  style={{ backgroundColor: "#000000" }}
                 >
                   Top Quality
                 </div>
-                {['sativa', 'hybrid', 'indica'].map(strain => {
-                  const isSelected = selectedJointType === `top-${strain}`;
+                {["sativa", "hybrid", "indica"].map((strain) => {
+                  const itemKey = `top-${strain}`;
+                  const isSelected = selectedJointType === itemKey;
+                  const isZoomed = zoomedImage === itemKey;
                   return (
-                    <div 
-                      key={`top-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
-                        isSelected ? 'ring-4 ring-green-500' : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedJointType(`top-${strain}`);
-                        setShowJointPopup(true);
-                      }}
+                    <div
+                      key={itemKey}
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                        isSelected || isZoomed
+                          ? "ring-4 ring-green-500 shadow-2xl z-10"
+                          : ""
+                      } ${isZoomed ? "scale-110" : "scale-100"}`}
+                      onClick={() => handleImageClick(itemKey)}
                     >
                       <Image
-                        src={personalizedJointsImages['top'][strain]}
-                        alt={`Top Quality ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
+                        src={personalizedJointsImages["top"][strain]}
+                        alt={`Top Quality ${
+                          strain.charAt(0).toUpperCase() + strain.slice(1)
+                        }`}
                         width={196}
                         height={196}
                         className="w-full h-full object-contain"
@@ -2568,6 +2890,150 @@ export default function MenuPage() {
             </div>
           </div>
         </div>
+
+        {/* Joint Selection Popup - Bottom Popup like variant selection */}
+        {showJointPopup && selectedJointType && (
+          <div
+            className="fixed inset-0 bg-black/10 flex items-end justify-center z-50 transition-opacity duration-300"
+            onClick={() => setShowJointPopup(false)}
+          >
+            <div
+              className="bg-white shadow-2xl w-full transition-transform duration-300 ease-out"
+              style={{
+                height: "fit-content",
+                minHeight: "400px",
+                maxHeight: "70vh",
+                borderTopLeftRadius: "3rem",
+                borderTopRightRadius: "3rem",
+                borderBottomLeftRadius: "0",
+                borderBottomRightRadius: "0",
+                transform: showJointPopup
+                  ? "translateY(0)"
+                  : "translateY(100%)",
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div
+                className="bg-gradient-to-r from-green-600 to-green-500 text-white px-6 py-6"
+                style={{
+                  borderTopLeftRadius: "3rem",
+                  borderTopRightRadius: "3rem",
+                }}
+              >
+                <div className="flex justify-between items-center">
+                  <h3 className="text-3xl font-bold mx-auto text-center flex-1">
+                    Size
+                  </h3>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col justify-between flex-1 overflow-y-auto p-6">
+                {/* Size Selection */}
+                <div className="grid grid-cols-3 gap-0">
+                  {/* Small Size */}
+                  <div
+                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                      selectedSize === "small"
+                        ? "border-green-500 bg-green-50 transform scale-105"
+                        : "border-gray-200 hover:border-green-300"
+                    }`}
+                    onClick={() => handlePrerollSizeSelect("small")}
+                  >
+                    <div className="w-32 h-32 mx-auto mb-3 relative">
+                      {selectedJointType && (
+                        <Image
+                          src={`/Product/${selectedJointType.split("-")[0]} ${
+                            selectedJointType.split("-")[1]
+                          } small.png`}
+                          alt="Small"
+                          fill
+                          className="object-contain"
+                        />
+                      )}
+                    </div>
+                    <div className="font-bold text-gray-800 text-xl">Small</div>
+                    <div className="text-green-600 font-semibold text-lg">
+                      ฿100
+                    </div>
+                  </div>
+
+                  {/* Normal Size */}
+                  <div
+                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                      selectedSize === "normal"
+                        ? "border-green-500 bg-green-50 transform scale-105"
+                        : "border-gray-200 hover:border-green-300"
+                    }`}
+                    onClick={() => handlePrerollSizeSelect("normal")}
+                  >
+                    <div className="w-32 h-32 mx-auto mb-3 relative">
+                      {selectedJointType && (
+                        <Image
+                          src={`/Product/${selectedJointType.split("-")[0]} ${
+                            selectedJointType.split("-")[1]
+                          } normal.png`}
+                          alt="Normal"
+                          fill
+                          className="object-contain"
+                        />
+                      )}
+                    </div>
+                    <div className="font-bold text-gray-800 text-xl">
+                      Normal
+                    </div>
+                    <div className="text-green-600 font-semibold text-lg">
+                      ฿150
+                    </div>
+                  </div>
+
+                  {/* King Size */}
+                  <div
+                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                      selectedSize === "king"
+                        ? "border-green-500 bg-green-50 transform scale-105"
+                        : "border-gray-200 hover:border-green-300"
+                    }`}
+                    onClick={() => handlePrerollSizeSelect("king")}
+                  >
+                    <div className="w-32 h-32 mx-auto mb-3 relative">
+                      {selectedJointType && (
+                        <Image
+                          src={`/Product/${selectedJointType.split("-")[0]} ${
+                            selectedJointType.split("-")[1]
+                          } king.png`}
+                          alt="King"
+                          fill
+                          className="object-contain"
+                        />
+                      )}
+                    </div>
+                    <div className="font-bold text-gray-800 text-xl">King</div>
+                    <div className="text-green-600 font-semibold text-lg">
+                      ฿200
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex justify-center mt-6">
+                  <button
+                    onClick={handleAddPrerollToCart}
+                    disabled={!selectedSize}
+                    className={`w-[90%] py-4 px-8 rounded-full font-bold text-2xl transition-colors ${
+                      selectedSize
+                        ? "bg-green-500 hover:bg-green-600 text-white"
+                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
+                  >
+                    Add to cart
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -2946,11 +3412,21 @@ export default function MenuPage() {
                     className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
                   >
                     <div className="flex flex-col items-center">
-                      <svg className="w-8 h-8 mb-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z" clipRule="evenodd"/>
+                      <svg
+                        className="w-8 h-8 mb-2"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path
+                          fillRule="evenodd"
+                          d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z"
+                          clipRule="evenodd"
+                        />
                       </svg>
-                      <span className="text-lg font-bold">Personalized Joints</span>
+                      <span className="text-lg font-bold">
+                        Personalized Joints
+                      </span>
                     </div>
                   </button>
                 </div>
@@ -2996,11 +3472,13 @@ export default function MenuPage() {
                           }}
                         />
                         {/* Cashback Badge - only show for members */}
-                        {customer && !customer.isNoMember && categoryPercentages[category.id] > 0 && (
-                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-18 h-8 flex items-center justify-center border-2 border-white shadow-lg">
-                            up to {categoryPercentages[category.id]}%
-                          </div>
-                        )}
+                        {customer &&
+                          !customer.isNoMember &&
+                          categoryPercentages[category.id] > 0 && (
+                            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-18 h-8 flex items-center justify-center border-2 border-white shadow-lg">
+                              up to {categoryPercentages[category.id]}%
+                            </div>
+                          )}
                       </div>
                     )}
 
@@ -3038,183 +3516,217 @@ export default function MenuPage() {
             ) : (
               <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col">
                 {selectedCategory ? (
-              <div
-                id="kiosk-right-list"
-                className="p-6 overflow-y-auto flex-1 custom-scrollbar"
-              >
-                {/* Subcategories */}
-                {getFilteredSubcategories().length > 0 && (
-                  <div className="mb-8 space-y-4">
-                    {getFilteredSubcategories().map((subcategory) => (
-                      <div key={subcategory.id} className="pb-2">
-                        <div className="flex items-center mb-2">
-                          {subcategory.image && (
-                            <div className="w-16 h-16 mr-3 relative flex-shrink-0">
-                              <Image
-                                src={subcategory.image}
-                                alt={subcategory.name}
-                                fill
-                                className="object-contain rounded"
-                                sizes="32px"
-                              />
-                            </div>
-                          )}
-                          <h5
-                            className="font-medium text-lg"
-                            style={{ color: "#959595" }}
-                          >
-                            {subcategory.name}
-                          </h5>
-                        </div>
-                        <div className="grid grid-cols-4 gap-4">
-                          {getFilteredProducts()
-                            .filter((p) => p.subcategoryId === subcategory.id)
-                            .map((product) => (
-                              <div
-                                key={product.id}
-                                className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
-                                  selectedProduct?.id === product.id
-                                    ? "transform scale-105 shadow-lg border-green-500"
-                                    : "border-gray-100"
-                                } `}
-                                style={{
-                                  backgroundImage: product.backgroundImage
-                                    ? `url(${product.backgroundImage})`
-                                    : "none",
-                                  backgroundSize:
-                                    product.backgroundFit || "cover",
-                                  backgroundPosition: "center",
-                                  backgroundRepeat: "no-repeat",
-                                  backgroundColor: product.backgroundImage
-                                    ? "transparent"
-                                    : "white",
-                                }}
-                                onClick={() => handleProductSelect(product)}
+                  <div
+                    id="kiosk-right-list"
+                    className="p-6 overflow-y-auto flex-1 custom-scrollbar"
+                  >
+                    {/* Subcategories */}
+                    {getFilteredSubcategories().length > 0 && (
+                      <div className="mb-8 space-y-4">
+                        {getFilteredSubcategories().map((subcategory) => (
+                          <div key={subcategory.id} className="pb-2">
+                            <div className="flex items-center mb-2">
+                              {subcategory.image && (
+                                <div className="w-16 h-16 mr-3 relative flex-shrink-0">
+                                  <Image
+                                    src={subcategory.image}
+                                    alt={subcategory.name}
+                                    fill
+                                    className="object-contain rounded"
+                                    sizes="32px"
+                                  />
+                                </div>
+                              )}
+                              <h5
+                                className="font-medium text-lg"
+                                style={{ color: "#959595" }}
                               >
-                                {product.mainImage && (
-                                  <div className="w-full aspect-[3/4] mb-2 relative">
-                                    <Image
-                                      src={product.mainImage}
-                                      alt={product.name}
-                                      fill
-                                      className="object-contain rounded-lg"
-                                    />
-                                    {getProductCartQuantity(product) > 0 && (
-                                      <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
-                                        {getProductCartQuantity(product)}
+                                {subcategory.name}
+                              </h5>
+                            </div>
+                            <div className="grid grid-cols-4 gap-4">
+                              {getFilteredProducts()
+                                .filter(
+                                  (p) => p.subcategoryId === subcategory.id
+                                )
+                                .map((product) => (
+                                  <div
+                                    key={product.id}
+                                    className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
+                                      selectedProduct?.id === product.id
+                                        ? "transform scale-105 shadow-lg border-green-500"
+                                        : "border-gray-100"
+                                    } `}
+                                    style={{
+                                      backgroundImage: product.backgroundImage
+                                        ? `url(${product.backgroundImage})`
+                                        : "none",
+                                      backgroundSize:
+                                        product.backgroundFit || "cover",
+                                      backgroundPosition: "center",
+                                      backgroundRepeat: "no-repeat",
+                                      backgroundColor: product.backgroundImage
+                                        ? "transparent"
+                                        : "white",
+                                    }}
+                                    onClick={() => handleProductSelect(product)}
+                                  >
+                                    {product.mainImage && (
+                                      <div className="w-full aspect-[3/4] mb-2 relative">
+                                        <Image
+                                          src={product.mainImage}
+                                          alt={product.name}
+                                          fill
+                                          className="object-contain rounded-lg"
+                                        />
+                                        {getProductCartQuantity(product) >
+                                          0 && (
+                                          <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
+                                            {getProductCartQuantity(product)}
+                                          </div>
+                                        )}
                                       </div>
                                     )}
+                                    <div className="text-center space-y-1">
+                                      <div
+                                        className="text-lg font-medium truncate"
+                                        style={{
+                                          color: product.textColor || "#6b7280",
+                                        }}
+                                      >
+                                        {product.name}
+                                      </div>
+                                      <div
+                                        className="text-lg font-semibold"
+                                        style={{
+                                          color: product.textColor || "#059669",
+                                        }}
+                                      >
+                                        {getProductPriceDisplay(product)}
+                                      </div>
+                                      {getStockWarningText(product) && (
+                                        <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
+                                          {getStockWarningText(product)}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
-                                <div className="text-center space-y-1">
-                                  <div
-                                    className="text-lg font-medium truncate"
-                                    style={{
-                                      color: product.textColor || "#6b7280",
-                                    }}
-                                  >
-                                    {product.name}
-                                  </div>
-                                  <div
-                                    className="text-lg font-semibold"
-                                    style={{
-                                      color: product.textColor || "#059669",
-                                    }}
-                                  >
-                                    {getProductPriceDisplay(product)}
-                                  </div>
-                                  {getStockWarningText(product) && (
-                                    <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
-                                      {getStockWarningText(product)}
+                                ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Products without subcategory */}
+                    {getFilteredProducts().filter((p) => !p.subcategoryId)
+                      .length > 0 && (
+                      <div className="grid grid-cols-4 gap-4">
+                        {getFilteredProducts()
+                          .filter((p) => !p.subcategoryId)
+                          .map((product) => (
+                            <div
+                              key={product.id}
+                              className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
+                                selectedProduct?.id === product.id
+                                  ? "transform scale-105 shadow-lg border-green-500"
+                                  : "border-gray-100"
+                              } `}
+                              style={{
+                                backgroundImage: product.backgroundImage
+                                  ? `url(${product.backgroundImage})`
+                                  : "none",
+                                backgroundSize:
+                                  product.backgroundFit || "cover",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                                backgroundColor: product.backgroundImage
+                                  ? "transparent"
+                                  : "white",
+                              }}
+                              onClick={() => handleProductSelect(product)}
+                            >
+                              {product.mainImage && (
+                                <div className="w-full aspect-[3/4] mb-2 relative">
+                                  <Image
+                                    src={product.mainImage}
+                                    alt={product.name}
+                                    fill
+                                    className="object-contain rounded-lg"
+                                  />
+                                  {getProductCartQuantity(product) > 0 && (
+                                    <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
+                                      {getProductCartQuantity(product)}
                                     </div>
                                   )}
                                 </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Products without subcategory */}
-                {getFilteredProducts().filter((p) => !p.subcategoryId).length >
-                  0 && (
-                  <div className="grid grid-cols-4 gap-4">
-                    {getFilteredProducts()
-                      .filter((p) => !p.subcategoryId)
-                      .map((product) => (
-                        <div
-                          key={product.id}
-                          className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
-                            selectedProduct?.id === product.id
-                              ? "transform scale-105 shadow-lg border-green-500"
-                              : "border-gray-100"
-                          } `}
-                          style={{
-                            backgroundImage: product.backgroundImage
-                              ? `url(${product.backgroundImage})`
-                              : "none",
-                            backgroundSize:
-                              product.backgroundFit || "cover",
-                            backgroundPosition: "center",
-                            backgroundRepeat: "no-repeat",
-                            backgroundColor: product.backgroundImage
-                              ? "transparent"
-                              : "white",
-                          }}
-                          onClick={() => handleProductSelect(product)}
-                        >
-                          {product.mainImage && (
-                            <div className="w-full aspect-[3/4] mb-2 relative">
-                              <Image
-                                src={product.mainImage}
-                                alt={product.name}
-                                fill
-                                className="object-contain rounded-lg"
-                              />
-                              {getProductCartQuantity(product) > 0 && (
-                                <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
-                                  {getProductCartQuantity(product)}
-                                </div>
                               )}
-                            </div>
-                          )}
-                          <div className="text-center space-y-1">
-                            <div
-                              className="text-lg font-medium truncate"
-                              style={{
-                                color: product.textColor || "#6b7280",
-                              }}
-                            >
-                              {product.name}
-                            </div>
-                            <div
-                              className="text-lg font-semibold"
-                              style={{
-                                color: product.textColor || "#059669",
-                              }}
-                            >
-                              {getProductPriceDisplay(product)}
-                            </div>
-                            {getStockWarningText(product) && (
-                              <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
-                                {getStockWarningText(product)}
+                              <div className="text-center space-y-1">
+                                <div
+                                  className="text-lg font-medium truncate"
+                                  style={{
+                                    color: product.textColor || "#6b7280",
+                                  }}
+                                >
+                                  {product.name}
+                                </div>
+                                <div
+                                  className="text-lg font-semibold"
+                                  style={{
+                                    color: product.textColor || "#059669",
+                                  }}
+                                >
+                                  {getProductPriceDisplay(product)}
+                                </div>
+                                {getStockWarningText(product) && (
+                                  <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
+                                    {getStockWarningText(product)}
+                                  </div>
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
+                            </div>
+                          ))}
+                      </div>
+                    )}
 
-                {/* Empty state */}
-                {getFilteredSubcategories().length === 0 &&
-                  getFilteredProducts().length === 0 && (
-                    <div className="text-center py-12">
+                    {/* Empty state */}
+                    {getFilteredSubcategories().length === 0 &&
+                      getFilteredProducts().length === 0 && (
+                        <div className="text-center py-12">
+                          <div className="text-gray-400 mb-4">
+                            <svg
+                              className="w-16 h-16 mx-auto"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1}
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M7 7h10"
+                              />
+                            </svg>
+                          </div>
+                          <h3 className="text-lg font-medium text-gray-500 mb-2">
+                            No items found
+                          </h3>
+                          <p className="text-gray-400">
+                            This category doesn&apos;t have any subcategories or
+                            products yet
+                          </p>
+                        </div>
+                      )}
+                  </div>
+                ) : (
+                  <div
+                    className="p-6 flex items-center justify-center flex-1"
+                    style={{ minHeight: "300px" }}
+                  >
+                    <div className="text-center">
                       <div className="text-gray-400 mb-4">
                         <svg
-                          className="w-16 h-16 mx-auto"
+                          className="w-20 h-20 mx-auto"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -3227,47 +3739,16 @@ export default function MenuPage() {
                           />
                         </svg>
                       </div>
-                      <h3 className="text-lg font-medium text-gray-500 mb-2">
-                        No items found
+                      <h3 className="text-xl font-medium text-gray-500 mb-2">
+                        Choose a Category
                       </h3>
                       <p className="text-gray-400">
-                        This category doesn&apos;t have any subcategories or
-                        products yet
+                        Select a category from the left to view subcategories
+                        and products
                       </p>
                     </div>
-                  )}
-              </div>
-            ) : (
-              <div
-                className="p-6 flex items-center justify-center flex-1"
-                style={{ minHeight: "300px" }}
-              >
-                <div className="text-center">
-                  <div className="text-gray-400 mb-4">
-                    <svg
-                      className="w-20 h-20 mx-auto"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1}
-                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 00-2-2M7 7h10"
-                      />
-                    </svg>
                   </div>
-                  <h3 className="text-xl font-medium text-gray-500 mb-2">
-                    Choose a Category
-                  </h3>
-                  <p className="text-gray-400">
-                    Select a category from the left to view subcategories and
-                    products
-                  </p>
-                </div>
-              </div>
-            )}
+                )}
               </div>
             )}
           </div>
@@ -3511,7 +3992,12 @@ export default function MenuPage() {
           <div className="p-4 flex items-center justify-between">
             {/* Back Button - Left */}
             <button
-              onClick={() => setShowCart(false)}
+              onClick={() => {
+                setShowCart(false);
+                if (previousSection === "prerolls") {
+                  setShowPersonalizedJoints(true);
+                }
+              }}
               className="bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
               aria-label="Back to menu"
             >
@@ -3843,7 +4329,7 @@ export default function MenuPage() {
                       count: cart.reduce(
                         (total, item) => total + (item.quantity || 1),
                         0
-                      )
+                      ),
                     })}
                   </div>
                 </div>
@@ -3890,7 +4376,10 @@ export default function MenuPage() {
                                 {Object.entries(item.variants).map(
                                   ([variantName, variantValue]) => (
                                     <div key={variantName}>
-                                      {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
+                                      {variantValue?.name ||
+                                        (typeof variantValue === "string"
+                                          ? variantValue
+                                          : JSON.stringify(variantValue))}
                                     </div>
                                   )
                                 )}
@@ -4070,10 +4559,13 @@ export default function MenuPage() {
               {/* Payment Methods */}
               {(() => {
                 const availablePaymentMethods = getAvailablePaymentMethods();
-                const hasAnyPaymentMethod = availablePaymentMethods.cash || availablePaymentMethods.card || availablePaymentMethods.crypto;
-                
+                const hasAnyPaymentMethod =
+                  availablePaymentMethods.cash ||
+                  availablePaymentMethods.card ||
+                  availablePaymentMethods.crypto;
+
                 if (!hasAnyPaymentMethod) return null;
-                
+
                 return (
                   <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                     <h3 className="text-2xl font-bold mb-6">
@@ -4091,7 +4583,9 @@ export default function MenuPage() {
                         >
                           <div className="text-center">
                             <div className="text-4xl mb-2">💵</div>
-                            <div className="text-xl font-semibold">{t("cash")}</div>
+                            <div className="text-xl font-semibold">
+                              {t("cash")}
+                            </div>
                           </div>
                         </button>
                       )}
@@ -4106,7 +4600,9 @@ export default function MenuPage() {
                         >
                           <div className="text-center">
                             <div className="text-4xl mb-2">💳</div>
-                            <div className="text-xl font-semibold">{t("card")}</div>
+                            <div className="text-xl font-semibold">
+                              {t("card")}
+                            </div>
                           </div>
                         </button>
                       )}
@@ -4125,7 +4621,9 @@ export default function MenuPage() {
                         >
                           <div className="text-center">
                             <div className="text-4xl mb-2">₿</div>
-                            <div className="text-xl font-semibold">{t("crypto")}</div>
+                            <div className="text-xl font-semibold">
+                              {t("crypto")}
+                            </div>
                           </div>
                         </button>
                       )}
@@ -4137,27 +4635,39 @@ export default function MenuPage() {
                         <div className="flex items-center">
                           <div className="w-8 h-8 mr-3">
                             <img
-                              src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(selectedCryptoCurrency)}.svg`}
+                              src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(
+                                selectedCryptoCurrency
+                              )}.svg`}
                               alt={selectedCryptoCurrency.name}
                               className="w-full h-full object-contain"
                               onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
+                                e.target.style.display = "none";
+                                e.target.nextSibling.style.display = "flex";
                               }}
                             />
-                            <div 
+                            <div
                               className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                              style={{ display: 'none' }}
+                              style={{ display: "none" }}
                             >
-                              {((selectedCryptoCurrency.code || selectedCryptoCurrency.currency).charAt(0).toUpperCase())}
+                              {(
+                                selectedCryptoCurrency.code ||
+                                selectedCryptoCurrency.currency
+                              )
+                                .charAt(0)
+                                .toUpperCase()}
                             </div>
                           </div>
                           <div>
                             <div className="font-semibold text-blue-800">
-                              Selected: {(selectedCryptoCurrency.code || selectedCryptoCurrency.currency).toUpperCase()}
+                              Selected:{" "}
+                              {(
+                                selectedCryptoCurrency.code ||
+                                selectedCryptoCurrency.currency
+                              ).toUpperCase()}
                             </div>
                             <div className="text-sm text-blue-600">
-                              {selectedCryptoCurrency.name || 'Cryptocurrency Payment'}
+                              {selectedCryptoCurrency.name ||
+                                "Cryptocurrency Payment"}
                             </div>
                           </div>
                         </div>
@@ -4171,17 +4681,16 @@ export default function MenuPage() {
               {customer && !customer.isNoMember && customer.totalPoints > 0 && (
                 <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold">
-                      {t("usePoints")}
-                    </h3>
+                    <h3 className="text-2xl font-bold">{t("usePoints")}</h3>
                     <div className="text-lg font-semibold text-green-600">
                       -{pointsToUse} {t("points")}
                     </div>
                   </div>
-                  
+
                   <div className="mb-4">
                     <div className="text-sm text-gray-600 mb-2">
-                      {t("availablePoints")}: {customer.totalPoints} {t("points")}
+                      {t("availablePoints")}: {customer.totalPoints}{" "}
+                      {t("points")}
                     </div>
                     <div className="text-sm text-gray-600 mb-4">
                       {t("pointsValue")}: ฿{pointsValue}
@@ -4191,12 +4700,16 @@ export default function MenuPage() {
                   {/* Slider */}
                   <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600">Slide to adjust</span>
-                      <span className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
-                        isNearSnapPoint(pointsUsagePercentage) 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span className="text-sm text-gray-600">
+                        Slide to adjust
+                      </span>
+                      <span
+                        className={`text-sm font-medium px-2 py-1 rounded transition-colors ${
+                          isNearSnapPoint(pointsUsagePercentage)
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
                         {pointsUsagePercentage}%
                       </span>
                     </div>
@@ -4207,23 +4720,26 @@ export default function MenuPage() {
                         max="100"
                         step="1"
                         value={pointsUsagePercentage}
-                        onChange={(e) => handlePointsSliderChange(parseInt(e.target.value))}
+                        onChange={(e) =>
+                          handlePointsSliderChange(parseInt(e.target.value))
+                        }
                         className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-green"
                         style={{
-                          background: `linear-gradient(to right, #10b981 0%, #10b981 ${pointsUsagePercentage}%, #e5e7eb ${pointsUsagePercentage}%, #e5e7eb 100%)`
+                          background: `linear-gradient(to right, #10b981 0%, #10b981 ${pointsUsagePercentage}%, #e5e7eb ${pointsUsagePercentage}%, #e5e7eb 100%)`,
                         }}
                       />
                       {/* Tick marks for snap points */}
                       <div className="absolute top-0 w-full h-3 pointer-events-none">
                         {[25, 50, 75, 100].map((snapPoint) => {
-                          const isNear = Math.abs(pointsUsagePercentage - snapPoint) <= 4;
+                          const isNear =
+                            Math.abs(pointsUsagePercentage - snapPoint) <= 4;
                           return (
                             <div
                               key={snapPoint}
                               className={`absolute top-1/2 transform -translate-y-1/2 w-0.5 h-3 transition-all duration-200 ${
-                                isNear 
-                                  ? 'bg-green-400 shadow-sm shadow-green-400 opacity-90' 
-                                  : 'bg-gray-400 opacity-50'
+                                isNear
+                                  ? "bg-green-400 shadow-sm shadow-green-400 opacity-90"
+                                  : "bg-gray-400 opacity-50"
                               }`}
                               style={{ left: `${snapPoint}%` }}
                             />
@@ -4303,9 +4819,7 @@ export default function MenuPage() {
                       : "bg-green-600 hover:bg-green-700 text-white"
                   }`}
                 >
-                  {processing
-                    ? t("processing")
-                    : getCompleteOrderButtonText()}
+                  {processing ? t("processing") : getCompleteOrderButtonText()}
                 </button>
               </div>
             </div>
@@ -4382,7 +4896,10 @@ export default function MenuPage() {
                           ([variantName, variantValue]) => (
                             <div key={variantName}>
                               {variantName}:{" "}
-                              {variantValue?.name || (typeof variantValue === 'string' ? variantValue : JSON.stringify(variantValue))}
+                              {variantValue?.name ||
+                                (typeof variantValue === "string"
+                                  ? variantValue
+                                  : JSON.stringify(variantValue))}
                             </div>
                           )
                         )}
@@ -4416,10 +4933,17 @@ export default function MenuPage() {
                     }}
                   >
                     <span>Subtotal</span>
-                    <span>฿{(completedOrder.originalTotal || completedOrder.total || 0).toFixed(2)}</span>
+                    <span>
+                      ฿
+                      {(
+                        completedOrder.originalTotal ||
+                        completedOrder.total ||
+                        0
+                      ).toFixed(2)}
+                    </span>
                   </div>
                 )}
-                
+
                 {/* Show points usage if any */}
                 {(completedOrder.pointsUsed || 0) > 0 && (
                   <div
@@ -4431,7 +4955,9 @@ export default function MenuPage() {
                     }}
                   >
                     <span>Points Used (-{completedOrder.pointsUsed || 0})</span>
-                    <span>-฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}</span>
+                    <span>
+                      -฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}
+                    </span>
                   </div>
                 )}
 
@@ -4441,8 +4967,12 @@ export default function MenuPage() {
                     justifyContent: "space-between",
                     fontSize: "14px",
                     fontWeight: "bold",
-                    borderTop: (completedOrder.pointsUsed || 0) > 0 ? "1px solid #000" : "none",
-                    paddingTop: (completedOrder.pointsUsed || 0) > 0 ? "2mm" : "0",
+                    borderTop:
+                      (completedOrder.pointsUsed || 0) > 0
+                        ? "1px solid #000"
+                        : "none",
+                    paddingTop:
+                      (completedOrder.pointsUsed || 0) > 0 ? "2mm" : "0",
                   }}
                 >
                   <span>{t("total")}</span>
@@ -4471,7 +5001,8 @@ export default function MenuPage() {
                       </div>
                       {(completedOrder.pointsUsed || 0) > 0 && (
                         <div>
-                          Points Used: {completedOrder.pointsUsed || 0} ({completedOrder.pointsUsagePercentage || 0}%)
+                          Points Used: {completedOrder.pointsUsed || 0} (
+                          {completedOrder.pointsUsagePercentage || 0}%)
                         </div>
                       )}
                       <div>
@@ -4612,19 +5143,33 @@ export default function MenuPage() {
                     {(completedOrder.pointsUsed || 0) > 0 && (
                       <div className="flex justify-between mb-2">
                         <span className="text-gray-600">Subtotal:</span>
-                        <span>฿{(completedOrder.originalTotal || completedOrder.total || 0).toFixed(2)}</span>
+                        <span>
+                          ฿
+                          {(
+                            completedOrder.originalTotal ||
+                            completedOrder.total ||
+                            0
+                          ).toFixed(2)}
+                        </span>
                       </div>
                     )}
-                    
+
                     {/* Show points usage if any */}
                     {(completedOrder.pointsUsed || 0) > 0 && (
                       <>
                         <div className="flex justify-between mb-2 text-green-600">
-                          <span>Points Used ({completedOrder.pointsUsed || 0} pts):</span>
-                          <span>-฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}</span>
+                          <span>
+                            Points Used ({completedOrder.pointsUsed || 0} pts):
+                          </span>
+                          <span>
+                            -฿{(completedOrder.pointsUsedValue || 0).toFixed(2)}
+                          </span>
                         </div>
                         <div className="flex justify-between mb-2 text-sm text-gray-500">
-                          <span>{completedOrder.pointsUsagePercentage || 0}% of available points</span>
+                          <span>
+                            {completedOrder.pointsUsagePercentage || 0}% of
+                            available points
+                          </span>
                           <span></span>
                         </div>
                       </>
@@ -4923,13 +5468,17 @@ export default function MenuPage() {
             {loadingCrypto ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto mb-4"></div>
-                <div className="text-lg text-gray-600">Loading available cryptocurrencies...</div>
+                <div className="text-lg text-gray-600">
+                  Loading available cryptocurrencies...
+                </div>
               </div>
             ) : creatingPayment ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <div className="text-lg text-gray-600">Creating payment...</div>
-                <div className="text-sm text-gray-500 mt-2">Please wait while we generate your payment details</div>
+                <div className="text-sm text-gray-500 mt-2">
+                  Please wait while we generate your payment details
+                </div>
               </div>
             ) : (
               <div>
@@ -4939,8 +5488,12 @@ export default function MenuPage() {
                     <div className="flex items-center">
                       <div className="text-red-600 text-2xl mr-3">⚠️</div>
                       <div>
-                        <div className="font-semibold text-red-800">Payment Creation Failed</div>
-                        <div className="text-red-600 text-sm">{paymentError}</div>
+                        <div className="font-semibold text-red-800">
+                          Payment Creation Failed
+                        </div>
+                        <div className="text-red-600 text-sm">
+                          {paymentError}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -4951,7 +5504,9 @@ export default function MenuPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-semibold">Order Total:</span>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">฿{getTotalPrice().toFixed(2)}</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        ฿{getTotalPrice().toFixed(2)}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -4959,42 +5514,60 @@ export default function MenuPage() {
                 {/* Currency Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {availableCurrencies
-                    .filter(currency => {
+                    .filter((currency) => {
                       const code = currency.code || currency.currency;
-                      if (!code || !['btc', 'eth', 'ltc', 'usdt', 'bnb', 'ada', 'xrp', 'doge'].includes(code.toLowerCase())) {
+                      if (
+                        !code ||
+                        ![
+                          "btc",
+                          "eth",
+                          "ltc",
+                          "usdt",
+                          "bnb",
+                          "ada",
+                          "xrp",
+                          "doge",
+                        ].includes(code.toLowerCase())
+                      ) {
                         return false;
                       }
-                      
+
                       // Check minimum requirement - convert Bath to USD first
                       const currencyCode = code.toLowerCase();
                       const minimum = currencyMinimums[currencyCode];
-                      
+
                       if (!minimum) {
                         return true; // If no minimum data, show the currency
                       }
-                      
+
                       // Convert total order from Bath to USD
                       const totalOrderInBath = getTotalPrice();
-                      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
-                      
+                      const totalOrderInUsd =
+                        convertBathToUsd(totalOrderInBath);
+
                       // Check if order meets minimum requirement in USD
-                      const meetsMinimum = totalOrderInUsd >= minimum.fiatEquivalent;
-                      
+                      const meetsMinimum =
+                        totalOrderInUsd >= minimum.fiatEquivalent;
+
                       console.log(`Currency ${currencyCode.toUpperCase()}:`, {
                         totalOrderInBath: totalOrderInBath.toFixed(2),
                         totalOrderInUsd: totalOrderInUsd.toFixed(2),
                         minimumUsd: minimum.fiatEquivalent?.toFixed(2),
-                        meetsMinimum
+                        meetsMinimum,
                       });
-                      
+
                       return meetsMinimum;
                     })
                     .map((currency) => {
-                      const currencyCode = (currency.code || currency.currency).toLowerCase();
+                      const currencyCode = (
+                        currency.code || currency.currency
+                      ).toLowerCase();
                       const minimum = currencyMinimums[currencyCode];
                       const totalOrderInBath = getTotalPrice();
-                      const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
-                      const canAfford = !minimum || totalOrderInUsd >= minimum.fiatEquivalent;
+                      const totalOrderInUsd =
+                        convertBathToUsd(totalOrderInBath);
+                      const canAfford =
+                        !minimum || totalOrderInUsd >= minimum.fiatEquivalent;
 
                       return (
                         <button
@@ -5002,7 +5575,7 @@ export default function MenuPage() {
                           onClick={() => {
                             setSelectedCryptoCurrency(currency);
                             setShowCryptoModal(false);
-                            console.log('Selected crypto currency:', currency);
+                            console.log("Selected crypto currency:", currency);
                           }}
                           className="p-4 rounded-lg border-2 transition-all border-gray-200 hover:border-green-500 hover:bg-green-50 cursor-pointer"
                         >
@@ -5010,41 +5583,59 @@ export default function MenuPage() {
                             {/* Currency Logo */}
                             <div className="w-12 h-12 mx-auto mb-2 relative">
                               <img
-                                src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(currency)}.svg`}
-                                alt={currency.name || currencyCode.toUpperCase()}
+                                src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(
+                                  currency
+                                )}.svg`}
+                                alt={
+                                  currency.name || currencyCode.toUpperCase()
+                                }
                                 className="w-full h-full object-contain"
                                 onError={(e) => {
                                   // First fallback: try original currency code
-                                  if (!e.target.src.includes(currencyCode) && getCryptoIconSymbol(currency) !== currencyCode) {
+                                  if (
+                                    !e.target.src.includes(currencyCode) &&
+                                    getCryptoIconSymbol(currency) !==
+                                      currencyCode
+                                  ) {
                                     e.target.src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${currencyCode}.svg`;
                                   }
                                   // Second fallback: NOWPayments logo if available
-                                  else if (currency.logo_url && !e.target.src.includes('nowpayments')) {
+                                  else if (
+                                    currency.logo_url &&
+                                    !e.target.src.includes("nowpayments")
+                                  ) {
                                     e.target.src = `https://api.nowpayments.io${currency.logo_url}`;
                                   }
                                   // Final fallback: text icon
                                   else {
-                                    e.target.style.display = 'none';
-                                    e.target.nextSibling.style.display = 'flex';
+                                    e.target.style.display = "none";
+                                    e.target.nextSibling.style.display = "flex";
                                   }
                                 }}
                               />
-                              <div 
+                              <div
                                 className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg"
-                                style={{ display: 'none' }}
+                                style={{ display: "none" }}
                               >
                                 {currencyCode.charAt(0).toUpperCase()}
                               </div>
                             </div>
-                            
+
                             {/* Currency Info */}
-                            <div className="font-semibold text-lg">{(currency.code || currency.currency).toUpperCase()}</div>
-                            <div className="text-sm text-gray-600 mb-2">{currency.name || currencyCode.toUpperCase()}</div>
-                            
+                            <div className="font-semibold text-lg">
+                              {(
+                                currency.code || currency.currency
+                              ).toUpperCase()}
+                            </div>
+                            <div className="text-sm text-gray-600 mb-2">
+                              {currency.name || currencyCode.toUpperCase()}
+                            </div>
+
                             {/* Minimum Amount - Optional display */}
                             {minimum && (
                               <div className="text-xs text-green-600">
-                                Min: ฿{minimum.minAmountInBath?.toFixed(2) || 'N/A'}
+                                Min: ฿
+                                {minimum.minAmountInBath?.toFixed(2) || "N/A"}
                               </div>
                             )}
                           </div>
@@ -5056,12 +5647,22 @@ export default function MenuPage() {
                 {/* Information Note */}
                 <div className="mt-6 p-4 bg-blue-50 rounded-lg">
                   <div className="text-sm text-blue-800">
-                    <div className="font-semibold mb-2">📝 Important Notes:</div>
+                    <div className="font-semibold mb-2">
+                      📝 Important Notes:
+                    </div>
                     <ul className="list-disc list-inside space-y-1">
                       <li>All prices are displayed in Thai Baht (฿)</li>
-                      <li>Minimum payment amounts are required for each cryptocurrency</li>
-                      <li>Transaction fees may apply depending on the selected currency</li>
-                      <li>Payment processing may take a few minutes to confirm</li>
+                      <li>
+                        Minimum payment amounts are required for each
+                        cryptocurrency
+                      </li>
+                      <li>
+                        Transaction fees may apply depending on the selected
+                        currency
+                      </li>
+                      <li>
+                        Payment processing may take a few minutes to confirm
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -5080,76 +5681,109 @@ export default function MenuPage() {
                 Complete Your Payment
               </h3>
               <div className="text-lg text-green-600 font-semibold">
-                {(selectedCryptoCurrency?.code || selectedCryptoCurrency?.currency || '').toUpperCase()} Payment
+                {(
+                  selectedCryptoCurrency?.code ||
+                  selectedCryptoCurrency?.currency ||
+                  ""
+                ).toUpperCase()}{" "}
+                Payment
               </div>
             </div>
 
             {/* Payment Status */}
-            <div className={`rounded-lg p-4 mb-6 ${
-              paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
-                ? 'bg-green-50 border border-green-200'
-                : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
-                ? 'bg-red-50 border border-red-200'
-                : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
-                ? 'bg-blue-50 border border-blue-200'
-                : 'bg-yellow-50 border border-yellow-200'
-            }`}>
+            <div
+              className={`rounded-lg p-4 mb-6 ${
+                paymentStatus?.payment_status === "finished" ||
+                paymentStatus?.payment_status === "confirmed"
+                  ? "bg-green-50 border border-green-200"
+                  : paymentStatus?.payment_status === "failed" ||
+                    paymentStatus?.payment_status === "expired" ||
+                    paymentStatus?.payment_status === "refunded"
+                  ? "bg-red-50 border border-red-200"
+                  : paymentStatus?.payment_status === "confirming" ||
+                    paymentStatus?.payment_status === "sending"
+                  ? "bg-blue-50 border border-blue-200"
+                  : "bg-yellow-50 border border-yellow-200"
+              }`}
+            >
               <div className="flex items-center justify-center">
-                <div className={`text-2xl mr-3 ${
-                  paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
-                    ? 'text-green-600'
-                    : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
-                    ? 'text-red-600'
-                    : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
-                    ? 'text-blue-600'
-                    : 'text-yellow-600'
-                }`}>
-                  {paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
-                    ? '✅'
-                    : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
-                    ? '❌'
-                    : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
-                    ? '🔄'
-                    : '⏳'
-                  }
+                <div
+                  className={`text-2xl mr-3 ${
+                    paymentStatus?.payment_status === "finished" ||
+                    paymentStatus?.payment_status === "confirmed"
+                      ? "text-green-600"
+                      : paymentStatus?.payment_status === "failed" ||
+                        paymentStatus?.payment_status === "expired" ||
+                        paymentStatus?.payment_status === "refunded"
+                      ? "text-red-600"
+                      : paymentStatus?.payment_status === "confirming" ||
+                        paymentStatus?.payment_status === "sending"
+                      ? "text-blue-600"
+                      : "text-yellow-600"
+                  }`}
+                >
+                  {paymentStatus?.payment_status === "finished" ||
+                  paymentStatus?.payment_status === "confirmed"
+                    ? "✅"
+                    : paymentStatus?.payment_status === "failed" ||
+                      paymentStatus?.payment_status === "expired" ||
+                      paymentStatus?.payment_status === "refunded"
+                    ? "❌"
+                    : paymentStatus?.payment_status === "confirming" ||
+                      paymentStatus?.payment_status === "sending"
+                    ? "🔄"
+                    : "⏳"}
                 </div>
                 <div>
-                  <div className={`font-semibold ${
-                    paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
-                      ? 'text-green-800'
-                      : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
-                      ? 'text-red-800'
-                      : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
-                      ? 'text-blue-800'
-                      : 'text-yellow-800'
-                  }`}>
-                    Payment Status: {paymentStatus?.payment_status || paymentDetails.payment_status}
+                  <div
+                    className={`font-semibold ${
+                      paymentStatus?.payment_status === "finished" ||
+                      paymentStatus?.payment_status === "confirmed"
+                        ? "text-green-800"
+                        : paymentStatus?.payment_status === "failed" ||
+                          paymentStatus?.payment_status === "expired" ||
+                          paymentStatus?.payment_status === "refunded"
+                        ? "text-red-800"
+                        : paymentStatus?.payment_status === "confirming" ||
+                          paymentStatus?.payment_status === "sending"
+                        ? "text-blue-800"
+                        : "text-yellow-800"
+                    }`}
+                  >
+                    Payment Status:{" "}
+                    {paymentStatus?.payment_status ||
+                      paymentDetails.payment_status}
                   </div>
-                  <div className={`text-sm ${
-                    paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed'
-                      ? 'text-green-700'
-                      : paymentStatus?.payment_status === 'failed' || paymentStatus?.payment_status === 'expired' || paymentStatus?.payment_status === 'refunded'
-                      ? 'text-red-700'
-                      : paymentStatus?.payment_status === 'confirming' || paymentStatus?.payment_status === 'sending'
-                      ? 'text-blue-700'
-                      : 'text-yellow-700'
-                  }`}>
-                    {paymentStatus?.payment_status === 'finished' 
-                      ? 'Payment completed successfully!'
-                      : paymentStatus?.payment_status === 'confirmed'
-                      ? 'Payment confirmed, processing...'
-                      : paymentStatus?.payment_status === 'confirming'
-                      ? 'Transaction being processed on blockchain...'
-                      : paymentStatus?.payment_status === 'sending'
-                      ? 'Funds being sent to wallet...'
-                      : paymentStatus?.payment_status === 'failed'
-                      ? 'Payment failed. Please try again.'
-                      : paymentStatus?.payment_status === 'expired'
-                      ? 'Payment expired. Please create a new payment.'
-                      : paymentStatus?.payment_status === 'refunded'
-                      ? 'Payment has been refunded.'
-                      : 'Waiting for your payment...'
-                    }
+                  <div
+                    className={`text-sm ${
+                      paymentStatus?.payment_status === "finished" ||
+                      paymentStatus?.payment_status === "confirmed"
+                        ? "text-green-700"
+                        : paymentStatus?.payment_status === "failed" ||
+                          paymentStatus?.payment_status === "expired" ||
+                          paymentStatus?.payment_status === "refunded"
+                        ? "text-red-700"
+                        : paymentStatus?.payment_status === "confirming" ||
+                          paymentStatus?.payment_status === "sending"
+                        ? "text-blue-700"
+                        : "text-yellow-700"
+                    }`}
+                  >
+                    {paymentStatus?.payment_status === "finished"
+                      ? "Payment completed successfully!"
+                      : paymentStatus?.payment_status === "confirmed"
+                      ? "Payment confirmed, processing..."
+                      : paymentStatus?.payment_status === "confirming"
+                      ? "Transaction being processed on blockchain..."
+                      : paymentStatus?.payment_status === "sending"
+                      ? "Funds being sent to wallet..."
+                      : paymentStatus?.payment_status === "failed"
+                      ? "Payment failed. Please try again."
+                      : paymentStatus?.payment_status === "expired"
+                      ? "Payment expired. Please create a new payment."
+                      : paymentStatus?.payment_status === "refunded"
+                      ? "Payment has been refunded."
+                      : "Waiting for your payment..."}
                   </div>
                   {checkingStatus && (
                     <div className="text-xs text-gray-500 mt-1">
@@ -5162,15 +5796,21 @@ export default function MenuPage() {
 
             {/* Order Summary */}
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <h4 className="font-semibold text-gray-800 mb-3">Order Summary</h4>
+              <h4 className="font-semibold text-gray-800 mb-3">
+                Order Summary
+              </h4>
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span>Order ID:</span>
-                  <span className="font-mono text-sm">{paymentDetails.order_id}</span>
+                  <span className="font-mono text-sm">
+                    {paymentDetails.order_id}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Amount:</span>
-                  <span className="font-semibold">฿{getTotalPrice().toFixed(2)}</span>
+                  <span className="font-semibold">
+                    ฿{getTotalPrice().toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>USD Equivalent:</span>
@@ -5178,7 +5818,10 @@ export default function MenuPage() {
                 </div>
                 <div className="flex justify-between font-semibold text-lg border-t pt-2">
                   <span>Pay Amount:</span>
-                  <span className="text-green-600">{paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</span>
+                  <span className="text-green-600">
+                    {paymentDetails.pay_amount}{" "}
+                    {paymentDetails.pay_currency.toUpperCase()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -5192,19 +5835,24 @@ export default function MenuPage() {
                     alt="Payment QR Code"
                     className="w-full h-full object-contain"
                     onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
                     }}
                   />
-                  <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm" style={{ display: 'none' }}>
+                  <div
+                    className="w-full h-full flex items-center justify-center text-gray-500 text-sm"
+                    style={{ display: "none" }}
+                  >
                     QR Code unavailable
                   </div>
                 </div>
               </div>
-              
+
               <div className="text-sm text-gray-600 mb-2">Payment Address:</div>
               <div className="bg-gray-100 p-3 rounded-lg border">
-                <div className="font-mono text-sm break-all">{paymentDetails.pay_address}</div>
+                <div className="font-mono text-sm break-all">
+                  {paymentDetails.pay_address}
+                </div>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(paymentDetails.pay_address);
@@ -5219,11 +5867,19 @@ export default function MenuPage() {
 
             {/* Payment Instructions */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-              <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
+              <h4 className="font-semibold text-blue-800 mb-2">
+                Payment Instructions:
+              </h4>
               <ol className="list-decimal list-inside text-blue-700 text-sm space-y-1">
                 <li>Scan the QR code with your crypto wallet</li>
                 <li>Or copy the payment address above</li>
-                <li>Send exactly <strong>{paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</strong></li>
+                <li>
+                  Send exactly{" "}
+                  <strong>
+                    {paymentDetails.pay_amount}{" "}
+                    {paymentDetails.pay_currency.toUpperCase()}
+                  </strong>
+                </li>
                 <li>Wait for payment confirmation</li>
               </ol>
             </div>
@@ -5232,16 +5888,28 @@ export default function MenuPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
               <h4 className="font-semibold text-red-800 mb-2">⚠️ Important:</h4>
               <ul className="list-disc list-inside text-red-700 text-sm space-y-1">
-                <li>Send only {paymentDetails.pay_currency.toUpperCase()} to this address</li>
-                <li>Send the exact amount: {paymentDetails.pay_amount} {paymentDetails.pay_currency.toUpperCase()}</li>
-                <li>Payment expires on: {new Date(paymentDetails.expiration_estimate_date).toLocaleString()}</li>
+                <li>
+                  Send only {paymentDetails.pay_currency.toUpperCase()} to this
+                  address
+                </li>
+                <li>
+                  Send the exact amount: {paymentDetails.pay_amount}{" "}
+                  {paymentDetails.pay_currency.toUpperCase()}
+                </li>
+                <li>
+                  Payment expires on:{" "}
+                  {new Date(
+                    paymentDetails.expiration_estimate_date
+                  ).toLocaleString()}
+                </li>
                 <li>Do not send from an exchange - use your personal wallet</li>
               </ul>
             </div>
 
             {/* Action Buttons */}
             <div className="flex space-x-4">
-              {(paymentStatus?.payment_status === 'finished' || paymentStatus?.payment_status === 'confirmed') ? (
+              {paymentStatus?.payment_status === "finished" ||
+              paymentStatus?.payment_status === "confirmed" ? (
                 <button
                   onClick={() => {
                     setShowPaymentModal(false);
@@ -5279,11 +5947,11 @@ export default function MenuPage() {
                     disabled={checkingStatus}
                     className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
                       checkingStatus
-                        ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                        : "bg-blue-500 hover:bg-blue-600 text-white"
                     }`}
                   >
-                    {checkingStatus ? '🔄 Checking...' : '🔍 Check Status Now'}
+                    {checkingStatus ? "🔄 Checking..." : "🔍 Check Status Now"}
                   </button>
                 </>
               )}
@@ -5294,10 +5962,11 @@ export default function MenuPage() {
               <div className="text-xs text-gray-500">
                 {paymentStatusTimer ? (
                   <>
-                    🔄 Auto-checking every 5 seconds • Last check: {new Date().toLocaleTimeString()}
+                    🔄 Auto-checking every 5 seconds • Last check:{" "}
+                    {new Date().toLocaleTimeString()}
                   </>
                 ) : (
-                  'Monitoring stopped'
+                  "Monitoring stopped"
                 )}
               </div>
             </div>
