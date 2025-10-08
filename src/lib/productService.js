@@ -158,6 +158,7 @@ export class CategoryService {
       } catch (orderErr) {
         console.warn("CategoryOrder not applied:", orderErr?.message);
       }
+
       return categories;
     } catch (error) {
       console.error("Error fetching categories:", error);
@@ -603,10 +604,10 @@ export class ProductService {
       console.log("ProductService.createProduct called with:", {
         productData: { ...productData },
         imageFilesCount: imageFiles?.length || 0,
-        imageFileNames: imageFiles?.map(f => f.name) || [],
-        hasBackgroundImage: !!backgroundImageFile
+        imageFileNames: imageFiles?.map((f) => f.name) || [],
+        hasBackgroundImage: !!backgroundImageFile,
       });
-      
+
       const productId = await this.generateProductId();
 
       let images = [];
@@ -617,12 +618,12 @@ export class ProductService {
         for (let i = 0; i < imageFiles.length; i++) {
           const imagePath = `products/${productId}/${imageFiles[i].name}`;
           console.log(`Uploading image ${i}: ${imagePath}`);
-          
+
           const imageUrl = await CategoryService.uploadImage(
             imageFiles[i],
             imagePath
           );
-          
+
           console.log(`Image ${i} uploaded successfully: ${imageUrl}`);
 
           if (i === 0) {
@@ -689,12 +690,20 @@ export class ProductService {
         mainImage: documentData.mainImage,
         imagesCount: documentData.images.length,
         subcategoryId: documentData.subcategoryId,
-        categoryId: documentData.categoryId
+        categoryId: documentData.categoryId,
       });
 
-      const docRef = await addDoc(collection(db, PRODUCTS_COLLECTION), documentData);
+      const docRef = await addDoc(
+        collection(db, PRODUCTS_COLLECTION),
+        documentData
+      );
 
-      console.log("Product saved successfully with ID:", docRef.id, "and main image:", documentData.mainImage);
+      console.log(
+        "Product saved successfully with ID:",
+        docRef.id,
+        "and main image:",
+        documentData.mainImage
+      );
       return { id: docRef.id, productId };
     } catch (error) {
       console.error("Error creating product:", error);
@@ -820,15 +829,21 @@ export class ProductService {
   }
 
   // Update product
-  static async updateProduct(id, productData, imageFiles = [], backgroundImageFile = null, removeMainImages = false) {
+  static async updateProduct(
+    id,
+    productData,
+    imageFiles = [],
+    backgroundImageFile = null,
+    removeMainImages = false
+  ) {
     try {
       console.log("ProductService.updateProduct called with:", {
         productId: id,
         productData: { ...productData },
         imageFilesCount: imageFiles?.length || 0,
-        imageFileNames: imageFiles?.map(f => f.name) || [],
+        imageFileNames: imageFiles?.map((f) => f.name) || [],
         hasBackgroundImage: !!backgroundImageFile,
-        removeMainImages: removeMainImages
+        removeMainImages: removeMainImages,
       });
 
       const docRef = doc(db, PRODUCTS_COLLECTION, id);
@@ -869,7 +884,10 @@ export class ProductService {
               await CategoryService.deleteImage(image.path);
               console.log(`Successfully deleted: ${image.path}`);
             } catch (deleteError) {
-              console.warn(`Failed to delete old image ${image.path}:`, deleteError);
+              console.warn(
+                `Failed to delete old image ${image.path}:`,
+                deleteError
+              );
             }
           }
         }
@@ -882,12 +900,12 @@ export class ProductService {
         for (let i = 0; i < imageFiles.length; i++) {
           const imagePath = `products/${currentData.productId}/${imageFiles[i].name}`;
           console.log(`Uploading main image ${i}: ${imagePath}`);
-          
+
           const imageUrl = await CategoryService.uploadImage(
             imageFiles[i],
             imagePath
           );
-          
+
           console.log(`Main image ${i} uploaded successfully: ${imageUrl}`);
 
           if (i === 0) {
@@ -903,7 +921,10 @@ export class ProductService {
 
         updateData.mainImage = mainImage;
         updateData.images = images;
-        console.log("Main images updated:", { mainImage, imagesCount: images.length });
+        console.log("Main images updated:", {
+          mainImage,
+          imagesCount: images.length,
+        });
       } else if (removeMainImages) {
         // User wants to completely remove all main images
         console.log("Removing all main images from product...");
@@ -914,7 +935,10 @@ export class ProductService {
               await CategoryService.deleteImage(image.path);
               console.log(`Successfully deleted: ${image.path}`);
             } catch (deleteError) {
-              console.warn(`Failed to delete image ${image.path}:`, deleteError);
+              console.warn(
+                `Failed to delete image ${image.path}:`,
+                deleteError
+              );
             }
           }
         }
@@ -942,17 +966,17 @@ export class ProductService {
         productId: id,
         mainImage: updateData.mainImage,
         imagesCount: updateData.images?.length || 0,
-        hasBackgroundImage: !!updateData.backgroundImage
+        hasBackgroundImage: !!updateData.backgroundImage,
       });
 
       await updateDoc(docRef, updateData);
-      
+
       console.log("✅ Product updated successfully in database:", {
         productId: id,
         mainImage: updateData.mainImage,
-        imagesCount: updateData.images?.length || 0
+        imagesCount: updateData.images?.length || 0,
       });
-      
+
       return true;
     } catch (error) {
       console.error("Error updating product:", error);
@@ -1180,7 +1204,7 @@ export class NonMemberCategoriesService {
     try {
       const docRef = doc(db, this.COLLECTION_NAME, this.DOC_ID);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const data = docSnap.data();
         return data.categories || [];
@@ -1198,13 +1222,17 @@ export class NonMemberCategoriesService {
   static async updateNonMemberCategories(categoryIds) {
     try {
       const docRef = doc(db, this.COLLECTION_NAME, this.DOC_ID);
-      
+
       // Always use setDoc to ensure we only have one document with ID "current"
-      await setDoc(docRef, {
-        categories: categoryIds || [],
-        updatedAt: serverTimestamp(),
-      }, { merge: true }); // Merge to preserve any other fields if they exist
-      
+      await setDoc(
+        docRef,
+        {
+          categories: categoryIds || [],
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      ); // Merge to preserve any other fields if they exist
+
       return true;
     } catch (error) {
       console.error("Error updating non-member categories:", error);

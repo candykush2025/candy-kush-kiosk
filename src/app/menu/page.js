@@ -92,6 +92,11 @@ export default function MenuPage() {
   // Cashback percentages for categories
   const [categoryPercentages, setCategoryPercentages] = useState({});
 
+  // Helper function to format price without unnecessary decimals
+  const formatPrice = (price) => {
+    return price % 1 === 0 ? price.toString() : price.toFixed(2);
+  };
+
   // Stock alerts
   const [stockAlerts, setStockAlerts] = useState([]);
   const [stockCalculations, setStockCalculations] = useState({});
@@ -868,6 +873,7 @@ export default function MenuPage() {
             backgroundImage: category.backgroundImage,
             backgroundFit: category.backgroundFit || "contain",
             textColor: category.textColor || "#000000",
+            specialPage: category.specialPage, // Add specialPage field
           })
         );
 
@@ -937,9 +943,6 @@ export default function MenuPage() {
     // Make TransactionService available for debugging
     if (typeof window !== "undefined") {
       window.TransactionService = TransactionService;
-      console.log("🔧 TransactionService available globally for debugging");
-      console.log("🧪 Try: window.TransactionService.testFirebaseWrite()");
-      console.log("🧪 Try: window.TransactionService.createTestTransaction()");
     }
   }, [router]);
 
@@ -955,6 +958,18 @@ export default function MenuPage() {
   const handleCategorySelect = (category) => {
     resetSessionTimer(); // Reset session timer on user interaction
 
+    console.log("Category clicked:", category.name);
+    console.log("Special page field:", category.specialPage);
+    console.log("Available fields:", Object.keys(category));
+
+    // Check if this category has a special page
+    if (category.specialPage === "Prerolled Page") {
+      console.log("✅ Navigating to prerolls section");
+      setShowPersonalizedJoints(true);
+      setSelectedCategory(null);
+      return;
+    }
+
     setSelectedCategory(category.id); // Use category.id (database ID) for filtering
 
     // Filter subcategories and products based on selected category database ID
@@ -967,28 +982,14 @@ export default function MenuPage() {
 
     setFilteredSubcategories(newFilteredSubcategories);
     setFilteredProducts(newFilteredProducts);
-
-    console.log("Selected category:", category);
-    console.log("Filtered subcategories:", newFilteredSubcategories);
-    console.log("Filtered products:", newFilteredProducts);
   };
 
   const handleBack = () => {
-    console.log("handleBack called, cart length:", cart.length);
-    // Temporarily always show modal for testing
-    console.log("Showing back modal (test mode)");
-    setShowBackModal(true);
-    console.log("showBackModal state after setting:", showBackModal);
-
-    // Original logic:
-    // if (cart.length > 0) {
-    //   console.log("Showing back modal");
-    //   setShowBackModal(true);
-    //   console.log("showBackModal state after setting:", showBackModal);
-    // } else {
-    //   console.log("Going to scanner page");
-    //   router.push("/scanner");
-    // }
+    if (cart.length > 0) {
+      setShowBackModal(true);
+    } else {
+      router.push("/scanner");
+    }
   };
 
   const confirmBack = () => {
@@ -1210,10 +1211,6 @@ export default function MenuPage() {
       quantity: 1,
     });
     setShowCartAnimation(true);
-    console.log(
-      "🎬 Add to cart animation triggered for variant:",
-      selectedProduct.name
-    );
 
     const cartItem = {
       id: `${selectedProduct.productId}_${Date.now()}`, // Unique ID for variant combinations
@@ -2366,11 +2363,6 @@ export default function MenuPage() {
         const key = product.id;
         const stockData = stockCalculations[key];
         const stock = stockData ? stockData.stock || 0 : 0;
-        console.log(
-          `📦 Stock lookup for ${product.name}: key=${key}, stockData=`,
-          stockData,
-          `stock=${stock}`
-        );
         return stock;
       }
     }
@@ -2401,28 +2393,11 @@ export default function MenuPage() {
   const getStockWarningText = (product) => {
     const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
 
-    console.log(`🔍 STOCK DEBUG for ${product.name}:`);
-    console.log(`  - Product ID: ${product.productId}`);
-    console.log(`  - Document ID: ${product.id}`);
-    console.log(`  - Stock Alert Found:`, stockAlert);
-    console.log(`  - Stock Calculations Loaded:`, stockCalculationsLoaded);
-    console.log(`  - Stock Calculations Keys:`, Object.keys(stockCalculations));
-
     if (!stockAlert) {
-      console.log(`  ❌ No stock alert found for document ID ${product.id}`);
       return null;
     }
 
     const currentStock = getCurrentStock(product);
-
-    console.log(`  - Current Stock: ${currentStock}`);
-    console.log(`  - Kiosk Alert Level: ${stockAlert.alertKioskLevel}`);
-    console.log(`  - Admin Alert Level: ${stockAlert.alertAdminLevel}`);
-    console.log(
-      `  - Should show warning: ${
-        currentStock <= stockAlert.alertKioskLevel && currentStock > 0
-      }`
-    );
 
     if (currentStock <= stockAlert.alertKioskLevel && currentStock > 0) {
       console.log(`  ✅ Showing warning: Stock ${currentStock} left!`);
@@ -2550,7 +2525,9 @@ export default function MenuPage() {
         <div className="p-4 flex items-center justify-between">
           {/* Back Button */}
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setShowPersonalizedJoints(false);
               setSelectedCategory(null);
             }}
@@ -2674,41 +2651,47 @@ export default function MenuPage() {
                     countryCode={getLanguageData(selectedLanguage).countryCode}
                     svg
                     style={{
-                      display: "inline-block",
                       width: "100%",
                       height: "100%",
-                      verticalAlign: "middle",
                       objectFit: "cover",
                     }}
                   />
                 </div>
               </button>
+
               {/* Language Dropdown */}
               {showLanguageDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                  <div className="py-2">
-                    {supportedLanguages.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => selectLanguage(lang.code)}
-                        className={`w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center ${
-                          selectedLanguage === lang.code
-                            ? "bg-green-50 text-green-700"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        <ReactCountryFlag
-                          countryCode={getLanguageData(lang.code).countryCode}
-                          svg
-                          style={{
-                            width: "1.5rem",
-                            height: "1.5rem",
-                            marginRight: "0.5rem",
-                          }}
-                        />
-                        {lang.name}
-                      </button>
-                    ))}
+                <div className="absolute top-full mt-2 right-0 bg-white border border-gray-300 rounded-lg shadow-lg py-4 min-w-[400px] z-50">
+                  <div className="grid grid-cols-2 gap-2 px-3">
+                    {supportedLanguages.map((lng) => {
+                      const langData = getLanguageData(lng);
+                      return (
+                        <button
+                          key={lng}
+                          onClick={() => selectLanguage(lng)}
+                          className={`flex items-center px-3 py-3 hover:bg-gray-50 text-left space-x-3 rounded-md transition-colors ${
+                            selectedLanguage === lng
+                              ? "bg-green-50 border border-green-200"
+                              : ""
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center">
+                            <ReactCountryFlag
+                              countryCode={langData.countryCode}
+                              svg
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm font-medium text-gray-700 flex-1">
+                            {langData.name}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -2716,9 +2699,18 @@ export default function MenuPage() {
 
             {/* Cart Button */}
             <button
-              onClick={() => {
-                setPreviousSection("prerolls");
-                setShowCart(true);
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                resetSessionTimer(); // Reset session timer on user interaction
+                if (cart.length > 0) {
+                  setPreviousSection("prerolls");
+                  setShowPersonalizedJoints(false); // Close prerolls section
+                  setShowCart(true); // Open cart
+                } else {
+                  // Optional: show message or do nothing if cart is empty
+                  console.log("Cart is empty");
+                }
               }}
               className="relative bg-green-500 hover:bg-green-600 text-white px-5 py-5 rounded-lg font-bold transition-colors flex items-center"
             >
@@ -2727,12 +2719,17 @@ export default function MenuPage() {
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
-                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z"></path>
               </svg>
+
+              {/* Notification Badge */}
               {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                  {cart.reduce((sum, item) => sum + item.quantity, 0)}
-                </span>
+                <div className="absolute -top-2 -right-2 bg-red-500 text-white text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                  {cart.reduce(
+                    (total, item) => total + (item.quantity || 1),
+                    0
+                  )}
+                </div>
               )}
             </button>
           </div>
@@ -3401,37 +3398,6 @@ export default function MenuPage() {
               id="kiosk-left-list"
               className="flex-1 overflow-y-auto hidden-scrollbar px-2 py-4"
             >
-              {/* Personalized Joints Button - Only show in dev mode */}
-              {isDev && (
-                <div className="mb-4">
-                  <button
-                    onClick={() => {
-                      setShowPersonalizedJoints(true);
-                      setSelectedCategory(null);
-                    }}
-                    className="w-full p-4 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
-                  >
-                    <div className="flex flex-col items-center">
-                      <svg
-                        className="w-8 h-8 mb-2"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path
-                          fillRule="evenodd"
-                          d="M4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2V8a2 2 0 00-2-2H8a2 2 0 00-2 2v5a2 2 0 01-2-2V5zM8 7a1 1 0 012 0v6a1 1 0 11-2 0V7zm5 0a1 1 0 10-2 0v6a1 1 0 102 0V7z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span className="text-lg font-bold">
-                        Personalized Joints
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              )}
-
               {categories.map((category, index) => (
                 <div key={category.id}>
                   <div
@@ -4315,15 +4281,6 @@ export default function MenuPage() {
                   className="text-center w-12 h-12"
                   style={{ color: "white" }}
                 >
-                  <div
-                    className="text-2xl font-bold"
-                    style={{ color: "white" }}
-                  >
-                    {cart.reduce(
-                      (total, item) => total + (item.quantity || 1),
-                      0
-                    )}
-                  </div>
                   <div className="text-s" style={{ color: "white" }}>
                     {t("itemsCount", {
                       count: cart.reduce(
@@ -4506,7 +4463,7 @@ export default function MenuPage() {
                           {t("finalTotal")}
                         </div>
                         <div className="text-6xl font-bold text-green-600">
-                          ฿{getTotalPriceAfterPoints().toFixed(2)}
+                          ฿{formatPrice(getTotalPriceAfterPoints())}
                         </div>
                       </div>
                     </div>
@@ -4516,7 +4473,7 @@ export default function MenuPage() {
                         {t("grandTotal")}
                       </div>
                       <div className="text-6xl font-bold text-green-600 mb-4">
-                        ฿{getTotalPrice().toFixed(2)}
+                        ฿{formatPrice(getTotalPrice())}
                       </div>
                     </div>
                   )}
