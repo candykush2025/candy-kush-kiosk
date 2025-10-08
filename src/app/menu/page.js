@@ -2430,23 +2430,22 @@ export default function MenuPage() {
         {/* Customer Section */}
         <CustomerSection customer={customer} />
 
-        {/* Main Personalized Joints Content */}
+        {/* Main Prerolls Content */}
         <div className="flex-1 min-h-0 p-6">
           <div className="h-full `flex flex-col p-8">
             {/* Title */}
             <div className="mb-8">
-              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Personalized Joints</h1>
-              <p className="text-center text-gray-600">Select your preferred combination</p>
+              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">Prerolls</h1>
             </div>
 
-            {/* 3x3 Grid - No Gaps, strict 220px cells */}
+            {/* 4x4 Grid - header row 150px, image cells 220px */}
             <div className="flex-1 w-full flex justify-center">
               <div
                 className="mx-auto"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "repeat(4, 220px)",
-                  gridTemplateRows: "repeat(4, 220px)",
+                  gridTemplateRows: "150px repeat(3, 220px)",
                   gap: "0px",
                 }}
               >
@@ -2455,19 +2454,19 @@ export default function MenuPage() {
                 
                 {/* Header: Sativa, Hybrid, Indica */}
                 <div 
-                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
+                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
                   style={{ backgroundColor: '#FDE047' }}
                 >
                   Sativa
                 </div>
                 <div 
-                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center"
+                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center"
                   style={{ backgroundColor: '#22C55E' }}
                 >
                   Hybrid
                 </div>
                 <div 
-                  className="w-[220px] h-[220px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
+                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
                   style={{ backgroundColor: '#3B82F6' }}
                 >
                   Indica
@@ -2485,7 +2484,7 @@ export default function MenuPage() {
                   return (
                     <div 
                       key={`outdoor-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
                         isSelected ? 'ring-4 ring-green-500' : ''
                       }`}
                       onClick={() => {
@@ -2496,9 +2495,9 @@ export default function MenuPage() {
                       <Image
                         src={personalizedJointsImages['outdoor'][strain]}
                         alt={`Outdoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
-                        width={220}
-                        height={220}
-                        className="w-[220px] h-[220px] object-contain"
+                        width={196}
+                        height={196}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   );
@@ -2516,7 +2515,7 @@ export default function MenuPage() {
                   return (
                     <div 
                       key={`indoor-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
                         isSelected ? 'ring-4 ring-green-500' : ''
                       }`}
                       onClick={() => {
@@ -2527,9 +2526,9 @@ export default function MenuPage() {
                       <Image
                         src={personalizedJointsImages['indoor'][strain]}
                         alt={`Indoor ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
-                        width={220}
-                        height={220}
-                        className="w-[220px] h-[220px] object-contain"
+                        width={196}
+                        height={196}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   );
@@ -2547,7 +2546,7 @@ export default function MenuPage() {
                   return (
                     <div 
                       key={`top-${strain}`} 
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white ${
+                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-200 flex items-center justify-center bg-white p-2 ${
                         isSelected ? 'ring-4 ring-green-500' : ''
                       }`}
                       onClick={() => {
@@ -2558,9 +2557,9 @@ export default function MenuPage() {
                       <Image
                         src={personalizedJointsImages['top'][strain]}
                         alt={`Top Quality ${strain.charAt(0).toUpperCase() + strain.slice(1)}`}
-                        width={220}
-                        height={220}
-                        className="w-[220px] h-[220px] object-contain"
+                        width={196}
+                        height={196}
+                        className="w-full h-full object-contain"
                       />
                     </div>
                   );
@@ -2998,8 +2997,8 @@ export default function MenuPage() {
                         />
                         {/* Cashback Badge - only show for members */}
                         {customer && !customer.isNoMember && categoryPercentages[category.id] > 0 && (
-                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-8 h-8 flex items-center justify-center border-2 border-white shadow-lg">
-                            {categoryPercentages[category.id]}%
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-18 h-8 flex items-center justify-center border-2 border-white shadow-lg">
+                            up to {categoryPercentages[category.id]}%
                           </div>
                         )}
                       </div>
