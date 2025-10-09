@@ -35,6 +35,7 @@ export default function MenuPage() {
   const [cart, setCart] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [expandedSubcategory, setExpandedSubcategory] = useState(null);
   const [showQuantityPopup, setShowQuantityPopup] = useState(false);
   const [isPopupClosing, setIsPopupClosing] = useState(false);
   const [isPopupOpening, setIsPopupOpening] = useState(false);
@@ -95,6 +96,13 @@ export default function MenuPage() {
   // Helper function to format price without unnecessary decimals
   const formatPrice = (price) => {
     return price % 1 === 0 ? price.toString() : price.toFixed(2);
+  };
+
+  // Handle subcategory expansion toggle
+  const handleSubcategoryToggle = (subcategoryId) => {
+    setExpandedSubcategory(
+      expandedSubcategory === subcategoryId ? null : subcategoryId
+    );
   };
 
   // Stock alerts
@@ -982,6 +990,13 @@ export default function MenuPage() {
 
     setFilteredSubcategories(newFilteredSubcategories);
     setFilteredProducts(newFilteredProducts);
+
+    // Auto-expand the first subcategory when category is selected
+    if (newFilteredSubcategories.length > 0) {
+      setExpandedSubcategory(newFilteredSubcategories[0].id);
+    } else {
+      setExpandedSubcategory(null);
+    }
   };
 
   const handleBack = () => {
@@ -1009,6 +1024,7 @@ export default function MenuPage() {
     sessionStorage.removeItem("receiptData");
 
     setShowBackModal(false);
+    setExpandedSubcategory(null); // Reset expanded subcategory when leaving
     router.push("/scanner");
   };
 
@@ -3489,98 +3505,153 @@ export default function MenuPage() {
                     {/* Subcategories */}
                     {getFilteredSubcategories().length > 0 && (
                       <div className="mb-8 space-y-4">
-                        {getFilteredSubcategories().map((subcategory) => (
-                          <div key={subcategory.id} className="pb-2">
-                            <div className="flex items-center mb-2">
-                              {subcategory.image && (
-                                <div className="w-16 h-16 mr-3 relative flex-shrink-0">
-                                  <Image
-                                    src={subcategory.image}
-                                    alt={subcategory.name}
-                                    fill
-                                    className="object-contain rounded"
-                                    sizes="32px"
-                                  />
-                                </div>
-                              )}
-                              <h5
-                                className="font-medium text-lg"
-                                style={{ color: "#959595" }}
+                        {getFilteredSubcategories().map((subcategory) => {
+                          const isExpanded =
+                            expandedSubcategory === subcategory.id;
+                          const subcategoryProducts =
+                            getFilteredProducts().filter(
+                              (p) => p.subcategoryId === subcategory.id
+                            );
+
+                          return (
+                            <div key={subcategory.id} className="pb-2">
+                              {/* Clickable Subcategory Header */}
+                              <button
+                                onClick={() =>
+                                  handleSubcategoryToggle(subcategory.id)
+                                }
+                                className="flex items-center mb-2 w-full text-left hover:bg-gray-50 p-2 rounded-lg transition-colors duration-200"
                               >
-                                {subcategory.name}
-                              </h5>
-                            </div>
-                            <div className="grid grid-cols-4 gap-4">
-                              {getFilteredProducts()
-                                .filter(
-                                  (p) => p.subcategoryId === subcategory.id
-                                )
-                                .map((product) => (
-                                  <div
-                                    key={product.id}
-                                    className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
-                                      selectedProduct?.id === product.id
-                                        ? "transform scale-105 shadow-lg border-green-500"
-                                        : "border-gray-100"
-                                    } `}
-                                    style={{
-                                      backgroundImage: product.backgroundImage
-                                        ? `url(${product.backgroundImage})`
-                                        : "none",
-                                      backgroundSize:
-                                        product.backgroundFit || "cover",
-                                      backgroundPosition: "center",
-                                      backgroundRepeat: "no-repeat",
-                                      backgroundColor: product.backgroundImage
-                                        ? "transparent"
-                                        : "white",
-                                    }}
-                                    onClick={() => handleProductSelect(product)}
+                                {subcategory.image && (
+                                  <div className="w-16 h-16 mr-3 relative flex-shrink-0">
+                                    <Image
+                                      src={subcategory.image}
+                                      alt={subcategory.name}
+                                      fill
+                                      className="object-contain rounded"
+                                      sizes="32px"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 flex items-center justify-between">
+                                  <h5
+                                    className="font-medium text-lg"
+                                    style={{ color: "#959595" }}
                                   >
-                                    {product.mainImage && (
-                                      <div className="w-full aspect-[3/4] mb-2 relative">
-                                        <Image
-                                          src={product.mainImage}
-                                          alt={product.name}
-                                          fill
-                                          className="object-contain rounded-lg"
-                                        />
-                                        {getProductCartQuantity(product) >
-                                          0 && (
-                                          <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
-                                            {getProductCartQuantity(product)}
+                                    {subcategory.name}
+                                  </h5>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                      {subcategoryProducts.length} products
+                                    </span>
+                                    <svg
+                                      className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
+                                        isExpanded ? "rotate-180" : "rotate-0"
+                                      }`}
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth="2"
+                                        d="M19 9l-7 7-7-7"
+                                      />
+                                    </svg>
+                                  </div>
+                                </div>
+                              </button>
+
+                              {/* Expandable Products Grid */}
+                              <div
+                                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                                  isExpanded
+                                    ? "max-h-screen opacity-100 mb-4"
+                                    : "max-h-0 opacity-0"
+                                }`}
+                              >
+                                <div className="grid grid-cols-4 gap-4 pt-2">
+                                  {getFilteredProducts()
+                                    .filter(
+                                      (p) => p.subcategoryId === subcategory.id
+                                    )
+                                    .map((product) => (
+                                      <div
+                                        key={product.id}
+                                        className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
+                                          selectedProduct?.id === product.id
+                                            ? "transform scale-105 shadow-lg border-green-500"
+                                            : "border-gray-100"
+                                        } `}
+                                        style={{
+                                          backgroundImage:
+                                            product.backgroundImage
+                                              ? `url(${product.backgroundImage})`
+                                              : "none",
+                                          backgroundSize:
+                                            product.backgroundFit || "cover",
+                                          backgroundPosition: "center",
+                                          backgroundRepeat: "no-repeat",
+                                          backgroundColor:
+                                            product.backgroundImage
+                                              ? "transparent"
+                                              : "white",
+                                        }}
+                                        onClick={() =>
+                                          handleProductSelect(product)
+                                        }
+                                      >
+                                        {product.mainImage && (
+                                          <div className="w-full aspect-[3/4] mb-2 relative">
+                                            <Image
+                                              src={product.mainImage}
+                                              alt={product.name}
+                                              fill
+                                              className="object-contain rounded-lg"
+                                            />
+                                            {getProductCartQuantity(product) >
+                                              0 && (
+                                              <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
+                                                {getProductCartQuantity(
+                                                  product
+                                                )}
+                                              </div>
+                                            )}
                                           </div>
                                         )}
-                                      </div>
-                                    )}
-                                    <div className="text-center space-y-1">
-                                      <div
-                                        className="text-lg font-medium truncate"
-                                        style={{
-                                          color: product.textColor || "#6b7280",
-                                        }}
-                                      >
-                                        {product.name}
-                                      </div>
-                                      <div
-                                        className="text-lg font-semibold"
-                                        style={{
-                                          color: product.textColor || "#059669",
-                                        }}
-                                      >
-                                        {getProductPriceDisplay(product)}
-                                      </div>
-                                      {getStockWarningText(product) && (
-                                        <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
-                                          {getStockWarningText(product)}
+                                        <div className="text-center space-y-1">
+                                          <div
+                                            className="text-lg font-medium truncate"
+                                            style={{
+                                              color:
+                                                product.textColor || "#6b7280",
+                                            }}
+                                          >
+                                            {product.name}
+                                          </div>
+                                          <div
+                                            className="text-lg font-semibold"
+                                            style={{
+                                              color:
+                                                product.textColor || "#059669",
+                                            }}
+                                          >
+                                            {getProductPriceDisplay(product)}
+                                          </div>
+                                          {getStockWarningText(product) && (
+                                            <div className="text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded-full mt-1 animate-pulse">
+                                              {getStockWarningText(product)}
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))}
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
 
