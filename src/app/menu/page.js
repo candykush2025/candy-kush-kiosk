@@ -3514,40 +3514,82 @@ export default function MenuPage() {
                             );
 
                           return (
-                            <div key={subcategory.id} className="pb-2">
+                            <div
+                              key={subcategory.id}
+                              className={`pb-2 rounded-lg overflow-hidden transition-all duration-300 ${
+                                isExpanded ? "shadow-lg" : "shadow-sm"
+                              }`}
+                              style={{
+                                backgroundImage: subcategory.backgroundImage
+                                  ? `url(${subcategory.backgroundImage})`
+                                  : "none",
+                                backgroundSize:
+                                  subcategory.backgroundFit || "cover",
+                                backgroundPosition: "center",
+                                backgroundRepeat: "no-repeat",
+                                backgroundColor: subcategory.backgroundImage
+                                  ? "transparent"
+                                  : "white",
+                              }}
+                            >
                               {/* Clickable Subcategory Header */}
                               <button
                                 onClick={() =>
                                   handleSubcategoryToggle(subcategory.id)
                                 }
-                                className="flex items-center mb-2 w-full text-left hover:bg-gray-50 p-2 rounded-lg transition-colors duration-200"
+                                className="flex items-center mb-2 w-full text-left hover:bg-black/10 p-4 transition-all duration-200"
                               >
                                 {subcategory.image && (
-                                  <div className="w-16 h-16 mr-3 relative flex-shrink-0">
+                                  <div className="w-16 h-16 mr-3 relative flex-shrink-0 rounded-lg overflow-hidden">
                                     <Image
                                       src={subcategory.image}
                                       alt={subcategory.name}
                                       fill
-                                      className="object-contain rounded"
-                                      sizes="32px"
+                                      className="object-contain rounded p-1"
+                                      sizes="64px"
                                     />
                                   </div>
                                 )}
                                 <div className="flex-1 flex items-center justify-between">
                                   <h5
-                                    className="font-medium text-lg"
-                                    style={{ color: "#959595" }}
+                                    className="font-bold text-lg"
+                                    style={{
+                                      color: subcategory.textColor || "#959595",
+                                      textShadow: subcategory.backgroundImage
+                                        ? "1px 1px 2px rgba(0,0,0,0.7)"
+                                        : "none",
+                                    }}
                                   >
                                     {subcategory.name}
                                   </h5>
                                   <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                    <span
+                                      className="text-xs px-2 py-1 rounded-full font-medium"
+                                      style={{
+                                        color:
+                                          subcategory.textColor || "#6b7280",
+                                        backgroundColor:
+                                          subcategory.backgroundImage
+                                            ? "rgba(255,255,255,0.8)"
+                                            : "#f3f4f6",
+                                        textShadow: subcategory.backgroundImage
+                                          ? "1px 1px 2px rgba(0,0,0,0.5)"
+                                          : "none",
+                                      }}
+                                    >
                                       {subcategoryProducts.length} products
                                     </span>
                                     <svg
-                                      className={`w-5 h-5 text-gray-400 transform transition-transform duration-200 ${
+                                      className={`w-5 h-5 transform transition-transform duration-200 ${
                                         isExpanded ? "rotate-180" : "rotate-0"
                                       }`}
+                                      style={{
+                                        color:
+                                          subcategory.textColor || "#6b7280",
+                                        filter: subcategory.backgroundImage
+                                          ? "drop-shadow(1px 1px 2px rgba(0,0,0,0.7))"
+                                          : "none",
+                                      }}
                                       fill="none"
                                       stroke="currentColor"
                                       viewBox="0 0 24 24"
@@ -3571,7 +3613,7 @@ export default function MenuPage() {
                                     : "max-h-0 opacity-0"
                                 }`}
                               >
-                                <div className="grid grid-cols-4 gap-4 pt-2">
+                                <div className="grid grid-cols-4 gap-4 p-2">
                                   {getFilteredProducts()
                                     .filter(
                                       (p) => p.subcategoryId === subcategory.id

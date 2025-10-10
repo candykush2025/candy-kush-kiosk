@@ -263,7 +263,7 @@ export default function QRScanner() {
 
         {/* Footer Info */}
         <div className="bg-green-600/90 border-t border-green-500 p-4 text-center">
-          <p className="text-white text-3xl">{t("havingTrouble")}</p>
+          <p className="text-white text-4xl">{t("havingTrouble")}</p>
         </div>
       </div>
     </div>
