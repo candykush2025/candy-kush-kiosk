@@ -2762,6 +2762,20 @@ export default function MenuPage() {
               <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">
                 Prerolls
               </h1>
+
+              {/* Custom Joint Builder Button */}
+              <div className="flex justify-center mt-6 mb-4">
+                <button
+                  onClick={() => {
+                    router.push("/personalized-joint");
+                  }}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center space-x-3"
+                >
+                  <span className="text-2xl">🔧</span>
+                  <span>Custom Joint Builder</span>
+                  <span className="text-2xl">✨</span>
+                </button>
+              </div>
             </div>
 
             {/* 4x4 Grid - header row 150px, image cells 220px */}

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import i18n, { supportedLanguages } from "../i18n";
 import ReactCountryFlag from "react-country-flag";
 import KioskHeader from "../components/KioskHeader";
+import { FaHandPointer } from "react-icons/fa";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export default function Home() {
   const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
   const [visitRecorded, setVisitRecorded] = useState(false);
   const [languageChangeTime, setLanguageChangeTime] = useState(null); // Track when language was changed
+  const [isIdle, setIsIdle] = useState(false); // Track idle state
 
   // Barcode scanning state (hidden from UI)
   const bufferRef = useRef("");
@@ -39,12 +41,26 @@ export default function Home() {
     };
 
     recordPageVisit();
-  }, [visitRecorded]); // Auto redirect to idle screen after 30 seconds of inactivity
+  }, [visitRecorded]); 
+
+  // Auto show idle overlay after 60 seconds of inactivity
   useEffect(() => {
     const checkInactivity = () => {
       if (Date.now() - lastInteraction > 60000) {
-        // 30 seconds
-        router.push("/idle");
+        // 60 seconds
+        console.log("🛌 Switching to idle mode");
+        setIsIdle(true);
+        
+        // Reset language to English when going idle
+        console.log("🔄 Idle: Resetting language to English for new customer session");
+        i18n.changeLanguage("en");
+        setSelectedLanguage("en");
+        setLanguageChangeTime(null);
+        
+        // Clear language preference from localStorage
+        if (typeof window !== "undefined") {
+          localStorage.setItem("i18nextLng", "en");
+        }
       }
     };
 
@@ -52,6 +68,10 @@ export default function Home() {
 
     const handleInteraction = () => {
       setLastInteraction(Date.now());
+      if (isIdle) {
+        console.log("🔄 Exiting idle mode");
+        setIsIdle(false);
+      }
     };
 
     // Track user interactions
@@ -67,7 +87,7 @@ export default function Home() {
       document.removeEventListener("mousemove", handleInteraction);
       document.removeEventListener("keydown", handleInteraction);
     };
-  }, [lastInteraction, router]);
+  }, [lastInteraction, isIdle]);
 
   // Language reset timer - Reset to English after 1 minute of staying on homepage
   useEffect(() => {
@@ -362,6 +382,33 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Idle Overlay - Full screen when inactive */}
+        {isIdle && (
+          <div className="absolute inset-0 z-50 bg-black cursor-pointer">
+            <video
+              className="w-full h-full object-cover"
+              autoPlay
+              loop
+              muted
+              playsInline
+            >
+              <source
+                src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
+                type="video/mp4"
+              />
+              Your browser does not support the video tag.
+            </video>
+            
+            {/* Tap to continue overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-white text-center animate-pulse">
+                <FaHandPointer className="text-4xl mb-4 mx-auto" />
+                <div className="text-2xl font-light">Tap to continue</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
