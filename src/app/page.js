@@ -41,7 +41,7 @@ export default function Home() {
     };
 
     recordPageVisit();
-  }, [visitRecorded]); 
+  }, [visitRecorded]);
 
   // Auto show idle overlay after 60 seconds of inactivity
   useEffect(() => {
@@ -50,13 +50,15 @@ export default function Home() {
         // 60 seconds
         console.log("🛌 Switching to idle mode");
         setIsIdle(true);
-        
+
         // Reset language to English when going idle
-        console.log("🔄 Idle: Resetting language to English for new customer session");
+        console.log(
+          "🔄 Idle: Resetting language to English for new customer session"
+        );
         i18n.changeLanguage("en");
         setSelectedLanguage("en");
         setLanguageChangeTime(null);
-        
+
         // Clear language preference from localStorage
         if (typeof window !== "undefined") {
           localStorage.setItem("i18nextLng", "en");
@@ -399,7 +401,7 @@ export default function Home() {
               />
               Your browser does not support the video tag.
             </video>
-            
+
             {/* Tap to continue overlay */}
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-white text-center animate-pulse">
