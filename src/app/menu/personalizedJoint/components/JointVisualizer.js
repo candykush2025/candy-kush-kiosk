@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GiPlantWatering } from "react-icons/gi";
-import { FaCheck, FaTimes } from "react-icons/fa";
 
 export default function JointVisualizer({ config }) {
   const [rotate, setRotate] = useState(false);
@@ -369,7 +367,9 @@ export default function JointVisualizer({ config }) {
             </div>
           ) : (
             <div className="text-center text-green-200">
-              <GiPlantWatering className="w-24 h-24 mb-4 mx-auto text-green-400 animate-pulse" />
+              <div className="w-24 h-24 mb-4 mx-auto flex items-center justify-center text-3xl font-bold bg-green-400/20 rounded-full animate-pulse">
+                🌿
+              </div>
               <p className="text-lg font-medium">
                 Select a paper to start building your custom joint
               </p>
@@ -411,11 +411,11 @@ export default function JointVisualizer({ config }) {
             <span className="font-bold flex items-center gap-1">
               {hasWorm ? (
                 <>
-                  <FaCheck className="text-green-400" /> Yes
+                  <span className="text-green-400">✓</span> Yes
                 </>
               ) : (
                 <>
-                  <FaTimes className="text-red-400" /> No
+                  <span className="text-red-400">✗</span> No
                 </>
               )}
             </span>
@@ -428,11 +428,11 @@ export default function JointVisualizer({ config }) {
             <span className="font-bold flex items-center gap-1">
               {hasCoating || hasWrap ? (
                 <>
-                  <FaCheck className="text-green-400" /> Yes
+                  <span className="text-green-400">✓</span> Yes
                 </>
               ) : (
                 <>
-                  <FaTimes className="text-red-400" /> No
+                  <span className="text-red-400">✗</span> No
                 </>
               )}
             </span>

@@ -1,13 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import {
-  GiPlantWatering,
-  GiRolledCloth,
-  GiScrollUnfurled,
-  GiGoldBar,
-} from "react-icons/gi";
-import { FaCheck } from "react-icons/fa";
 
 const paperOptions = [
   {
@@ -20,7 +13,7 @@ const paperOptions = [
       { capacity: 1.2, price: 35, label: "Large (1.2g)" },
     ],
     color: "from-amber-100 to-amber-200",
-    icon: GiScrollUnfurled,
+    icon: "CONE",
   },
   {
     id: "hemp-wrap",
@@ -31,7 +24,7 @@ const paperOptions = [
       { capacity: 2.0, price: 55, label: "Large (2.0g)" },
     ],
     color: "from-green-700 to-green-800",
-    icon: GiPlantWatering,
+    icon: "HEMP",
   },
   {
     id: "rolling-paper-custom",
@@ -43,7 +36,7 @@ const paperOptions = [
     minLength: 7,
     maxLength: 20,
     color: "from-gray-100 to-gray-200",
-    icon: GiRolledCloth,
+    icon: "PAPER",
   },
   {
     id: "golden-paper",
@@ -51,7 +44,7 @@ const paperOptions = [
     description: "Premium gold-infused paper",
     variants: [{ capacity: 1.0, price: 80, label: "Premium (1.0g)" }],
     color: "from-yellow-400 to-amber-500",
-    icon: GiGoldBar,
+    icon: "GOLD",
   },
 ];
 
@@ -123,7 +116,9 @@ export default function PaperStep({ config, updateConfig, onNext }) {
             `}
           >
             <div className="text-4xl mb-3">
-              <paper.icon className="w-12 h-12 mx-auto" />
+              <div className="w-12 h-12 mx-auto flex items-center justify-center bg-white/10 rounded-lg text-xs font-bold text-center">
+                {paper.icon}
+              </div>
             </div>
             <h3 className="text-xl font-bold mb-1">{paper.name}</h3>
             <p className="text-sm text-green-200">{paper.description}</p>
@@ -131,7 +126,7 @@ export default function PaperStep({ config, updateConfig, onNext }) {
             {selectedType === paper.id && (
               <div className="absolute top-4 right-4">
                 <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full flex items-center justify-center shadow-lg">
-                  <FaCheck className="text-sm" />
+                  <span className="text-sm">✓</span>
                 </div>
               </div>
             )}

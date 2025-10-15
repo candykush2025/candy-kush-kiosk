@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GiPlantWatering, GiHoneyJar } from "react-icons/gi";
-import { FaPlus, FaTrash, FaCheck } from "react-icons/fa";
-import { MdDonutSmall } from "react-icons/md";
 
 const strainOptions = [
   {

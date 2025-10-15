@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GiPlantWatering } from "react-icons/gi";
 import StepIndicator from "./components/StepIndicator";
 import PaperStep from "./components/PaperStep";
 import FilterStep from "./components/FilterStep";
@@ -145,9 +144,9 @@ export default function CustomJointBuilder() {
       {/* Header */}
       <div className="relative z-10 pt-8 pb-6 text-center">
         <h1 className="text-5xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-green-200 via-emerald-200 to-lime-200 flex items-center justify-center gap-4">
-          <GiPlantWatering className="text-green-400" />
+          <span className="text-green-400">🌿</span>
           Custom Joint Builder
-          <GiPlantWatering className="text-green-400" />
+          <span className="text-green-400">🌿</span>
         </h1>
         <p className="text-green-200 text-lg">
           Craft your perfect joint, step by step

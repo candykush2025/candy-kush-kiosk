@@ -1,5 +1,3 @@
-import { FaCheck } from "react-icons/fa";
-
 export default function StepIndicator({
   steps,
   currentStep,
@@ -36,7 +34,7 @@ export default function StepIndicator({
               `}
             >
               <span className="text-xl font-bold">
-                {currentStep > step.number ? <FaCheck /> : step.number}
+                {currentStep > step.number ? "✓" : step.number}
               </span>
               {currentStep === step.number && (
                 <div className="absolute inset-0 rounded-full bg-gradient-to-br from-green-400 to-emerald-400 animate-ping opacity-20"></div>

@@ -1,10 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FaCheck, FaInfoCircle } from "react-icons/fa";
-import { GiHoneyJar, GiSparkles, GiPaintBrush } from "react-icons/gi";
-import { MdLayers } from "react-icons/md";
-import { TbSpiral } from "react-icons/tb";
 
 const externalOptions = [
   {
@@ -13,7 +9,7 @@ const externalOptions = [
     description: "Entire joint dipped in premium rosin",
     price: 80,
     type: "coating",
-    icon: GiHoneyJar,
+    icon: "ROSIN",
     color: "from-amber-400 to-yellow-600",
   },
   {
@@ -22,7 +18,7 @@ const externalOptions = [
     description: "Elegant spiral rosin pattern",
     price: 60,
     type: "wrap",
-    icon: TbSpiral,
+    icon: "SPIRAL",
     color: "from-yellow-500 to-amber-500",
   },
   {
@@ -31,7 +27,7 @@ const externalOptions = [
     description: "Covered in premium kief crystals",
     price: 70,
     type: "coating",
-    icon: GiSparkles,
+    icon: "KIEF",
     color: "from-green-400 to-emerald-500",
   },
   {
@@ -40,7 +36,7 @@ const externalOptions = [
     description: "Rosin layer with kief coating",
     price: 120,
     type: "coating",
-    icon: MdLayers,
+    icon: "COMBO",
     color: "from-green-400 to-emerald-500",
   },
   {
@@ -49,7 +45,7 @@ const externalOptions = [
     description: "Light cannabis oil application",
     price: 50,
     type: "coating",
-    icon: GiPaintBrush,
+    icon: "OIL",
     color: "from-orange-400 to-red-500",
   },
 ];
@@ -131,8 +127,8 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="text-5xl">
-                  <option.icon />
+                <div className="w-20 h-20 flex items-center justify-center bg-white/10 rounded-lg text-xs font-bold">
+                  {option.icon}
                 </div>
                 <div>
                   <div className="flex items-center space-x-2">

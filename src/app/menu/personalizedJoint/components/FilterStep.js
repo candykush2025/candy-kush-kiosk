@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { FaCheck } from "react-icons/fa";
-import { GiRolledCloth, GiGlassShot, GiWineGlass } from "react-icons/gi";
 
 const filterOptions = [
   {
@@ -10,7 +8,7 @@ const filterOptions = [
     name: "Paper Filter",
     description: "Classic cardboard tip, smooth draw",
     price: 5,
-    icon: GiRolledCloth,
+    icon: "PAPER",
     color: "from-amber-50 to-amber-100",
   },
   {
@@ -18,7 +16,7 @@ const filterOptions = [
     name: "Slim Glass Filter",
     description: "Elegant glass tip, cooler smoke",
     price: 25,
-    icon: GiGlassShot,
+    icon: "SLIM",
     color: "from-blue-200 to-cyan-200",
   },
   {
@@ -26,7 +24,7 @@ const filterOptions = [
     name: "Wide Glass Filter",
     description: "Premium wide glass, maximum airflow",
     price: 35,
-    icon: GiWineGlass,
+    icon: "WIDE",
     color: "from-indigo-200 to-green-200",
   },
 ];
@@ -73,8 +71,8 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="text-5xl">
-                  <filter.icon />
+                <div className="w-20 h-20 flex items-center justify-center bg-white/10 rounded-lg text-sm font-bold">
+                  {filter.icon}
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold mb-1">{filter.name}</h3>
