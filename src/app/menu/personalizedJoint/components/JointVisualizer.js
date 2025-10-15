@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 
 export default function JointVisualizer({ config }) {
   const [rotate, setRotate] = useState(false);
+
+  // Memoize config stringify to prevent unnecessary re-renders
+  const configString = useMemo(() => JSON.stringify(config), [config]);
 
   useEffect(() => {
     // Trigger rotation animation when config changes
     setRotate(true);
     const timer = setTimeout(() => setRotate(false), 600);
     return () => clearTimeout(timer);
-  }, [config]);
+  }, [configString]);
 
   const paperType = config.paper?.type || "none";
   const filterType = config.filter?.id || "none";
@@ -62,9 +65,9 @@ export default function JointVisualizer({ config }) {
     <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
       <h3 className="text-2xl font-bold mb-6 text-center">Live Preview</h3>
 
-      <div className="grid grid-cols-2 gap-8">
+      <div className="grid grid-cols-2 gap-8 items-stretch">
         {/* Left - Visual Preview */}
-        <div className="relative w-full h-[550px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
+        <div className="relative w-full min-h-[400px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
           {/* Background ambient effect */}
           {config.paper && (flowerCount > 0 || hashCount > 0) && (
             <div className="absolute inset-0 flex items-center justify-center opacity-20">
@@ -381,9 +384,9 @@ export default function JointVisualizer({ config }) {
         </div>
 
         {/* Right - Order Details */}
-        <div>
+        <div className="flex flex-col">
           {/* Specifications */}
-          <div className="p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl space-y-3 text-sm border border-green-500/20 backdrop-blur-sm">
+          <div className="flex-1 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl space-y-3 text-sm border border-green-500/20 backdrop-blur-sm flex flex-col justify-center">
             <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
               <span className="text-green-200 flex items-center">
                 <span className="w-2 h-2 bg-green-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>

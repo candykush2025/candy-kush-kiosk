@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import CustomJointBuilder from "../../components/CustomJointBuilder";
 import {
   CustomerService,
   getTierColor,
@@ -54,6 +55,7 @@ export default function MenuPage() {
   const [showPersonalizedJoints, setShowPersonalizedJoints] = useState(false);
   const [selectedJointType, setSelectedJointType] = useState(null);
   const [showJointPopup, setShowJointPopup] = useState(false);
+  const [showCustomJointBuilder, setShowCustomJointBuilder] = useState(false);
 
   // Image zoom states
   const [zoomedImage, setZoomedImage] = useState(null);
@@ -982,6 +984,14 @@ export default function MenuPage() {
       return;
     }
 
+    // Check if this is a Custom Joint Builder category
+    if (category.specialPage === "Custom Joint Builder") {
+      console.log("✅ Opening Custom Joint Builder");
+      setShowCustomJointBuilder(true);
+      setSelectedCategory(null);
+      return;
+    }
+
     setSelectedCategory(category.id); // Use category.id (database ID) for filtering
 
     // Filter subcategories and products based on selected category database ID
@@ -1153,6 +1163,16 @@ export default function MenuPage() {
   // Handle product selection for quantity popup
   const handleProductSelect = (product) => {
     resetSessionTimer(); // Reset session timer on user interaction
+
+    // Check if this is a custom joint product
+    if (
+      product.productId === "customjoint" ||
+      product.name?.toLowerCase().includes("custom joint")
+    ) {
+      setShowCustomJointBuilder(true);
+      return;
+    }
+
     setSelectedProduct(product);
     setQuantity(1);
     setCurrentVariantIndex(0);
@@ -1164,6 +1184,78 @@ export default function MenuPage() {
     setTimeout(() => {
       setIsPopupOpening(true);
     }, 10);
+  };
+
+  // Handle custom joint builder completion
+  const handleCustomJointComplete = (jointConfig) => {
+    // Build detailed description for the custom joint
+    const details = [];
+
+    // Paper details
+    if (jointConfig.paper) {
+      details.push(
+        `Paper: ${jointConfig.paper.name} (${jointConfig.paper.capacity}g capacity)`
+      );
+    }
+
+    // Filter details
+    if (jointConfig.filter) {
+      details.push(`Filter: ${jointConfig.filter.name}`);
+    }
+
+    // Flower details
+    if (jointConfig.filling.flower && jointConfig.filling.flower.length > 0) {
+      const flowerDetails = jointConfig.filling.flower
+        .map((f) => `${f.name} (${f.type}, ${f.weight}g)`)
+        .join(", ");
+      details.push(`Flower: ${flowerDetails}`);
+    }
+
+    // Hash details
+    if (jointConfig.filling.hash && jointConfig.filling.hash.length > 0) {
+      const hashDetails = jointConfig.filling.hash
+        .map((h) => `${h.name} (${h.weight}g)`)
+        .join(", ");
+      details.push(`Hash: ${hashDetails}`);
+    }
+
+    // Worm details
+    if (jointConfig.filling.worm) {
+      details.push(`Worm: ${jointConfig.filling.worm.name}`);
+    }
+
+    // Coating details
+    if (jointConfig.external.coating) {
+      details.push(`Coating: ${jointConfig.external.coating.name}`);
+    }
+
+    // Wrap details
+    if (jointConfig.external.wrap) {
+      details.push(`Wrap: ${jointConfig.external.wrap.name}`);
+    }
+
+    // Add the custom joint to cart
+    const customJoint = {
+      id: `customjoint_${Date.now()}`,
+      name: "Custom Joint",
+      price: jointConfig.totalPrice,
+      quantity: 1,
+      image: "/Product/custom-joint.png",
+      productId: "customjoint",
+      isCustomJoint: true,
+      config: jointConfig,
+      details: details, // Readable details for display
+      detailsText: details.join(" | "), // Single line for thermal receipt
+    };
+
+    setCart([...cart, customJoint]);
+    setShowCustomJointBuilder(false);
+    setShowCart(true);
+  };
+
+  // Handle custom joint builder cancel
+  const handleCustomJointCancel = () => {
+    setShowCustomJointBuilder(false);
   };
 
   // Handle variant option selection
@@ -2007,7 +2099,8 @@ export default function MenuPage() {
         setSessionModalCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(modalCountdownInterval);
-            handleSessionTimeout();
+            // Use setTimeout to avoid calling setState during render
+            setTimeout(() => handleSessionTimeout(), 0);
             return 0;
           }
           return prev - 1;
@@ -2024,8 +2117,66 @@ export default function MenuPage() {
 
   // Reset session timer on user interactions
   const resetSessionTimer = useCallback(() => {
-    if (!showCart && sessionTimerRef.current) {
-      setSessionTimer(60); // Reset to 60 seconds
+    // Clear existing timers
+    if (sessionTimerRef.current) {
+      clearTimeout(sessionTimerRef.current);
+    }
+    if (sessionCountdownRef.current) {
+      clearInterval(sessionCountdownRef.current);
+    }
+    if (cartTimerRef.current) {
+      clearTimeout(cartTimerRef.current);
+    }
+
+    // If cart is open, restart cart timer
+    if (showCart) {
+      setCartTimer(60);
+
+      // Start cart countdown interval
+      const countdownInterval = setInterval(() => {
+        setCartTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            setShowSessionExpiryModal(true);
+            setSessionModalCountdown(60);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Set timeout for 60 seconds
+      cartTimerRef.current = setTimeout(() => {
+        clearInterval(countdownInterval);
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
+      }, 60000);
+    } else {
+      // Restart the session timer for main menu
+      setSessionTimer(60);
+
+      // Start new countdown interval with stored reference
+      const newCountdownInterval = setInterval(() => {
+        setSessionTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(newCountdownInterval);
+            setShowSessionExpiryModal(true);
+            setSessionModalCountdown(60);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      // Store the interval reference
+      sessionCountdownRef.current = newCountdownInterval;
+
+      // Set new timeout for 60 seconds
+      sessionTimerRef.current = setTimeout(() => {
+        clearInterval(newCountdownInterval);
+        setShowSessionExpiryModal(true);
+        setSessionModalCountdown(60);
+      }, 60000);
     }
   }, [showCart]);
 
@@ -3499,6 +3650,13 @@ export default function MenuPage() {
           <div className="flex-1 h-full">
             {showPersonalizedJoints ? (
               renderPersonalizedJoints()
+            ) : showCustomJointBuilder ? (
+              <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden">
+                <CustomJointBuilder
+                  onComplete={handleCustomJointComplete}
+                  onCancel={handleCustomJointCancel}
+                />
+              </div>
             ) : (
               <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col">
                 {selectedCategory ? (
@@ -4444,6 +4602,19 @@ export default function MenuPage() {
                           <div className="font-semibold text-lg">
                             {item.name}
                           </div>
+
+                          {/* Custom Joint Details */}
+                          {item.isCustomJoint && item.details && (
+                            <div className="text-sm text-gray-600 mt-1 space-y-0.5">
+                              {item.details.map((detail, idx) => (
+                                <div key={idx} className="text-xs">
+                                  • {detail}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Regular Product Variants */}
                           {item.variants &&
                             Object.keys(item.variants).length > 0 && (
                               <div className="text-gray-600">
@@ -4459,6 +4630,7 @@ export default function MenuPage() {
                                 )}
                               </div>
                             )}
+
                           <div className="text-green-600 font-semibold">
                             ฿{item.price} {item.unit || "each"}
                           </div>

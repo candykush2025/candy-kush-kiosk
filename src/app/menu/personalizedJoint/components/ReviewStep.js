@@ -1,10 +1,14 @@
 "use client";
 
-export default function ReviewStep({ config, onPrev }) {
+export default function ReviewStep({ config, onPrev, onComplete }) {
   const handleAddToCart = () => {
-    // TODO: Implement cart functionality
-    console.log("Adding to cart:", config);
-    alert("Joint added to cart! (Cart functionality to be implemented)");
+    if (onComplete) {
+      onComplete(config);
+    } else {
+      // Fallback if onComplete is not provided
+      console.log("Adding to cart:", config);
+      alert("Joint added to cart!");
+    }
   };
 
   return (

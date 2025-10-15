@@ -104,10 +104,16 @@ export default function AdminPage() {
 
   // Non-Member Categories state
   const [nonMemberCategories, setNonMemberCategories] = useState([]);
-  const [savingNonMemberCategories, setSavingNonMemberCategories] = useState(false);
+  const [savingNonMemberCategories, setSavingNonMemberCategories] =
+    useState(false);
 
   // Helper function to upload a single variant option image
-  const uploadSingleVariantImage = async (file, productId, variantId, optionId) => {
+  const uploadSingleVariantImage = async (
+    file,
+    productId,
+    variantId,
+    optionId
+  ) => {
     try {
       const imagePath = `products/${productId}/variants/${variantId}/${optionId}_${file.name}`;
       const imageUrl = await CategoryService.uploadImage(file, imagePath);
@@ -370,7 +376,7 @@ export default function AdminPage() {
   const [showTransactionDetails, setShowTransactionDetails] = useState(false);
   const [selectedTransactionDetails, setSelectedTransactionDetails] =
     useState(null);
-  
+
   // Payment method editing states
   const [editingPaymentMethod, setEditingPaymentMethod] = useState(false);
   const [newPaymentMethod, setNewPaymentMethod] = useState("");
@@ -436,9 +442,20 @@ export default function AdminPage() {
   const [showAddStockIn, setShowAddStockIn] = useState(false);
   const [stockInForm, setStockInForm] = useState({
     supplier: "",
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-    products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
+    date: new Date().toISOString().split("T")[0],
+    time: new Date().toTimeString().split(" ")[0].substring(0, 5),
+    products: [
+      {
+        productId: "",
+        productName: "",
+        variantId: "",
+        variantName: "",
+        productSearch: "",
+        showProductDropdown: false,
+        quantity: 0,
+        buyPrice: 0,
+      },
+    ],
   });
   const [isStockSaving, setIsStockSaving] = useState(false);
   const [stockSearchTerm, setStockSearchTerm] = useState("");
@@ -455,23 +472,27 @@ export default function AdminPage() {
   const [alertAdminLevel, setAlertAdminLevel] = useState("");
   // Stock Alert searchable dropdown states
   const [alertProductSearch, setAlertProductSearch] = useState("");
-  const [showAlertProductDropdown, setShowAlertProductDropdown] = useState(false);
+  const [showAlertProductDropdown, setShowAlertProductDropdown] =
+    useState(false);
 
   // Edit Alert states
   const [editingAlert, setEditingAlert] = useState(null);
   const [showEditAlertForm, setShowEditAlertForm] = useState(false);
   const [editAlertProductSearch, setEditAlertProductSearch] = useState("");
-  const [showEditAlertProductDropdown, setShowEditAlertProductDropdown] = useState(false);
+  const [showEditAlertProductDropdown, setShowEditAlertProductDropdown] =
+    useState(false);
 
   // Crypto Payments states
   const [cryptoPayments, setCryptoPayments] = useState([]);
   const [loadingCryptoPayments, setLoadingCryptoPayments] = useState(false);
   const [selectedCryptoPayment, setSelectedCryptoPayment] = useState(null);
   const [showCryptoPaymentModal, setShowCryptoPaymentModal] = useState(false);
-  const [cryptoPaymentStatusFilter, setCryptoPaymentStatusFilter] = useState("all");
+  const [cryptoPaymentStatusFilter, setCryptoPaymentStatusFilter] =
+    useState("all");
   const [checkingCryptoStatus, setCheckingCryptoStatus] = useState(false);
   const [refreshingAllPayments, setRefreshingAllPayments] = useState(false);
-  const [editSelectedProductForAlert, setEditSelectedProductForAlert] = useState(null);
+  const [editSelectedProductForAlert, setEditSelectedProductForAlert] =
+    useState(null);
   const [editAlertKioskLevel, setEditAlertKioskLevel] = useState("");
   const [editAlertAdminLevel, setEditAlertAdminLevel] = useState("");
   const [editStockZeroAction, setEditStockZeroAction] = useState("disable");
@@ -480,9 +501,10 @@ export default function AdminPage() {
   const [nonMemberPaymentSettings, setNonMemberPaymentSettings] = useState({
     cash: true,
     card: true,
-    crypto: true
+    crypto: true,
   });
-  const [savingNonMemberPaymentSettings, setSavingNonMemberPaymentSettings] = useState(false);
+  const [savingNonMemberPaymentSettings, setSavingNonMemberPaymentSettings] =
+    useState(false);
 
   // Stock submenu state - updated to include purchasing
   const [stockActiveSubTab, setStockActiveSubTab] = useState("overview");
@@ -502,12 +524,25 @@ export default function AdminPage() {
   const [showPurchasingForm, setShowPurchasingForm] = useState(false);
   const [isPurchasingSaving, setIsPurchasingSaving] = useState(false);
   const [purchasingProducts, setPurchasingProducts] = useState([
-    { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    {
+      productId: "",
+      productName: "",
+      variantId: "",
+      variantName: "",
+      productSearch: "",
+      quantity: 0,
+      buyPrice: 0,
+      showProductDropdown: false,
+    },
   ]);
   const [purchasingSupplier, setPurchasingSupplier] = useState("");
   const [purchasingNotes, setPurchasingNotes] = useState("");
-  const [purchasingDate, setPurchasingDate] = useState(new Date().toISOString().split('T')[0]); // YYYY-MM-DD format
-  const [purchasingTime, setPurchasingTime] = useState(new Date().toTimeString().slice(0, 5)); // HH:MM format
+  const [purchasingDate, setPurchasingDate] = useState(
+    new Date().toISOString().split("T")[0]
+  ); // YYYY-MM-DD format
+  const [purchasingTime, setPurchasingTime] = useState(
+    new Date().toTimeString().slice(0, 5)
+  ); // HH:MM format
 
   // Complex Product Form States
   const [hasVariants, setHasVariants] = useState(false);
@@ -794,7 +829,6 @@ export default function AdminPage() {
   // Helper function to load transactions from the Firebase transactions collection
   const loadTransactionsCollection = async () => {
     try {
-
       // Import Firestore functions
       const { collection, getDocs, orderBy, query } = await import(
         "firebase/firestore"
@@ -887,14 +921,18 @@ export default function AdminPage() {
       setTransactions(allTransactions);
 
       // Populate categoryName and subcategoryName in products
-      const enrichedProducts = productsData.map(product => {
-        const category = categoriesData.find(cat => cat.id === product.categoryId);
-        const subcategory = subcategoriesData.find(sub => sub.id === product.subcategoryId);
-        
+      const enrichedProducts = productsData.map((product) => {
+        const category = categoriesData.find(
+          (cat) => cat.id === product.categoryId
+        );
+        const subcategory = subcategoriesData.find(
+          (sub) => sub.id === product.subcategoryId
+        );
+
         return {
           ...product,
-          categoryName: category?.name || '',
-          subcategoryName: subcategory?.name || ''
+          categoryName: category?.name || "",
+          subcategoryName: subcategory?.name || "",
         };
       });
 
@@ -906,11 +944,14 @@ export default function AdminPage() {
       // Load non-member categories after categories are set
       if (categoriesData.length > 0) {
         try {
-          const categoryIds = await NonMemberCategoriesService.getNonMemberCategories();
+          const categoryIds =
+            await NonMemberCategoriesService.getNonMemberCategories();
           if (categoryIds.length === 0) {
             // Initialize with all categories if empty
-            const allCategoryIds = categoriesData.map(cat => cat.id);
-            await NonMemberCategoriesService.updateNonMemberCategories(allCategoryIds);
+            const allCategoryIds = categoriesData.map((cat) => cat.id);
+            await NonMemberCategoriesService.updateNonMemberCategories(
+              allCategoryIds
+            );
             setNonMemberCategories(allCategoryIds);
           } else {
             setNonMemberCategories(categoryIds);
@@ -918,7 +959,7 @@ export default function AdminPage() {
         } catch (error) {
           console.error("Error loading non-member categories:", error);
           // Default to all categories on error
-          setNonMemberCategories(categoriesData.map(cat => cat.id));
+          setNonMemberCategories(categoriesData.map((cat) => cat.id));
         }
       }
 
@@ -994,7 +1035,7 @@ export default function AdminPage() {
 
   // Load crypto payments when tab is active
   useEffect(() => {
-    if (activeTab === 'cryptoPayments') {
+    if (activeTab === "cryptoPayments") {
       loadCryptoPayments();
     }
   }, [activeTab, cryptoPaymentStatusFilter]);
@@ -1097,7 +1138,7 @@ export default function AdminPage() {
       isActive: true,
       dateOfBirth: "",
       customPoints: 0,
-      allowedCategories: categories.map(cat => cat.id), // All categories checked by default
+      allowedCategories: categories.map((cat) => cat.id), // All categories checked by default
     });
     setShowAddCustomer(true);
   };
@@ -1661,7 +1702,9 @@ export default function AdminPage() {
 
     try {
       setSavingNonMemberCategories(true);
-      await NonMemberCategoriesService.updateNonMemberCategories(nonMemberCategories);
+      await NonMemberCategoriesService.updateNonMemberCategories(
+        nonMemberCategories
+      );
       alert("Non-member categories updated successfully!");
     } catch (error) {
       console.error("Error saving non-member categories:", error);
@@ -1672,9 +1715,9 @@ export default function AdminPage() {
   };
 
   const toggleNonMemberCategory = (categoryId) => {
-    setNonMemberCategories(prev => {
+    setNonMemberCategories((prev) => {
       if (prev.includes(categoryId)) {
-        return prev.filter(id => id !== categoryId);
+        return prev.filter((id) => id !== categoryId);
       } else {
         return [...prev, categoryId];
       }
@@ -1682,7 +1725,7 @@ export default function AdminPage() {
   };
 
   const selectAllNonMemberCategories = () => {
-    setNonMemberCategories(categories.map(cat => cat.id));
+    setNonMemberCategories(categories.map((cat) => cat.id));
   };
 
   const clearAllNonMemberCategories = () => {
@@ -1691,7 +1734,10 @@ export default function AdminPage() {
 
   // Payment method update handlers
   const handleStartEditPaymentMethod = () => {
-    const paymentMethod = selectedTransaction?.paymentMethod || selectedTransactionDetails?.paymentMethod || "";
+    const paymentMethod =
+      selectedTransaction?.paymentMethod ||
+      selectedTransactionDetails?.paymentMethod ||
+      "";
     setNewPaymentMethod(paymentMethod);
     setEditingPaymentMethod(true);
   };
@@ -1703,43 +1749,46 @@ export default function AdminPage() {
 
   const handleUpdatePaymentMethod = async () => {
     if (!checkEditPermission()) return;
-    
+
     try {
       setUpdatingPaymentMethod(true);
-      
-      const transactionToUpdate = selectedTransaction || selectedTransactionDetails;
+
+      const transactionToUpdate =
+        selectedTransaction || selectedTransactionDetails;
       if (!transactionToUpdate) return;
-      
+
       // Update the transaction in the database
       await TransactionService.updateTransaction(transactionToUpdate.id, {
-        paymentMethod: newPaymentMethod
+        paymentMethod: newPaymentMethod,
       });
-      
+
       // Update the selected transaction in the UI
       if (selectedTransaction) {
-        setSelectedTransaction(prev => ({
+        setSelectedTransaction((prev) => ({
           ...prev,
-          paymentMethod: newPaymentMethod
+          paymentMethod: newPaymentMethod,
         }));
       }
-      
+
       if (selectedTransactionDetails) {
-        setSelectedTransactionDetails(prev => ({
+        setSelectedTransactionDetails((prev) => ({
           ...prev,
-          paymentMethod: newPaymentMethod
+          paymentMethod: newPaymentMethod,
         }));
       }
-      
+
       // Also update in transactions list if it exists there
-      setTransactions(prev => prev.map(t => 
-        t.id === transactionToUpdate.id 
-          ? { ...t, paymentMethod: newPaymentMethod }
-          : t
-      ));
-      
+      setTransactions((prev) =>
+        prev.map((t) =>
+          t.id === transactionToUpdate.id
+            ? { ...t, paymentMethod: newPaymentMethod }
+            : t
+        )
+      );
+
       setEditingPaymentMethod(false);
       setNewPaymentMethod("");
-      
+
       alert("Payment method updated successfully!");
     } catch (error) {
       console.error("Error updating payment method:", error);
@@ -1830,8 +1879,6 @@ export default function AdminPage() {
         return updatedVariants;
       };
 
-
-
       if (editingProduct) {
         // Handle editing existing product
         let processedVariants = [];
@@ -1883,7 +1930,7 @@ export default function AdminPage() {
           fileType: productImageFile?.type,
           isValidFile: productImageFile instanceof File,
           hasImageFile: !!productImageFile,
-          editingProductId: editingProduct.id
+          editingProductId: editingProduct.id,
         });
 
         // Prepare image files for update (same as create flow)
@@ -1896,32 +1943,32 @@ export default function AdminPage() {
           subcategoryId: cleanProductData.subcategoryId,
           hasImageFile: !!productImageFile,
           imageFileName: productImageFile?.name,
-          imageFilesCount: imageFiles.length
+          imageFilesCount: imageFiles.length,
         });
 
         console.log("🚀 EDIT MODE SAVE DEBUG - Image handling:", {
           hasNewImageFile: !!productImageFile,
           shouldRemoveImages: shouldRemoveMainImages,
-          imageFilesCount: imageFiles.length
+          imageFilesCount: imageFiles.length,
         });
 
         await ProductService.updateProduct(
           editingProduct.id,
           cleanProductData,
-          imageFiles,                    // New image files
-          productBackgroundImageFile,    // Background image
-          shouldRemoveMainImages         // Flag to remove existing images
+          imageFiles, // New image files
+          productBackgroundImageFile, // Background image
+          shouldRemoveMainImages // Flag to remove existing images
         );
 
         console.log("✅ EDIT MODE SUCCESS - Product updated successfully:", {
           productId: editingProduct.id,
           productName: cleanProductData.name,
           hadImageFile: !!productImageFile,
-          subcategoryId: cleanProductData.subcategoryId
+          subcategoryId: cleanProductData.subcategoryId,
         });
 
         setEditingProduct(null);
-        setProductImageFile(null);  // Clear the image file state
+        setProductImageFile(null); // Clear the image file state
         setShouldRemoveMainImages(false); // Reset removal flag
         setProductBackgroundImageFile(null);
         setProductForm({
@@ -1974,12 +2021,12 @@ export default function AdminPage() {
           fileSize: productImageFile?.size,
           fileType: productImageFile?.type,
           isValidFile: productImageFile instanceof File,
-          hasImageFile: !!productImageFile
+          hasImageFile: !!productImageFile,
         });
 
         // Preserve the file reference to prevent it from being lost
         const imageFileToUpload = productImageFile;
-        
+
         // Create a clean product data object without File objects
         const cleanProductData = {
           name: productDataToSave.name,
@@ -2016,11 +2063,11 @@ export default function AdminPage() {
           imageFileSize: imageFileToUpload?.size,
           imageFileType: imageFileToUpload?.type,
           cleanDataKeys: Object.keys(cleanProductData),
-          isEditMode: !!editingProduct
+          isEditMode: !!editingProduct,
         });
 
         const imageFiles = imageFileToUpload ? [imageFileToUpload] : [];
-        
+
         const result = await ProductService.createProduct(
           cleanProductData,
           imageFiles,
@@ -2033,7 +2080,7 @@ export default function AdminPage() {
           productId: result?.productId,
           productName: cleanProductData.name,
           hadImageFile: !!imageFileToUpload,
-          subcategoryId: cleanProductData.subcategoryId
+          subcategoryId: cleanProductData.subcategoryId,
         });
 
         setNewProduct({
@@ -2683,23 +2730,32 @@ export default function AdminPage() {
         setTransactionPrefix(settings.transactionPrefix || "TRX");
         setStoreName(settings.storeName || "Candy Kush Dispensary");
         setBathToUsdRate(settings.bathToUsdRate || "0.029");
-        
+
         // Load non-member payment settings
         setNonMemberPaymentSettings({
-          cash: settings.nonMemberPaymentCash !== undefined ? settings.nonMemberPaymentCash : true,
-          card: settings.nonMemberPaymentCard !== undefined ? settings.nonMemberPaymentCard : true,
-          crypto: settings.nonMemberPaymentCrypto !== undefined ? settings.nonMemberPaymentCrypto : true
+          cash:
+            settings.nonMemberPaymentCash !== undefined
+              ? settings.nonMemberPaymentCash
+              : true,
+          card:
+            settings.nonMemberPaymentCard !== undefined
+              ? settings.nonMemberPaymentCard
+              : true,
+          crypto:
+            settings.nonMemberPaymentCrypto !== undefined
+              ? settings.nonMemberPaymentCrypto
+              : true,
         });
       } else {
         setTransactionPrefix("TRX");
         setStoreName("Candy Kush Dispensary");
         setBathToUsdRate("0.029");
-        
+
         // Default non-member payment settings
         setNonMemberPaymentSettings({
           cash: true,
           card: true,
-          crypto: true
+          crypto: true,
         });
       }
     } catch (error) {
@@ -2711,7 +2767,7 @@ export default function AdminPage() {
       setNonMemberPaymentSettings({
         cash: true,
         card: true,
-        crypto: true
+        crypto: true,
       });
     } finally {
       setLoadingSettings(false);
@@ -2851,9 +2907,20 @@ export default function AdminPage() {
     if (!checkInputPermission()) return;
     setStockInForm({
       supplier: "",
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-      products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toTimeString().split(" ")[0].substring(0, 5),
+      products: [
+        {
+          productId: "",
+          productName: "",
+          variantId: "",
+          variantName: "",
+          productSearch: "",
+          showProductDropdown: false,
+          quantity: 0,
+          buyPrice: 0,
+        },
+      ],
     });
     setShowAddStockIn(true);
   };
@@ -2862,9 +2929,20 @@ export default function AdminPage() {
     setShowAddStockIn(false);
     setStockInForm({
       supplier: "",
-      date: new Date().toISOString().split('T')[0],
-      time: new Date().toTimeString().split(' ')[0].substring(0, 5),
-      products: [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
+      date: new Date().toISOString().split("T")[0],
+      time: new Date().toTimeString().split(" ")[0].substring(0, 5),
+      products: [
+        {
+          productId: "",
+          productName: "",
+          variantId: "",
+          variantName: "",
+          productSearch: "",
+          showProductDropdown: false,
+          quantity: 0,
+          buyPrice: 0,
+        },
+      ],
     });
   };
 
@@ -2895,16 +2973,21 @@ export default function AdminPage() {
           alert("Please select all products");
           return;
         }
-        
+
         // Check if product has variants and validate variant selection
-        const selectedProduct = products.find(p => p.id === product.productId);
-        if (selectedProduct?.hasVariants && selectedProduct?.variants?.length > 0) {
+        const selectedProduct = products.find(
+          (p) => p.id === product.productId
+        );
+        if (
+          selectedProduct?.hasVariants &&
+          selectedProduct?.variants?.length > 0
+        ) {
           if (!product.variantId) {
             alert(`Please select a variant for ${product.productName}`);
             return;
           }
         }
-        
+
         if (product.quantity <= 0) {
           alert("Please enter valid quantities");
           return;
@@ -2917,15 +3000,14 @@ export default function AdminPage() {
 
       // Save stock in
       await StockService.addStockIn(stockInForm);
-      
+
       // Reload stock movements and products data
       await loadStockMovementsData();
       await loadAllStockCalculations(); // Recalculate stock after stock in
       await loadDashboardData(); // This will refresh the products with updated stock quantities
-      
+
       alert("Stock in added successfully!");
       setShowAddStockIn(false);
-      
     } catch (error) {
       console.error("Error saving stock in:", error);
       alert("Error saving stock in. Please try again.");
@@ -2939,8 +3021,17 @@ export default function AdminPage() {
       ...stockInForm,
       products: [
         ...stockInForm.products,
-        { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }
-      ]
+        {
+          productId: "",
+          productName: "",
+          variantId: "",
+          variantName: "",
+          productSearch: "",
+          showProductDropdown: false,
+          quantity: 0,
+          buyPrice: 0,
+        },
+      ],
     });
   };
 
@@ -2948,20 +3039,34 @@ export default function AdminPage() {
     const newProducts = stockInForm.products.filter((_, i) => i !== index);
     setStockInForm({
       ...stockInForm,
-      products: newProducts.length > 0 ? newProducts : [{ productId: "", productName: "", variantId: "", variantName: "", productSearch: "", showProductDropdown: false, quantity: 0, buyPrice: 0 }]
+      products:
+        newProducts.length > 0
+          ? newProducts
+          : [
+              {
+                productId: "",
+                productName: "",
+                variantId: "",
+                variantName: "",
+                productSearch: "",
+                showProductDropdown: false,
+                quantity: 0,
+                buyPrice: 0,
+              },
+            ],
     });
   };
 
   const updateStockInProduct = (index, field, value) => {
-    console.log('updateStockInProduct called:', { index, field, value });
+    console.log("updateStockInProduct called:", { index, field, value });
     const newProducts = [...stockInForm.products];
     newProducts[index] = { ...newProducts[index], [field]: value };
-    
-    console.log('Updated product at index', index, ':', newProducts[index]);
-    
+
+    console.log("Updated product at index", index, ":", newProducts[index]);
+
     // If productId is selected, auto-fill productName and clear variant selection
-    if (field === 'productId' && value) {
-      const selectedProduct = products.find(p => p.id === value);
+    if (field === "productId" && value) {
+      const selectedProduct = products.find((p) => p.id === value);
       if (selectedProduct) {
         newProducts[index].productName = selectedProduct.name;
         // Clear variant selection when product changes
@@ -2969,66 +3074,84 @@ export default function AdminPage() {
         newProducts[index].variantName = "";
       }
     }
-    
+
     // If variantId is selected, auto-fill variantName
-    if (field === 'variantId' && value) {
-      const selectedProduct = products.find(p => p.id === newProducts[index].productId);
+    if (field === "variantId" && value) {
+      const selectedProduct = products.find(
+        (p) => p.id === newProducts[index].productId
+      );
       if (selectedProduct && selectedProduct.variants) {
         // Handle Firebase variant structure with options
-        let variantDisplay = '';
-        
+        let variantDisplay = "";
+
         // Check if it's the new format with variant-option combination
-        if (value.includes('-')) {
-          const [variantId, optionId] = value.split('-');
-          const selectedVariant = selectedProduct.variants.find(v => v.id === variantId);
+        if (value.includes("-")) {
+          const [variantId, optionId] = value.split("-");
+          const selectedVariant = selectedProduct.variants.find(
+            (v) => v.id === variantId
+          );
           if (selectedVariant && selectedVariant.options) {
-            const selectedOption = selectedVariant.options.find(o => o.id === optionId);
+            const selectedOption = selectedVariant.options.find(
+              (o) => o.id === optionId
+            );
             if (selectedOption) {
               variantDisplay = `${selectedVariant.variantName}: ${selectedOption.name}`;
             }
           }
         } else {
           // Fallback for old variant structure
-          const selectedVariant = selectedProduct.variants.find(v => v.id === value);
+          const selectedVariant = selectedProduct.variants.find(
+            (v) => v.id === value
+          );
           if (selectedVariant) {
-            variantDisplay = selectedProduct.variantGroups?.map(group => {
-              const selection = selectedVariant.selections?.find(s => s.groupId === group.id);
-              return selection ? `${group.variantName}: ${selection.name}` : '';
-            }).filter(Boolean).join(' | ') || selectedVariant.name || `Variant ${selectedVariant.id}`;
+            variantDisplay =
+              selectedProduct.variantGroups
+                ?.map((group) => {
+                  const selection = selectedVariant.selections?.find(
+                    (s) => s.groupId === group.id
+                  );
+                  return selection
+                    ? `${group.variantName}: ${selection.name}`
+                    : "";
+                })
+                .filter(Boolean)
+                .join(" | ") ||
+              selectedVariant.name ||
+              `Variant ${selectedVariant.id}`;
           }
         }
-        
+
         newProducts[index].variantName = variantDisplay;
       }
     }
-    
+
     setStockInForm({
       ...stockInForm,
-      products: newProducts
+      products: newProducts,
     });
   };
 
   // New function to update multiple fields at once
   const updateStockInProductMultiple = (index, updates) => {
-    console.log('updateStockInProductMultiple called:', { index, updates });
+    console.log("updateStockInProductMultiple called:", { index, updates });
     const newProducts = [...stockInForm.products];
-    
+
     // Apply all updates at once
-    Object.keys(updates).forEach(field => {
+    Object.keys(updates).forEach((field) => {
       newProducts[index][field] = updates[field];
     });
-    
-    console.log('Updated product at index', index, ':', newProducts[index]);
-    
+
+    console.log("Updated product at index", index, ":", newProducts[index]);
+
     setStockInForm({
       ...stockInForm,
-      products: newProducts
+      products: newProducts,
     });
   };
 
   // Load stock movements when tab is accessed
   useEffect(() => {
-    if (activeTab === 'stockManagement') {
+    if (activeTab === "stockManagement") {
       setStockCalculationsLoaded(false); // Reset loading state
       loadStockMovementsData(); // Use the new service for consistency
       loadStockAlerts();
@@ -3042,11 +3165,11 @@ export default function AdminPage() {
       // Load stock movements
       const movements = await StockMovementService.getAllStockMovements();
       setStockMovements(movements);
-      
+
       // Load stock purchases
       const purchases = await StockMovementService.getAllStockPurchasing();
       setStockPurchases(purchases);
-      
+
       // Calculate current stock summary for all products
       const stockSummary = await StockMovementService.getStockSummary();
       setStockCalculations(stockSummary);
@@ -3059,28 +3182,46 @@ export default function AdminPage() {
     if (!checkInputPermission()) return;
     setShowPurchasingForm(true);
     setPurchasingProducts([
-      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+      {
+        productId: "",
+        productName: "",
+        variantId: "",
+        variantName: "",
+        productSearch: "",
+        quantity: 0,
+        buyPrice: 0,
+        showProductDropdown: false,
+      },
     ]);
     setPurchasingSupplier("");
     setPurchasingNotes("");
-    setPurchasingDate(new Date().toISOString().split('T')[0]);
+    setPurchasingDate(new Date().toISOString().split("T")[0]);
     setPurchasingTime(new Date().toTimeString().slice(0, 5));
   };
 
   const handleCancelPurchasing = () => {
     setShowPurchasingForm(false);
     setPurchasingProducts([
-      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+      {
+        productId: "",
+        productName: "",
+        variantId: "",
+        variantName: "",
+        productSearch: "",
+        quantity: 0,
+        buyPrice: 0,
+        showProductDropdown: false,
+      },
     ]);
     setPurchasingSupplier("");
     setPurchasingNotes("");
-    setPurchasingDate(new Date().toISOString().split('T')[0]);
+    setPurchasingDate(new Date().toISOString().split("T")[0]);
     setPurchasingTime(new Date().toTimeString().slice(0, 5));
   };
 
   const handleSavePurchasing = async (e) => {
     e.preventDefault();
-    
+
     if (!checkInputPermission()) return;
 
     // Prevent double submission
@@ -3088,22 +3229,22 @@ export default function AdminPage() {
 
     try {
       setIsPurchasingSaving(true);
-      
+
       // Validate that all products have required fields
-      const validProducts = purchasingProducts.filter(p => 
-        p.productId && p.quantity > 0 && p.buyPrice > 0
+      const validProducts = purchasingProducts.filter(
+        (p) => p.productId && p.quantity > 0 && p.buyPrice > 0
       );
-      
+
       if (validProducts.length === 0) {
         alert("Please add at least one valid product with quantity and price.");
         return;
       }
-      
+
       if (!purchasingSupplier.trim()) {
         alert("Please enter a supplier name.");
         return;
       }
-      
+
       // Create purchasing data
       const purchasingData = {
         items: validProducts,
@@ -3111,21 +3252,27 @@ export default function AdminPage() {
         notes: purchasingNotes,
         date: purchasingDate,
         time: purchasingTime,
-        createdBy: 'admin'
+        createdBy: "admin",
       };
-      
+
       // Add to StockPurchasing and StockMovement databases
       const result = await StockMovementService.addPurchasing(purchasingData);
-      
+
       // Reload data
       await loadStockMovementsData();
       await loadAllStockCalculations(); // Recalculate stock after purchase
       await loadDashboardData(); // Refresh products if needed
-      
+
       // Reset form
       handleCancelPurchasing();
-      
-      alert(`✅ Purchase Order created successfully!\n\nPO ID: ${result.purchaseOrderId}\nTotal Items: ${result.totalItems}\nTotal Amount: ฿${result.totalAmount.toFixed(2)}`);
+
+      alert(
+        `✅ Purchase Order created successfully!\n\nPO ID: ${
+          result.purchaseOrderId
+        }\nTotal Items: ${
+          result.totalItems
+        }\nTotal Amount: ฿${result.totalAmount.toFixed(2)}`
+      );
     } catch (error) {
       console.error("Error saving purchasing:", error);
       alert("❌ Failed to save purchasing. Please try again.");
@@ -3135,16 +3282,39 @@ export default function AdminPage() {
   };
 
   const addProductToPurchasing = () => {
-    setPurchasingProducts([...purchasingProducts, 
-      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
+    setPurchasingProducts([
+      ...purchasingProducts,
+      {
+        productId: "",
+        productName: "",
+        variantId: "",
+        variantName: "",
+        productSearch: "",
+        quantity: 0,
+        buyPrice: 0,
+        showProductDropdown: false,
+      },
     ]);
   };
 
   const removeProductFromPurchasing = (index) => {
     const newProducts = purchasingProducts.filter((_, i) => i !== index);
-    setPurchasingProducts(newProducts.length > 0 ? newProducts : [
-      { productId: "", productName: "", variantId: "", variantName: "", productSearch: "", quantity: 0, buyPrice: 0, showProductDropdown: false }
-    ]);
+    setPurchasingProducts(
+      newProducts.length > 0
+        ? newProducts
+        : [
+            {
+              productId: "",
+              productName: "",
+              variantId: "",
+              variantName: "",
+              productSearch: "",
+              quantity: 0,
+              buyPrice: 0,
+              showProductDropdown: false,
+            },
+          ]
+    );
   };
 
   const updatePurchasingProduct = (index, field, value) => {
@@ -3154,16 +3324,20 @@ export default function AdminPage() {
   };
 
   const updatePurchasingProductMultiple = (index, updates) => {
-    console.log('updatePurchasingProductMultiple called:', { index, updates });
+    console.log("updatePurchasingProductMultiple called:", { index, updates });
     const newProducts = [...purchasingProducts];
     newProducts[index] = { ...newProducts[index], ...updates };
-    console.log('Purchasing products after update:', newProducts);
+    console.log("Purchasing products after update:", newProducts);
     setPurchasingProducts(newProducts);
   };
 
   // Load stock movements data when stockActiveSubTab changes
   useEffect(() => {
-    if (stockActiveSubTab === 'overview' || stockActiveSubTab === 'movements' || stockActiveSubTab === 'purchasing') {
+    if (
+      stockActiveSubTab === "overview" ||
+      stockActiveSubTab === "movements" ||
+      stockActiveSubTab === "purchasing"
+    ) {
       loadStockMovementsData();
     }
   }, [stockActiveSubTab]);
@@ -3171,24 +3345,32 @@ export default function AdminPage() {
   // Stock Alert Management Functions
   const loadStockAlerts = async () => {
     try {
-      const { collection, getDocs, query, orderBy } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, getDocs, query, orderBy } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
 
-      const alertsRef = collection(db, 'StockAlert');
-      const q = query(alertsRef, orderBy('createdAt', 'desc'));
+      const alertsRef = collection(db, "StockAlert");
+      const q = query(alertsRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      
+
       const alerts = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data() || {};
         alerts.push({
           id: doc.id,
           ...data,
-          createdAt: data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : data.createdAt || null,
-          updatedAt: data.updatedAt && data.updatedAt.toDate ? data.updatedAt.toDate() : data.updatedAt || null,
+          createdAt:
+            data.createdAt && data.createdAt.toDate
+              ? data.createdAt.toDate()
+              : data.createdAt || null,
+          updatedAt:
+            data.updatedAt && data.updatedAt.toDate
+              ? data.updatedAt.toDate()
+              : data.updatedAt || null,
         });
       });
-      
+
       setStockAlerts(alerts);
     } catch (error) {
       console.error("Error loading stock alerts:", error);
@@ -3202,27 +3384,29 @@ export default function AdminPage() {
         return;
       }
 
-      const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, addDoc, serverTimestamp } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
 
       const alertData = {
         productId: selectedProductForAlert.id,
         productName: selectedProductForAlert.name,
-        variantId: selectedProductForAlert.variantId || '',
-        variantName: selectedProductForAlert.variantName || '',
+        variantId: selectedProductForAlert.variantId || "",
+        variantName: selectedProductForAlert.variantName || "",
         alertKioskLevel: parseInt(alertKioskLevel),
         alertAdminLevel: parseInt(alertAdminLevel),
         stockZeroAction: stockZeroAction, // "disable" or "keepVisible"
         isActive: true,
         createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
       };
 
-      await addDoc(collection(db, 'StockAlert'), alertData);
-      
+      await addDoc(collection(db, "StockAlert"), alertData);
+
       // Refresh data
       await loadStockAlerts();
-      
+
       // Reset form
       setSelectedProductForAlert(null);
       setAlertKioskLevel("");
@@ -3230,7 +3414,7 @@ export default function AdminPage() {
       setStockZeroAction("disable");
       setAlertProductSearch("");
       setShowAlertProductDropdown(false);
-      
+
       alert("Stock alert created successfully!");
     } catch (error) {
       console.error("Error creating stock alert:", error);
@@ -3244,10 +3428,10 @@ export default function AdminPage() {
         return;
       }
 
-      const { doc, deleteDoc } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { doc, deleteDoc } = await import("firebase/firestore");
+      const { db } = await import("../../lib/firebase");
 
-      await deleteDoc(doc(db, 'StockAlert', alertId));
+      await deleteDoc(doc(db, "StockAlert", alertId));
       await loadStockAlerts();
       alert("Stock alert deleted successfully!");
     } catch (error) {
@@ -3260,24 +3444,26 @@ export default function AdminPage() {
   const startEditAlert = (alert) => {
     setEditingAlert(alert);
     setShowEditAlertForm(true);
-    
+
     // Pre-populate edit form with current values
-    const product = products.find(p => p.id === alert.productId);
+    const product = products.find((p) => p.id === alert.productId);
     if (product) {
       setEditSelectedProductForAlert({
         ...product,
         selectedVariantId: alert.variantId || null,
-        selectedVariantName: alert.variantName || ''
+        selectedVariantName: alert.variantName || "",
       });
-      
+
       // Set search text
-      let searchText = `${product.categoryName || 'Uncategorized'} - ${product.subcategoryName || 'No Subcategory'} - ${product.name}`;
+      let searchText = `${product.categoryName || "Uncategorized"} - ${
+        product.subcategoryName || "No Subcategory"
+      } - ${product.name}`;
       if (alert.variantName) {
         searchText += ` - ${alert.variantName}`;
       }
       setEditAlertProductSearch(searchText);
     }
-    
+
     setEditAlertKioskLevel(alert.alertKioskLevel.toString());
     setEditAlertAdminLevel(alert.alertAdminLevel.toString());
     setEditStockZeroAction(alert.stockZeroAction);
@@ -3309,13 +3495,18 @@ export default function AdminPage() {
       const kioskLevel = parseInt(editAlertKioskLevel);
       const adminLevel = parseInt(editAlertAdminLevel);
 
-      if (isNaN(kioskLevel) || isNaN(adminLevel) || kioskLevel < 0 || adminLevel < 0) {
+      if (
+        isNaN(kioskLevel) ||
+        isNaN(adminLevel) ||
+        kioskLevel < 0 ||
+        adminLevel < 0
+      ) {
         alert("Alert levels must be valid numbers (0 or greater)");
         return;
       }
 
-      const { doc, updateDoc } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { doc, updateDoc } = await import("firebase/firestore");
+      const { db } = await import("../../lib/firebase");
 
       const alertData = {
         productId: editSelectedProductForAlert.id,
@@ -3327,10 +3518,10 @@ export default function AdminPage() {
         stockZeroAction: editStockZeroAction,
         isActive: true,
         updatedAt: new Date(),
-        updatedBy: 'admin'
+        updatedBy: "admin",
       };
 
-      await updateDoc(doc(db, 'StockAlert', editingAlert.id), alertData);
+      await updateDoc(doc(db, "StockAlert", editingAlert.id), alertData);
       await loadStockAlerts();
       cancelEditAlert();
       alert("Stock alert updated successfully!");
@@ -3342,27 +3533,31 @@ export default function AdminPage() {
 
   // Get stock alert for a product
   const getProductStockAlert = (productId) => {
-    return stockAlerts.find(alert => alert.productId === productId && alert.isActive);
+    return stockAlerts.find(
+      (alert) => alert.productId === productId && alert.isActive
+    );
   };
 
   // Calculate stock directly from StockMovement collection
   const calculateStock = async (productId, variantId = null) => {
     try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, query, where, getDocs } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
 
       // Create query to get all stock movements for this product
       let stockQuery = query(
-        collection(db, 'StockMovement'),
-        where('productId', '==', productId)
+        collection(db, "StockMovement"),
+        where("productId", "==", productId)
       );
 
       // If variantId is provided, also filter by variantId
       if (variantId) {
         stockQuery = query(
-          collection(db, 'StockMovement'),
-          where('productId', '==', productId),
-          where('variantId', '==', variantId)
+          collection(db, "StockMovement"),
+          where("productId", "==", productId),
+          where("variantId", "==", variantId)
         );
       }
 
@@ -3373,17 +3568,17 @@ export default function AdminPage() {
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const quantity = data.quantity || 0;
-        
-        if (data.status === 'purchasing') {
+
+        if (data.status === "purchasing") {
           totalStock += quantity;
-        } else if (data.status === 'sales') {
+        } else if (data.status === "sales") {
           totalStock -= quantity;
         }
       });
 
       return totalStock;
     } catch (error) {
-      console.error('Error calculating stock:', error);
+      console.error("Error calculating stock:", error);
       return 0;
     }
   };
@@ -3391,24 +3586,27 @@ export default function AdminPage() {
   // Load all stock calculations from StockMovement collection
   const loadAllStockCalculations = async () => {
     try {
-      console.log('🔍 Starting stock calculation...');
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      console.log("🔍 Starting stock calculation...");
+      const { collection, getDocs } = await import("firebase/firestore");
+      const { db } = await import("../../lib/firebase");
 
       // Get all stock movements
-      const querySnapshot = await getDocs(collection(db, 'StockMovement'));
+      const querySnapshot = await getDocs(collection(db, "StockMovement"));
       const stockSummary = {};
-      
-      console.log('📊 Total StockMovement documents found:', querySnapshot.size);
+
+      console.log(
+        "📊 Total StockMovement documents found:",
+        querySnapshot.size
+      );
 
       // Process each stock movement
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const productId = data.productId;
-        const variantId = data.variantId || '';
+        const variantId = data.variantId || "";
         const quantity = data.quantity || 0;
         const status = data.status;
-        
+
         // Create key for this product/variant combination
         const key = variantId ? `${productId}-${variantId}` : productId;
 
@@ -3418,24 +3616,28 @@ export default function AdminPage() {
         }
 
         // Calculate stock: add "purchasing", subtract "sales"
-        if (status === 'purchasing') {
+        if (status === "purchasing") {
           stockSummary[key].stock += quantity;
-          console.log(`➕ PURCHASING: ${key} +${quantity} = ${stockSummary[key].stock}`);
-        } else if (status === 'sales') {
+          console.log(
+            `➕ PURCHASING: ${key} +${quantity} = ${stockSummary[key].stock}`
+          );
+        } else if (status === "sales") {
           stockSummary[key].stock -= quantity;
-          console.log(`➖ SALES: ${key} -${quantity} = ${stockSummary[key].stock}`);
+          console.log(
+            `➖ SALES: ${key} -${quantity} = ${stockSummary[key].stock}`
+          );
         }
       });
 
-      console.log('✅ Final stock calculations:', stockSummary);
-      console.log('📈 Stock summary keys:', Object.keys(stockSummary));
+      console.log("✅ Final stock calculations:", stockSummary);
+      console.log("📈 Stock summary keys:", Object.keys(stockSummary));
 
       // Update state with calculated stock
       setStockCalculations(stockSummary);
       setStockCalculationsLoaded(true);
-      console.log('Stock calculations loaded:', stockSummary);
+      console.log("Stock calculations loaded:", stockSummary);
     } catch (error) {
-      console.error('❌ Error loading stock calculations:', error);
+      console.error("❌ Error loading stock calculations:", error);
       setStockCalculationsLoaded(false);
     }
   };
@@ -3443,7 +3645,7 @@ export default function AdminPage() {
   // Get current stock level for a product - Updated to use StockMovement system
   const getCurrentStock = (product, variantId = null) => {
     if (!product) {
-      console.log('🚫 getCurrentStock: No product provided');
+      console.log("🚫 getCurrentStock: No product provided");
       return 0;
     }
 
@@ -3455,45 +3657,69 @@ export default function AdminPage() {
     }
 
     // First check if we have stock calculations from StockMovement system
-    if (stockCalculations && ((typeof stockCalculations === 'object' && Object.keys(stockCalculations).length > 0) || Array.isArray(stockCalculations))) {
+    if (
+      stockCalculations &&
+      ((typeof stockCalculations === "object" &&
+        Object.keys(stockCalculations).length > 0) ||
+        Array.isArray(stockCalculations))
+    ) {
       // Handle case where stockCalculations might be an array (should be fixed now)
       let calculations = stockCalculations;
       if (Array.isArray(stockCalculations)) {
-        console.log('⚠️ WARNING: stockCalculations is an array, converting to object format');
+        console.log(
+          "⚠️ WARNING: stockCalculations is an array, converting to object format"
+        );
         calculations = {};
-        stockCalculations.forEach(item => {
-          const key = item.variantId ? `${item.productId}-${item.variantId}` : item.productId;
+        stockCalculations.forEach((item) => {
+          const key = item.variantId
+            ? `${item.productId}-${item.variantId}`
+            : item.productId;
           calculations[key] = { stock: item.totalStock };
         });
       }
-      
+
       // If variantId is provided, get stock for specific variant
       if (variantId) {
         const key = `${product.id}-${variantId}`;
         const stockData = calculations[key];
-        const stock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
-        console.log(`🎯 VARIANT LOOKUP - ProductId: "${product.id}" | VariantId: "${variantId}" | Key: "${key}"`);
+        const stock = stockData
+          ? stockData.totalStock || stockData.stock || 0
+          : 0;
+        console.log(
+          `🎯 VARIANT LOOKUP - ProductId: "${product.id}" | VariantId: "${variantId}" | Key: "${key}"`
+        );
         console.log(`📋 Available keys:`, Object.keys(calculations));
         console.log(`💰 Found stock:`, stock);
         if (stockData) {
           console.log(`✅ Key found! Stock data:`, stockData);
         } else {
           console.log(`❌ Key NOT found! Checking if similar keys exist...`);
-          const similarKeys = Object.keys(calculations).filter(k => k.includes(product.id));
-          console.log(`🔍 Keys containing productId "${product.id}":`, similarKeys);
+          const similarKeys = Object.keys(calculations).filter((k) =>
+            k.includes(product.id)
+          );
+          console.log(
+            `🔍 Keys containing productId "${product.id}":`,
+            similarKeys
+          );
         }
         return stock;
       }
-      
+
       // Check if product has variants
-      if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+      if (
+        product.variants &&
+        Array.isArray(product.variants) &&
+        product.variants.length > 0
+      ) {
         let totalStock = 0;
-        product.variants.forEach(variant => {
+        product.variants.forEach((variant) => {
           if (variant.options && Array.isArray(variant.options)) {
-            variant.options.forEach(option => {
+            variant.options.forEach((option) => {
               const key = `${product.id}-${variant.id}-${option.id}`;
               const stockData = calculations[key];
-              const variantStock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
+              const variantStock = stockData
+                ? stockData.totalStock || stockData.stock || 0
+                : 0;
               totalStock += variantStock;
             });
           }
@@ -3503,12 +3729,16 @@ export default function AdminPage() {
         // Product without variants (or empty variants array)
         const key = product.id;
         const stockData = calculations[key];
-        const stock = stockData ? (stockData.totalStock || stockData.stock || 0) : 0;
-        console.log(`📦 SIMPLE PRODUCT - Product: "${product.name}" | Key: "${key}" | Stock: ${stock}`);
+        const stock = stockData
+          ? stockData.totalStock || stockData.stock || 0
+          : 0;
+        console.log(
+          `📦 SIMPLE PRODUCT - Product: "${product.name}" | Key: "${key}" | Stock: ${stock}`
+        );
         return stock;
       }
     }
-    
+
     // Fallback to old system for backwards compatibility
     if (variantId && product.variants && Array.isArray(product.variants)) {
       // Look for specific variant
@@ -3526,20 +3756,20 @@ export default function AdminPage() {
       }
       return 0;
     }
-    
+
     // Check if product has variants with stock
     if (product.variants && Array.isArray(product.variants)) {
       let totalStock = 0;
-      product.variants.forEach(variant => {
+      product.variants.forEach((variant) => {
         if (variant.options && Array.isArray(variant.options)) {
-          variant.options.forEach(option => {
+          variant.options.forEach((option) => {
             totalStock += option.quantity || 0;
           });
         }
       });
       return totalStock;
     }
-    
+
     // Return product quantity or 0
     return product.quantity || 0;
   };
@@ -3548,20 +3778,22 @@ export default function AdminPage() {
   const loadCryptoPayments = async () => {
     setLoadingCryptoPayments(true);
     try {
-      const { collection, getDocs, query, orderBy, where } = await import('firebase/firestore');
-      const { db } = await import('../../lib/firebase');
+      const { collection, getDocs, query, orderBy, where } = await import(
+        "firebase/firestore"
+      );
+      const { db } = await import("../../lib/firebase");
 
       let paymentsQuery = query(
-        collection(db, 'crypto_payments'),
-        orderBy('created_at', 'desc')
+        collection(db, "crypto_payments"),
+        orderBy("created_at", "desc")
       );
 
       // Apply status filter
-      if (cryptoPaymentStatusFilter !== 'all') {
+      if (cryptoPaymentStatusFilter !== "all") {
         paymentsQuery = query(
-          collection(db, 'crypto_payments'),
-          where('payment_status', '==', cryptoPaymentStatusFilter),
-          orderBy('created_at', 'desc')
+          collection(db, "crypto_payments"),
+          where("payment_status", "==", cryptoPaymentStatusFilter),
+          orderBy("created_at", "desc")
         );
       }
 
@@ -3573,16 +3805,24 @@ export default function AdminPage() {
         payments.push({
           id: doc.id,
           ...data,
-          created_at: data.created_at?.toDate ? data.created_at.toDate() : new Date(data.created_at),
-          updated_at: data.updated_at?.toDate ? data.updated_at.toDate() : new Date(data.updated_at),
-          expiration_date: data.expiration_date?.toDate ? data.expiration_date.toDate() : (data.expiration_date ? new Date(data.expiration_date) : null)
+          created_at: data.created_at?.toDate
+            ? data.created_at.toDate()
+            : new Date(data.created_at),
+          updated_at: data.updated_at?.toDate
+            ? data.updated_at.toDate()
+            : new Date(data.updated_at),
+          expiration_date: data.expiration_date?.toDate
+            ? data.expiration_date.toDate()
+            : data.expiration_date
+            ? new Date(data.expiration_date)
+            : null,
         });
       });
 
       setCryptoPayments(payments);
-      console.log('Loaded crypto payments:', payments.length);
+      console.log("Loaded crypto payments:", payments.length);
     } catch (error) {
-      console.error('Error loading crypto payments:', error);
+      console.error("Error loading crypto payments:", error);
     } finally {
       setLoadingCryptoPayments(false);
     }
@@ -3593,20 +3833,20 @@ export default function AdminPage() {
     setCheckingCryptoStatus(true);
     try {
       const response = await fetch(`/api/crypto/payment/${paymentId}`);
-      
+
       if (!response.ok) {
-        throw new Error('Failed to check payment status');
+        throw new Error("Failed to check payment status");
       }
 
       const statusData = await response.json();
-      console.log('Payment status from API:', statusData);
+      console.log("Payment status from API:", statusData);
 
       // Reload the payments list to get updated data from Firebase
       await loadCryptoPayments();
 
       return statusData;
     } catch (error) {
-      console.error('Error checking crypto payment status:', error);
+      console.error("Error checking crypto payment status:", error);
       throw error;
     } finally {
       setCheckingCryptoStatus(false);
@@ -3617,26 +3857,27 @@ export default function AdminPage() {
   const refreshAllPaymentStatuses = async () => {
     setRefreshingAllPayments(true);
     try {
-      const response = await fetch('/api/crypto/payments/refresh-all', {
-        method: 'POST',
+      const response = await fetch("/api/crypto/payments/refresh-all", {
+        method: "POST",
       });
 
       if (!response.ok) {
-        throw new Error('Failed to refresh payment statuses');
+        throw new Error("Failed to refresh payment statuses");
       }
 
       const result = await response.json();
-      console.log('Bulk refresh result:', result);
+      console.log("Bulk refresh result:", result);
 
       // Reload the crypto payments list to reflect updated data
       await loadCryptoPayments();
-      
+
       // Show success message
-      alert(`✅ Payment Status Refresh Complete!\n\nTotal checked: ${result.results.total}\nUpdated: ${result.results.updated}\nNo changes: ${result.results.skipped}\nErrors: ${result.results.errors}`);
-      
+      alert(
+        `✅ Payment Status Refresh Complete!\n\nTotal checked: ${result.results.total}\nUpdated: ${result.results.updated}\nNo changes: ${result.results.skipped}\nErrors: ${result.results.errors}`
+      );
     } catch (error) {
-      console.error('Error refreshing all payment statuses:', error);
-      alert('❌ Failed to refresh payment statuses. Please try again.');
+      console.error("Error refreshing all payment statuses:", error);
+      alert("❌ Failed to refresh payment statuses. Please try again.");
     } finally {
       setRefreshingAllPayments(false);
     }
@@ -3874,15 +4115,20 @@ export default function AdminPage() {
                 >
                   <Package className="w-5 h-5 mr-3" />
                   Stock Management
-                  <svg 
+                  <svg
                     className={`w-4 h-4 ml-auto transition-transform ${
                       activeTab === "stockManagement" ? "rotate-90" : ""
-                    }`} 
-                    fill="none" 
-                    stroke="currentColor" 
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
                   </svg>
                 </button>
 
@@ -3897,8 +4143,18 @@ export default function AdminPage() {
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
                       </svg>
                       Stock Overview
                     </button>
@@ -3910,8 +4166,18 @@ export default function AdminPage() {
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                        />
                       </svg>
                       Stock Movements
                     </button>
@@ -3923,8 +4189,18 @@ export default function AdminPage() {
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+                        />
                       </svg>
                       Purchasing
                     </button>
@@ -3936,8 +4212,18 @@ export default function AdminPage() {
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       }`}
                     >
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z"
+                        />
                       </svg>
                       Stock Alerts
                     </button>
@@ -3965,8 +4251,18 @@ export default function AdminPage() {
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
               >
-                <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <svg
+                  className="w-5 h-5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
                 </svg>
                 Payment Crypto
               </button>
@@ -4503,11 +4799,12 @@ export default function AdminPage() {
                             )}
                           </button>
                         </div>
-                        
+
                         <div className="max-h-32 overflow-y-auto">
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-xs text-gray-600">
-                              {nonMemberCategories.length} of {categories.length} selected
+                              {nonMemberCategories.length} of{" "}
+                              {categories.length} selected
                             </span>
                             <div className="space-x-2">
                               <button
@@ -4526,7 +4823,7 @@ export default function AdminPage() {
                               </button>
                             </div>
                           </div>
-                          
+
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
                             {categories.map((category) => (
                               <label
@@ -4535,8 +4832,12 @@ export default function AdminPage() {
                               >
                                 <input
                                   type="checkbox"
-                                  checked={nonMemberCategories.includes(category.id)}
-                                  onChange={() => toggleNonMemberCategory(category.id)}
+                                  checked={nonMemberCategories.includes(
+                                    category.id
+                                  )}
+                                  onChange={() =>
+                                    toggleNonMemberCategory(category.id)
+                                  }
                                   className="h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                                 />
                                 <span className="text-xs text-gray-700">
@@ -4545,7 +4846,7 @@ export default function AdminPage() {
                               </label>
                             ))}
                           </div>
-                          
+
                           {categories.length === 0 && (
                             <div className="text-center py-2 text-gray-500 text-xs">
                               No categories available
@@ -5591,8 +5892,12 @@ export default function AdminPage() {
                                                                           alt={
                                                                             product.name
                                                                           }
-                                                                          width={40}
-                                                                          height={40}
+                                                                          width={
+                                                                            40
+                                                                          }
+                                                                          height={
+                                                                            40
+                                                                          }
                                                                           className="w-10 h-10 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                                                         />
                                                                       ) : (
@@ -5986,8 +6291,12 @@ export default function AdminPage() {
                                                                                                     alt={
                                                                                                       optionName
                                                                                                     }
-                                                                                                    width={40}
-                                                                                                    height={40}
+                                                                                                    width={
+                                                                                                      40
+                                                                                                    }
+                                                                                                    height={
+                                                                                                      40
+                                                                                                    }
                                                                                                     className="w-10 h-10 object-cover rounded-md border border-gray-200"
                                                                                                   />
                                                                                                 )}
@@ -6039,8 +6348,12 @@ export default function AdminPage() {
                                                                                               alt={
                                                                                                 variantName
                                                                                               }
-                                                                                              width={40}
-                                                                                              height={40}
+                                                                                              width={
+                                                                                                40
+                                                                                              }
+                                                                                              height={
+                                                                                                40
+                                                                                              }
                                                                                               className="w-10 h-10 object-cover rounded-md border border-gray-200"
                                                                                             />
                                                                                           )}
@@ -6771,15 +7084,29 @@ export default function AdminPage() {
                     <div className="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-4 text-white">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-xl font-bold">{selectedStockDetail.product.name}</h3>
-                          <p className="text-green-100 text-sm opacity-90">Detailed Stock Analysis</p>
+                          <h3 className="text-xl font-bold">
+                            {selectedStockDetail.product.name}
+                          </h3>
+                          <p className="text-green-100 text-sm opacity-90">
+                            Detailed Stock Analysis
+                          </p>
                         </div>
                         <button
                           onClick={() => setShowStockDetailModal(false)}
                           className="text-white hover:text-gray-200 p-2 rounded-full hover:bg-white/10 transition-colors"
                         >
-                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          <svg
+                            className="w-6 h-6"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
                           </svg>
                         </button>
                       </div>
@@ -6788,31 +7115,44 @@ export default function AdminPage() {
                     {/* Modal Content */}
                     <div className="p-6 max-h-[calc(90vh-80px)] overflow-y-auto">
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
                         {/* Left Column - Product Info */}
                         <div className="lg:col-span-1 space-y-6">
                           {/* Product Summary Card */}
                           <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Product Information</h4>
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                              Product Information
+                            </h4>
                             <div className="space-y-3">
                               <div className="flex justify-between">
-                                <span className="text-sm font-medium text-gray-600">Category:</span>
+                                <span className="text-sm font-medium text-gray-600">
+                                  Category:
+                                </span>
                                 <span className="text-sm text-gray-800">
-                                  {selectedStockDetail.product.categoryName || 'Uncategorized'}
+                                  {selectedStockDetail.product.categoryName ||
+                                    "Uncategorized"}
                                 </span>
                               </div>
                               {selectedStockDetail.product.subcategoryName && (
                                 <div className="flex justify-between">
-                                  <span className="text-sm font-medium text-gray-600">Subcategory:</span>
+                                  <span className="text-sm font-medium text-gray-600">
+                                    Subcategory:
+                                  </span>
                                   <span className="text-sm text-gray-800">
-                                    {selectedStockDetail.product.subcategoryName}
+                                    {
+                                      selectedStockDetail.product
+                                        .subcategoryName
+                                    }
                                   </span>
                                 </div>
                               )}
                               <div className="flex justify-between">
-                                <span className="text-sm font-medium text-gray-600">Type:</span>
+                                <span className="text-sm font-medium text-gray-600">
+                                  Type:
+                                </span>
                                 <span className="text-sm text-gray-800">
-                                  {selectedStockDetail.hasVariants ? 'Variable Product' : 'Simple Product'}
+                                  {selectedStockDetail.hasVariants
+                                    ? "Variable Product"
+                                    : "Simple Product"}
                                 </span>
                               </div>
                             </div>
@@ -6821,52 +7161,83 @@ export default function AdminPage() {
                           {/* Stock Status Card */}
                           {(() => {
                             // Recalculate stock status in modal using the same logic as cards
-                            const stockAlert = stockAlerts.find(alert => alert.productId === selectedStockDetail.product.id && alert.isActive);
+                            const stockAlert = stockAlerts.find(
+                              (alert) =>
+                                alert.productId ===
+                                  selectedStockDetail.product.id &&
+                                alert.isActive
+                            );
                             let modalStockStatus = null;
-                            
+
                             if (stockAlert) {
-                              if (selectedStockDetail.totalStock <= stockAlert.alertAdminLevel) {
-                                modalStockStatus = 'critical';
-                              } else if (selectedStockDetail.totalStock <= stockAlert.alertKioskLevel) {
-                                modalStockStatus = 'warning';
+                              if (
+                                selectedStockDetail.totalStock <=
+                                stockAlert.alertAdminLevel
+                              ) {
+                                modalStockStatus = "critical";
+                              } else if (
+                                selectedStockDetail.totalStock <=
+                                stockAlert.alertKioskLevel
+                              ) {
+                                modalStockStatus = "warning";
                               } else {
-                                modalStockStatus = 'good';
+                                modalStockStatus = "good";
                               }
                             }
-                            
+
                             return modalStockStatus ? (
-                              <div className={`rounded-xl p-6 ${
-                                modalStockStatus === 'good' ? 'bg-green-50 border border-green-200' :
-                                modalStockStatus === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-                                'bg-red-50 border border-red-200'
-                              }`}>
+                              <div
+                                className={`rounded-xl p-6 ${
+                                  modalStockStatus === "good"
+                                    ? "bg-green-50 border border-green-200"
+                                    : modalStockStatus === "warning"
+                                    ? "bg-yellow-50 border border-yellow-200"
+                                    : "bg-red-50 border border-red-200"
+                                }`}
+                              >
                                 <div className="flex items-center space-x-3 mb-4">
-                                  <div className={`w-3 h-3 rounded-full ${
-                                    modalStockStatus === 'good' ? 'bg-green-500' :
-                                    modalStockStatus === 'warning' ? 'bg-yellow-500' :
-                                    'bg-red-500'
-                                  }`}></div>
-                                  <h4 className={`text-lg font-semibold ${
-                                    modalStockStatus === 'good' ? 'text-green-800' :
-                                    modalStockStatus === 'warning' ? 'text-yellow-800' :
-                                    'text-red-800'
-                                  }`}>
-                                    {modalStockStatus === 'good' ? 'Well Stocked' :
-                                     modalStockStatus === 'warning' ? 'Low Stock' :
-                                     'Critical Stock'}
+                                  <div
+                                    className={`w-3 h-3 rounded-full ${
+                                      modalStockStatus === "good"
+                                        ? "bg-green-500"
+                                        : modalStockStatus === "warning"
+                                        ? "bg-yellow-500"
+                                        : "bg-red-500"
+                                    }`}
+                                  ></div>
+                                  <h4
+                                    className={`text-lg font-semibold ${
+                                      modalStockStatus === "good"
+                                        ? "text-green-800"
+                                        : modalStockStatus === "warning"
+                                        ? "text-yellow-800"
+                                        : "text-red-800"
+                                    }`}
+                                  >
+                                    {modalStockStatus === "good"
+                                      ? "Well Stocked"
+                                      : modalStockStatus === "warning"
+                                      ? "Low Stock"
+                                      : "Critical Stock"}
                                   </h4>
                                 </div>
                                 <div className="text-3xl font-bold mb-2 text-gray-900">
                                   {selectedStockDetail.totalStock} units
                                 </div>
-                                <p className={`text-sm ${
-                                  modalStockStatus === 'good' ? 'text-green-700' :
-                                  modalStockStatus === 'warning' ? 'text-yellow-700' :
-                                  'text-red-700'
-                                }`}>
-                                  {modalStockStatus === 'good' ? 'Stock levels are healthy' :
-                                   modalStockStatus === 'warning' ? 'Consider restocking soon' :
-                                   'Immediate restocking required'}
+                                <p
+                                  className={`text-sm ${
+                                    modalStockStatus === "good"
+                                      ? "text-green-700"
+                                      : modalStockStatus === "warning"
+                                      ? "text-yellow-700"
+                                      : "text-red-700"
+                                  }`}
+                                >
+                                  {modalStockStatus === "good"
+                                    ? "Stock levels are healthy"
+                                    : modalStockStatus === "warning"
+                                    ? "Consider restocking soon"
+                                    : "Immediate restocking required"}
                                 </p>
                               </div>
                             ) : (
@@ -6875,7 +7246,9 @@ export default function AdminPage() {
                                   <div className="text-3xl font-bold mb-2 text-gray-900">
                                     {selectedStockDetail.totalStock} units
                                   </div>
-                                  <p className="text-sm text-gray-600">No stock alert configured</p>
+                                  <p className="text-sm text-gray-600">
+                                    No stock alert configured
+                                  </p>
                                 </div>
                               </div>
                             );
@@ -6883,42 +7256,64 @@ export default function AdminPage() {
 
                           {/* Stock Alert Information */}
                           {(() => {
-                            const stockAlert = stockAlerts.find(alert => alert.productId === selectedStockDetail.product.id && alert.isActive);
+                            const stockAlert = stockAlerts.find(
+                              (alert) =>
+                                alert.productId ===
+                                  selectedStockDetail.product.id &&
+                                alert.isActive
+                            );
                             return stockAlert ? (
                               <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-4">Stock Alert Settings</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                                  Stock Alert Settings
+                                </h4>
                                 <div className="space-y-3 text-sm">
                                   <div className="flex justify-between">
-                                    <span className="font-medium text-gray-600">Kiosk Alert Level:</span>
+                                    <span className="font-medium text-gray-600">
+                                      Kiosk Alert Level:
+                                    </span>
                                     <span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
                                       {stockAlert.alertKioskLevel} units
                                     </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="font-medium text-gray-600">Admin Alert Level:</span>
+                                    <span className="font-medium text-gray-600">
+                                      Admin Alert Level:
+                                    </span>
                                     <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
                                       {stockAlert.alertAdminLevel} units
                                     </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span className="font-medium text-gray-600">When Stock is Zero:</span>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                      stockAlert.stockZeroAction === 'disable' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                    }`}>
-                                      {stockAlert.stockZeroAction === 'disable' ? 'Disable Product' : 'Keep Visible'}
+                                    <span className="font-medium text-gray-600">
+                                      When Stock is Zero:
+                                    </span>
+                                    <span
+                                      className={`px-2 py-1 rounded text-xs font-medium ${
+                                        stockAlert.stockZeroAction === "disable"
+                                          ? "bg-red-100 text-red-800"
+                                          : "bg-green-100 text-green-800"
+                                      }`}
+                                    >
+                                      {stockAlert.stockZeroAction === "disable"
+                                        ? "Disable Product"
+                                        : "Keep Visible"}
                                     </span>
                                   </div>
                                 </div>
                               </div>
                             ) : (
                               <div className="bg-gray-50 rounded-xl p-6">
-                                <h4 className="text-lg font-semibold text-gray-900 mb-2">No Stock Alert</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                                  No Stock Alert
+                                </h4>
                                 <p className="text-sm text-gray-600 mb-3">
-                                  This product doesn&apos;t have stock alerts configured.
+                                  This product doesn&apos;t have stock alerts
+                                  configured.
                                 </p>
                                 <button
                                   onClick={() => {
-                                    setStockActiveSubTab('alerts');
+                                    setStockActiveSubTab("alerts");
                                     setShowStockDetailModal(false);
                                   }}
                                   className="w-full px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
@@ -6936,8 +7331,13 @@ export default function AdminPage() {
                           {selectedStockDetail.hasVariants && (
                             <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                               <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                                <h4 className="text-lg font-semibold text-gray-900">Stock by Variant</h4>
-                                <p className="text-sm text-gray-600 mt-1">Individual stock levels for each product variant</p>
+                                <h4 className="text-lg font-semibold text-gray-900">
+                                  Stock by Variant
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  Individual stock levels for each product
+                                  variant
+                                </p>
                               </div>
                               <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-200">
@@ -6955,88 +7355,149 @@ export default function AdminPage() {
                                     </tr>
                                   </thead>
                                   <tbody className="bg-white divide-y divide-gray-200">
-                                    {selectedStockDetail.product.variants.map((variant) => {
-                                      if (variant.options && Array.isArray(variant.options)) {
-                                        return variant.options.map((option) => {
-                                          const variantId = `${variant.id}-${option.id}`;
-                                          const variantStock = getCurrentStock(selectedStockDetail.product, variantId);
-                                          const variantStatus = variantStock > 10 ? 'high' : variantStock > 0 ? 'low' : 'out';
-                                          
+                                    {selectedStockDetail.product.variants.map(
+                                      (variant) => {
+                                        if (
+                                          variant.options &&
+                                          Array.isArray(variant.options)
+                                        ) {
+                                          return variant.options.map(
+                                            (option) => {
+                                              const variantId = `${variant.id}-${option.id}`;
+                                              const variantStock =
+                                                getCurrentStock(
+                                                  selectedStockDetail.product,
+                                                  variantId
+                                                );
+                                              const variantStatus =
+                                                variantStock > 10
+                                                  ? "high"
+                                                  : variantStock > 0
+                                                  ? "low"
+                                                  : "out";
+
+                                              return (
+                                                <tr
+                                                  key={`${variant.id}-${option.id}`}
+                                                  className="hover:bg-gray-50"
+                                                >
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-sm font-medium text-gray-900">
+                                                      {variant.variantName}:{" "}
+                                                      {option.name}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                      ID: {variantId}
+                                                    </div>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                    <div className="text-2xl font-bold text-gray-900">
+                                                      {variantStock}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                      units
+                                                    </div>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span
+                                                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                        variantStatus === "high"
+                                                          ? "bg-green-100 text-green-800"
+                                                          : variantStatus ===
+                                                            "low"
+                                                          ? "bg-yellow-100 text-yellow-800"
+                                                          : "bg-red-100 text-red-800"
+                                                      }`}
+                                                    >
+                                                      <div
+                                                        className={`w-2 h-2 rounded-full mr-1 ${
+                                                          variantStatus ===
+                                                          "high"
+                                                            ? "bg-green-500"
+                                                            : variantStatus ===
+                                                              "low"
+                                                            ? "bg-yellow-500"
+                                                            : "bg-red-500"
+                                                        }`}
+                                                      ></div>
+                                                      {variantStatus === "high"
+                                                        ? "In Stock"
+                                                        : variantStatus ===
+                                                          "low"
+                                                        ? "Low Stock"
+                                                        : "Out of Stock"}
+                                                    </span>
+                                                  </td>
+                                                </tr>
+                                              );
+                                            }
+                                          );
+                                        } else {
+                                          const variantStock = getCurrentStock(
+                                            selectedStockDetail.product,
+                                            variant.id
+                                          );
+                                          const variantStatus =
+                                            variantStock > 10
+                                              ? "high"
+                                              : variantStock > 0
+                                              ? "low"
+                                              : "out";
+
                                           return (
-                                            <tr key={`${variant.id}-${option.id}`} className="hover:bg-gray-50">
+                                            <tr
+                                              key={variant.id}
+                                              className="hover:bg-gray-50"
+                                            >
                                               <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-sm font-medium text-gray-900">
-                                                  {variant.variantName}: {option.name}
+                                                  {variant.name ||
+                                                    `Variant ${variant.id}`}
                                                 </div>
                                                 <div className="text-xs text-gray-500">
-                                                  ID: {variantId}
+                                                  ID: {variant.id}
                                                 </div>
                                               </td>
                                               <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="text-2xl font-bold text-gray-900">
                                                   {variantStock}
                                                 </div>
-                                                <div className="text-xs text-gray-500">units</div>
+                                                <div className="text-xs text-gray-500">
+                                                  units
+                                                </div>
                                               </td>
                                               <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                                  variantStatus === 'high' ? 'bg-green-100 text-green-800' :
-                                                  variantStatus === 'low' ? 'bg-yellow-100 text-yellow-800' :
-                                                  'bg-red-100 text-red-800'
-                                                }`}>
-                                                  <div className={`w-2 h-2 rounded-full mr-1 ${
-                                                    variantStatus === 'high' ? 'bg-green-500' :
-                                                    variantStatus === 'low' ? 'bg-yellow-500' :
-                                                    'bg-red-500'
-                                                  }`}></div>
-                                                  {variantStatus === 'high' ? 'In Stock' :
-                                                   variantStatus === 'low' ? 'Low Stock' :
-                                                   'Out of Stock'}
+                                                <span
+                                                  className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                                                    variantStatus === "high"
+                                                      ? "bg-green-100 text-green-800"
+                                                      : variantStatus === "low"
+                                                      ? "bg-yellow-100 text-yellow-800"
+                                                      : "bg-red-100 text-red-800"
+                                                  }`}
+                                                >
+                                                  <div
+                                                    className={`w-2 h-2 rounded-full mr-1 ${
+                                                      variantStatus === "high"
+                                                        ? "bg-green-500"
+                                                        : variantStatus ===
+                                                          "low"
+                                                        ? "bg-yellow-500"
+                                                        : "bg-red-500"
+                                                    }`}
+                                                  ></div>
+                                                  {variantStatus === "high"
+                                                    ? "In Stock"
+                                                    : variantStatus === "low"
+                                                    ? "Low Stock"
+                                                    : "Out of Stock"}
                                                 </span>
                                               </td>
                                             </tr>
                                           );
-                                        });
-                                      } else {
-                                        const variantStock = getCurrentStock(selectedStockDetail.product, variant.id);
-                                        const variantStatus = variantStock > 10 ? 'high' : variantStock > 0 ? 'low' : 'out';
-                                        
-                                        return (
-                                          <tr key={variant.id} className="hover:bg-gray-50">
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-sm font-medium text-gray-900">
-                                                {variant.name || `Variant ${variant.id}`}
-                                              </div>
-                                              <div className="text-xs text-gray-500">
-                                                ID: {variant.id}
-                                              </div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <div className="text-2xl font-bold text-gray-900">
-                                                {variantStock}
-                                              </div>
-                                              <div className="text-xs text-gray-500">units</div>
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                                                variantStatus === 'high' ? 'bg-green-100 text-green-800' :
-                                                variantStatus === 'low' ? 'bg-yellow-100 text-yellow-800' :
-                                                'bg-red-100 text-red-800'
-                                              }`}>
-                                                <div className={`w-2 h-2 rounded-full mr-1 ${
-                                                  variantStatus === 'high' ? 'bg-green-500' :
-                                                  variantStatus === 'low' ? 'bg-yellow-500' :
-                                                  'bg-red-500'
-                                                }`}></div>
-                                                {variantStatus === 'high' ? 'In Stock' :
-                                                 variantStatus === 'low' ? 'Low Stock' :
-                                                 'Out of Stock'}
-                                              </span>
-                                            </td>
-                                          </tr>
-                                        );
+                                        }
                                       }
-                                    })}
+                                    )}
                                   </tbody>
                                 </table>
                               </div>
@@ -7046,12 +7507,16 @@ export default function AdminPage() {
                           {/* Simple Product Stock (if no variants) */}
                           {!selectedStockDetail.hasVariants && (
                             <div className="bg-white border border-gray-200 rounded-xl p-6">
-                              <h4 className="text-lg font-semibold text-gray-900 mb-4">Stock Information</h4>
+                              <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                                Stock Information
+                              </h4>
                               <div className="text-center py-8">
                                 <div className="text-6xl font-bold text-gray-900 mb-2">
                                   {selectedStockDetail.totalStock}
                                 </div>
-                                <div className="text-lg text-gray-600">Total Units Available</div>
+                                <div className="text-lg text-gray-600">
+                                  Total Units Available
+                                </div>
                               </div>
                             </div>
                           )}
@@ -7059,43 +7524,84 @@ export default function AdminPage() {
                           {/* Stock Movement Summary */}
                           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                             <div className="bg-gray-50 px-6 py-4 border-b border-gray-200">
-                              <h4 className="text-lg font-semibold text-gray-900">Recent Stock Movements</h4>
-                              <p className="text-sm text-gray-600 mt-1">Last 10 stock transactions for this product</p>
+                              <h4 className="text-lg font-semibold text-gray-900">
+                                Recent Stock Movements
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Last 10 stock transactions for this product
+                              </p>
                             </div>
                             <div className="p-6">
                               <div className="space-y-4">
                                 {stockMovements
-                                  .filter(movement => movement.productId === selectedStockDetail.product.id)
+                                  .filter(
+                                    (movement) =>
+                                      movement.productId ===
+                                      selectedStockDetail.product.id
+                                  )
                                   .slice(0, 10)
                                   .map((movement) => (
-                                    <div key={movement.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div
+                                      key={movement.id}
+                                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                                    >
                                       <div className="flex items-center space-x-3">
-                                        <div className={`w-3 h-3 rounded-full ${
-                                          movement.status === 'purchasing' ? 'bg-green-500' : 'bg-red-500'
-                                        }`}></div>
+                                        <div
+                                          className={`w-3 h-3 rounded-full ${
+                                            movement.status === "purchasing"
+                                              ? "bg-green-500"
+                                              : "bg-red-500"
+                                          }`}
+                                        ></div>
                                         <div>
                                           <div className="text-sm font-medium text-gray-900">
-                                            {movement.status === 'purchasing' ? 'Purchase' : 'Sale'}
+                                            {movement.status === "purchasing"
+                                              ? "Purchase"
+                                              : "Sale"}
                                           </div>
                                           <div className="text-xs text-gray-500">
-                                            {movement.variantName && `${movement.variantName} • `}
+                                            {movement.variantName &&
+                                              `${movement.variantName} • `}
                                             {movement.date} {movement.time}
                                           </div>
                                         </div>
                                       </div>
-                                      <div className={`text-sm font-medium ${
-                                        movement.status === 'purchasing' ? 'text-green-600' : 'text-red-600'
-                                      }`}>
-                                        {movement.status === 'purchasing' ? '+' : '-'}{movement.quantity}
+                                      <div
+                                        className={`text-sm font-medium ${
+                                          movement.status === "purchasing"
+                                            ? "text-green-600"
+                                            : "text-red-600"
+                                        }`}
+                                      >
+                                        {movement.status === "purchasing"
+                                          ? "+"
+                                          : "-"}
+                                        {movement.quantity}
                                       </div>
                                     </div>
                                   ))}
-                                {stockMovements.filter(movement => movement.productId === selectedStockDetail.product.id).length === 0 && (
+                                {stockMovements.filter(
+                                  (movement) =>
+                                    movement.productId ===
+                                    selectedStockDetail.product.id
+                                ).length === 0 && (
                                   <div className="text-center py-8 text-gray-500">
-                                    <svg className="mx-auto h-8 w-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    <svg
+                                      className="mx-auto h-8 w-8 text-gray-400 mb-2"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={1}
+                                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                                      />
                                     </svg>
-                                    <p className="text-sm">No stock movements recorded yet</p>
+                                    <p className="text-sm">
+                                      No stock movements recorded yet
+                                    </p>
                                   </div>
                                 )}
                               </div>
@@ -8024,7 +8530,6 @@ export default function AdminPage() {
               {/* Stock Management Tab */}
               {activeTab === "stockManagement" && (
                 <div className="space-y-6">
-                  
                   {/* Stock Overview Sub-tab - Modern Professional Design */}
                   {stockActiveSubTab === "overview" && (
                     <div className="space-y-6">
@@ -8032,67 +8537,120 @@ export default function AdminPage() {
                       <div className="bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl shadow-lg p-6 text-white">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-2xl font-bold mb-2">Stock Overview</h3>
-                            <p className="text-green-100 opacity-90">Real-time inventory management dashboard</p>
+                            <h3 className="text-2xl font-bold mb-2">
+                              Stock Overview
+                            </h3>
+                            <p className="text-green-100 opacity-90">
+                              Real-time inventory management dashboard
+                            </p>
                           </div>
                           <div className="flex items-center space-x-4">
                             <div className="text-right">
-                              <div className="text-3xl font-bold">{products.length}</div>
-                              <div className="text-sm text-green-100 opacity-75">Total Products</div>
+                              <div className="text-3xl font-bold">
+                                {products.length}
+                              </div>
+                              <div className="text-sm text-green-100 opacity-75">
+                                Total Products
+                              </div>
                             </div>
                             <button
                               onClick={async () => {
                                 setStockCalculationsLoaded(false);
                                 await loadAllStockCalculations();
                                 await loadStockMovementsData();
-                                console.log('🔄 Stock data refreshed manually');
+                                console.log("🔄 Stock data refreshed manually");
                               }}
                               className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-200 flex items-center space-x-2"
                               title="Refresh Stock Data"
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              <svg
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
                               </svg>
                               <span>Refresh</span>
                             </button>
                           </div>
                         </div>
-                        
+
                         {/* Quick Stats */}
                         {stockCalculationsLoaded && (
                           <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                               <div className="text-2xl font-bold text-green-200">
-                                {products.filter(p => {
-                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
-                                  return alert && getCurrentStock(p) > alert.alertKioskLevel;
-                                }).length}
+                                {
+                                  products.filter((p) => {
+                                    const alert = stockAlerts.find(
+                                      (a) => a.productId === p.id && a.isActive
+                                    );
+                                    return (
+                                      alert &&
+                                      getCurrentStock(p) > alert.alertKioskLevel
+                                    );
+                                  }).length
+                                }
                               </div>
-                              <div className="text-sm text-green-100">Well Stocked</div>
+                              <div className="text-sm text-green-100">
+                                Well Stocked
+                              </div>
                             </div>
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                               <div className="text-2xl font-bold text-yellow-200">
-                                {products.filter(p => {
-                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
-                                  return alert && getCurrentStock(p) <= alert.alertKioskLevel && getCurrentStock(p) > alert.alertAdminLevel;
-                                }).length}
+                                {
+                                  products.filter((p) => {
+                                    const alert = stockAlerts.find(
+                                      (a) => a.productId === p.id && a.isActive
+                                    );
+                                    return (
+                                      alert &&
+                                      getCurrentStock(p) <=
+                                        alert.alertKioskLevel &&
+                                      getCurrentStock(p) > alert.alertAdminLevel
+                                    );
+                                  }).length
+                                }
                               </div>
-                              <div className="text-sm text-green-100">Low Stock</div>
+                              <div className="text-sm text-green-100">
+                                Low Stock
+                              </div>
                             </div>
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                               <div className="text-2xl font-bold text-red-200">
-                                {products.filter(p => {
-                                  const alert = stockAlerts.find(a => a.productId === p.id && a.isActive);
-                                  return alert && getCurrentStock(p) <= alert.alertAdminLevel;
-                                }).length}
+                                {
+                                  products.filter((p) => {
+                                    const alert = stockAlerts.find(
+                                      (a) => a.productId === p.id && a.isActive
+                                    );
+                                    return (
+                                      alert &&
+                                      getCurrentStock(p) <=
+                                        alert.alertAdminLevel
+                                    );
+                                  }).length
+                                }
                               </div>
-                              <div className="text-sm text-green-100">Critical Stock</div>
+                              <div className="text-sm text-green-100">
+                                Critical Stock
+                              </div>
                             </div>
                             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
                               <div className="text-2xl font-bold">
-                                {products.reduce((total, p) => total + getCurrentStock(p), 0)}
+                                {products.reduce(
+                                  (total, p) => total + getCurrentStock(p),
+                                  0
+                                )}
                               </div>
-                              <div className="text-sm text-green-100">Total Units</div>
+                              <div className="text-sm text-green-100">
+                                Total Units
+                              </div>
                             </div>
                           </div>
                         )}
@@ -8103,8 +8661,12 @@ export default function AdminPage() {
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
                           <div className="flex flex-col items-center justify-center">
                             <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mb-4"></div>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">Loading Stock Data</h3>
-                            <p className="text-gray-600">Calculating inventory levels for all products...</p>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                              Loading Stock Data
+                            </h3>
+                            <p className="text-gray-600">
+                              Calculating inventory levels for all products...
+                            </p>
                           </div>
                         </div>
                       )}
@@ -8114,25 +8676,36 @@ export default function AdminPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                           {products.map((product) => {
                             const totalStock = getCurrentStock(product);
-                            const hasVariants = product.variants && Array.isArray(product.variants) && product.variants.length > 0;
-                            
+                            const hasVariants =
+                              product.variants &&
+                              Array.isArray(product.variants) &&
+                              product.variants.length > 0;
+
                             // Find stock alert for this product (if exists)
-                            const stockAlert = stockAlerts.find(alert => alert.productId === product.id && alert.isActive);
-                            
+                            const stockAlert = stockAlerts.find(
+                              (alert) =>
+                                alert.productId === product.id && alert.isActive
+                            );
+
                             // Determine stock status based on stock alert levels (if configured)
                             let stockStatus = null;
                             if (stockAlert) {
                               if (totalStock <= stockAlert.alertAdminLevel) {
-                                stockStatus = 'critical';
-                              } else if (totalStock <= stockAlert.alertKioskLevel) {
-                                stockStatus = 'warning';
+                                stockStatus = "critical";
+                              } else if (
+                                totalStock <= stockAlert.alertKioskLevel
+                              ) {
+                                stockStatus = "warning";
                               } else {
-                                stockStatus = 'good';
+                                stockStatus = "good";
                               }
                             }
-                            
+
                             return (
-                              <div key={product.id} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+                              <div
+                                key={product.id}
+                                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
+                              >
                                 {/* Product Card Header */}
                                 <div className="p-6 border-b border-gray-100">
                                   <div className="flex items-start justify-between">
@@ -8142,7 +8715,8 @@ export default function AdminPage() {
                                       </h4>
                                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                                         <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                                          {product.categoryName || 'Uncategorized'}
+                                          {product.categoryName ||
+                                            "Uncategorized"}
                                         </span>
                                         {product.subcategoryName && (
                                           <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs">
@@ -8151,27 +8725,37 @@ export default function AdminPage() {
                                         )}
                                       </div>
                                     </div>
-                                    
+
                                     {/* Stock Status Indicator - Only show if stock alert is configured */}
                                     <div className="text-right">
                                       <div className="text-lg font-semibold text-gray-900 mb-1">
                                         {totalStock} units
                                       </div>
                                       {stockStatus && (
-                                        <div className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                          stockStatus === 'good' ? 'bg-green-100 text-green-700' :
-                                          stockStatus === 'warning' ? 'bg-yellow-100 text-yellow-700' :
-                                          'bg-red-100 text-red-700'
-                                        }`}>
-                                          <div className={`w-1.5 h-1.5 rounded-full ${
-                                            stockStatus === 'good' ? 'bg-green-500' :
-                                            stockStatus === 'warning' ? 'bg-yellow-500' :
-                                            'bg-red-500'
-                                          }`}></div>
+                                        <div
+                                          className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                            stockStatus === "good"
+                                              ? "bg-green-100 text-green-700"
+                                              : stockStatus === "warning"
+                                              ? "bg-yellow-100 text-yellow-700"
+                                              : "bg-red-100 text-red-700"
+                                          }`}
+                                        >
+                                          <div
+                                            className={`w-1.5 h-1.5 rounded-full ${
+                                              stockStatus === "good"
+                                                ? "bg-green-500"
+                                                : stockStatus === "warning"
+                                                ? "bg-yellow-500"
+                                                : "bg-red-500"
+                                            }`}
+                                          ></div>
                                           <span>
-                                            {stockStatus === 'good' ? 'Well Stocked' :
-                                             stockStatus === 'warning' ? 'Low Stock' :
-                                             'Critical'}
+                                            {stockStatus === "good"
+                                              ? "Well Stocked"
+                                              : stockStatus === "warning"
+                                              ? "Low Stock"
+                                              : "Critical"}
                                           </span>
                                         </div>
                                       )}
@@ -8186,17 +8770,26 @@ export default function AdminPage() {
                                     <div className="space-y-3 mb-4">
                                       {hasVariants && (
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-gray-600">Product Type:</span>
+                                          <span className="text-gray-600">
+                                            Product Type:
+                                          </span>
                                           <span className="font-medium">
-                                            {product.variants.length} Variant{product.variants.length > 1 ? 's' : ''}
+                                            {product.variants.length} Variant
+                                            {product.variants.length > 1
+                                              ? "s"
+                                              : ""}
                                           </span>
                                         </div>
                                       )}
                                       {stockAlert && (
                                         <div className="flex justify-between text-sm">
-                                          <span className="text-gray-600">Alert Levels:</span>
+                                          <span className="text-gray-600">
+                                            Alert Levels:
+                                          </span>
                                           <span className="text-xs text-gray-600">
-                                            Kiosk: {stockAlert.alertKioskLevel} • Admin: {stockAlert.alertAdminLevel}
+                                            Kiosk: {stockAlert.alertKioskLevel}{" "}
+                                            • Admin:{" "}
+                                            {stockAlert.alertAdminLevel}
                                           </span>
                                         </div>
                                       )}
@@ -8206,39 +8799,79 @@ export default function AdminPage() {
                                   {/* Variants Preview (if any) */}
                                   {hasVariants && (
                                     <div className="mb-4">
-                                      <h5 className="text-sm font-medium text-gray-700 mb-2">Variants:</h5>
+                                      <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                        Variants:
+                                      </h5>
                                       <div className="space-y-2 max-h-32 overflow-y-auto">
-                                        {product.variants.slice(0, 3).map((variant) => {
-                                          if (variant.options && Array.isArray(variant.options)) {
-                                            return variant.options.slice(0, 2).map((option) => {
-                                              const variantId = `${variant.id}-${option.id}`;
-                                              const variantStock = getCurrentStock(product, variantId);
-                                              return (
-                                                <div key={`${variant.id}-${option.id}`} className="flex justify-between items-center text-xs bg-gray-50 rounded p-2">
-                                                  <span className="text-gray-700 truncate">
-                                                    {variant.variantName}: {option.name}
-                                                  </span>
-                                                  <span className={`font-medium ${variantStock > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {variantStock}
-                                                  </span>
-                                                </div>
-                                              );
-                                            });
-                                          }
-                                          return (
-                                            <div key={variant.id} className="flex justify-between items-center text-xs bg-gray-50 rounded p-2">
-                                              <span className="text-gray-700 truncate">
-                                                {variant.name || `Variant ${variant.id}`}
-                                              </span>
-                                              <span className={`font-medium ${getCurrentStock(product, variant.id) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                {getCurrentStock(product, variant.id)}
-                                              </span>
-                                            </div>
-                                          );
-                                        })}
+                                        {product.variants
+                                          .slice(0, 3)
+                                          .map((variant) => {
+                                            if (
+                                              variant.options &&
+                                              Array.isArray(variant.options)
+                                            ) {
+                                              return variant.options
+                                                .slice(0, 2)
+                                                .map((option) => {
+                                                  const variantId = `${variant.id}-${option.id}`;
+                                                  const variantStock =
+                                                    getCurrentStock(
+                                                      product,
+                                                      variantId
+                                                    );
+                                                  return (
+                                                    <div
+                                                      key={`${variant.id}-${option.id}`}
+                                                      className="flex justify-between items-center text-xs bg-gray-50 rounded p-2"
+                                                    >
+                                                      <span className="text-gray-700 truncate">
+                                                        {variant.variantName}:{" "}
+                                                        {option.name}
+                                                      </span>
+                                                      <span
+                                                        className={`font-medium ${
+                                                          variantStock > 0
+                                                            ? "text-green-600"
+                                                            : "text-red-600"
+                                                        }`}
+                                                      >
+                                                        {variantStock}
+                                                      </span>
+                                                    </div>
+                                                  );
+                                                });
+                                            }
+                                            return (
+                                              <div
+                                                key={variant.id}
+                                                className="flex justify-between items-center text-xs bg-gray-50 rounded p-2"
+                                              >
+                                                <span className="text-gray-700 truncate">
+                                                  {variant.name ||
+                                                    `Variant ${variant.id}`}
+                                                </span>
+                                                <span
+                                                  className={`font-medium ${
+                                                    getCurrentStock(
+                                                      product,
+                                                      variant.id
+                                                    ) > 0
+                                                      ? "text-green-600"
+                                                      : "text-red-600"
+                                                  }`}
+                                                >
+                                                  {getCurrentStock(
+                                                    product,
+                                                    variant.id
+                                                  )}
+                                                </span>
+                                              </div>
+                                            );
+                                          })}
                                         {product.variants.length > 3 && (
                                           <div className="text-xs text-gray-500 text-center py-1">
-                                            +{product.variants.length - 3} more variants
+                                            +{product.variants.length - 3} more
+                                            variants
                                           </div>
                                         )}
                                       </div>
@@ -8252,14 +8885,24 @@ export default function AdminPage() {
                                         product,
                                         totalStock,
                                         stockStatus,
-                                        hasVariants
+                                        hasVariants,
                                       });
                                       setShowStockDetailModal(true);
                                     }}
                                     className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
                                   >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    <svg
+                                      className="w-4 h-4"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                                      />
                                     </svg>
                                     <span>View Stock Details</span>
                                   </button>
@@ -8274,11 +8917,26 @@ export default function AdminPage() {
                       {stockCalculationsLoaded && products.length === 0 && (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
                           <div className="text-center">
-                            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            <svg
+                              className="mx-auto h-12 w-12 text-gray-400 mb-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={1}
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                              />
                             </svg>
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Products Found</h3>
-                            <p className="text-gray-600 mb-6">Get started by adding some products to your inventory.</p>
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                              No Products Found
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                              Get started by adding some products to your
+                              inventory.
+                            </p>
                             <button className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200">
                               Add First Product
                             </button>
@@ -8287,7 +8945,7 @@ export default function AdminPage() {
                       )}
                     </div>
                   )}
-                  
+
                   {/* Stock Movements Sub-tab - Updated for StockMovement system */}
                   {stockActiveSubTab === "movements" && (
                     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -8302,7 +8960,9 @@ export default function AdminPage() {
 
                       {/* Purchase Orders Section */}
                       <div className="mb-8">
-                        <h4 className="text-md font-medium text-gray-900 mb-4">Recent Purchase Orders</h4>
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Recent Purchase Orders
+                        </h4>
                         <div className="overflow-x-auto">
                           <table className="w-full border-collapse border border-gray-300">
                             <thead>
@@ -8333,41 +8993,70 @@ export default function AdminPage() {
                             <tbody>
                               {stockPurchases.length === 0 ? (
                                 <tr>
-                                  <td colSpan="7" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                                  <td
+                                    colSpan="7"
+                                    className="border border-gray-300 px-4 py-8 text-center text-gray-500"
+                                  >
                                     No purchase orders found.
                                   </td>
                                 </tr>
                               ) : (
                                 stockPurchases.slice(0, 10).map((purchase) => (
-                                  <tr key={purchase.id} className="hover:bg-gray-50">
+                                  <tr
+                                    key={purchase.id}
+                                    className="hover:bg-gray-50"
+                                  >
                                     <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-mono text-sm">{purchase.id.slice(-8)}</div>
+                                      <div className="font-mono text-sm">
+                                        {purchase.id.slice(-8)}
+                                      </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
                                       <div className="text-sm">
                                         <div className="font-medium">
-                                          {purchase.createdAt ? new Date(purchase.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                          {purchase.createdAt
+                                            ? new Date(
+                                                purchase.createdAt.seconds *
+                                                  1000
+                                              ).toLocaleDateString()
+                                            : "N/A"}
                                         </div>
                                         <div className="text-gray-500">
-                                          {purchase.createdAt ? new Date(purchase.createdAt.seconds * 1000).toLocaleTimeString() : 'N/A'}
+                                          {purchase.createdAt
+                                            ? new Date(
+                                                purchase.createdAt.seconds *
+                                                  1000
+                                              ).toLocaleTimeString()
+                                            : "N/A"}
                                         </div>
                                       </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium">{purchase.supplier}</div>
+                                      <div className="font-medium">
+                                        {purchase.supplier}
+                                      </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium">{purchase.totalItems}</div>
+                                      <div className="font-medium">
+                                        {purchase.totalItems}
+                                      </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium text-green-600">{purchase.totalQuantity}</div>
+                                      <div className="font-medium text-green-600">
+                                        {purchase.totalQuantity}
+                                      </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
-                                      <div className="font-medium">฿{purchase.totalAmount ? purchase.totalAmount.toFixed(2) : '0.00'}</div>
+                                      <div className="font-medium">
+                                        ฿
+                                        {purchase.totalAmount
+                                          ? purchase.totalAmount.toFixed(2)
+                                          : "0.00"}
+                                      </div>
                                     </td>
                                     <td className="border border-gray-300 px-4 py-2">
                                       <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                        {purchase.status || 'Completed'}
+                                        {purchase.status || "Completed"}
                                       </span>
                                     </td>
                                   </tr>
@@ -8380,7 +9069,9 @@ export default function AdminPage() {
 
                       {/* Individual Stock Movements Table */}
                       <div className="mb-4">
-                        <h4 className="text-md font-medium text-gray-900 mb-4">Individual Stock Movements</h4>
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Individual Stock Movements
+                        </h4>
                       </div>
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse border border-gray-300">
@@ -8415,61 +9106,100 @@ export default function AdminPage() {
                           <tbody>
                             {stockMovements.length === 0 ? (
                               <tr>
-                                <td colSpan="8" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
-                                  No stock movements found. Use &quot;Purchasing&quot; tab to add stock.
+                                <td
+                                  colSpan="8"
+                                  className="border border-gray-300 px-4 py-8 text-center text-gray-500"
+                                >
+                                  No stock movements found. Use
+                                  &quot;Purchasing&quot; tab to add stock.
                                 </td>
                               </tr>
                             ) : (
                               stockMovements.map((movement) => (
-                                <tr key={movement.id} className="hover:bg-gray-50">
+                                <tr
+                                  key={movement.id}
+                                  className="hover:bg-gray-50"
+                                >
                                   <td className="border border-gray-300 px-4 py-2">
                                     <div className="text-sm">
                                       <div className="font-medium">
-                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}
+                                        {movement.createdAt
+                                          ? new Date(
+                                              movement.createdAt.seconds * 1000
+                                            ).toLocaleDateString()
+                                          : "N/A"}
                                       </div>
                                       <div className="text-gray-500">
-                                        {movement.createdAt ? new Date(movement.createdAt.seconds * 1000).toLocaleTimeString() : 'N/A'}
+                                        {movement.createdAt
+                                          ? new Date(
+                                              movement.createdAt.seconds * 1000
+                                            ).toLocaleTimeString()
+                                          : "N/A"}
                                       </div>
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
                                     <div className="text-sm">
-                                      <div className="font-medium">{movement.productName}</div>
+                                      <div className="font-medium">
+                                        {movement.productName}
+                                      </div>
                                       {movement.variantName && (
-                                        <div className="text-gray-500">{movement.variantName}</div>
+                                        <div className="text-gray-500">
+                                          {movement.variantName}
+                                        </div>
                                       )}
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
-                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      movement.status === 'purchasing' 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                    }`}>
-                                      {movement.status === 'purchasing' ? 'Stock In' : 'Stock Out'}
+                                    <span
+                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        movement.status === "purchasing"
+                                          ? "bg-green-100 text-green-800"
+                                          : "bg-red-100 text-red-800"
+                                      }`}
+                                    >
+                                      {movement.status === "purchasing"
+                                        ? "Stock In"
+                                        : "Stock Out"}
                                     </span>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
-                                    <div className={`font-medium ${
-                                      movement.status === 'purchasing' ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                      {movement.status === 'purchasing' ? '+' : '-'}{movement.quantity}
+                                    <div
+                                      className={`font-medium ${
+                                        movement.status === "purchasing"
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }`}
+                                    >
+                                      {movement.status === "purchasing"
+                                        ? "+"
+                                        : "-"}
+                                      {movement.quantity}
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
                                     <div className="font-medium">
-                                      ฿{movement.price ? movement.price.toFixed(2) : '0.00'}
+                                      ฿
+                                      {movement.price
+                                        ? movement.price.toFixed(2)
+                                        : "0.00"}
                                     </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
-                                    <div className="text-sm">{movement.supplier || 'N/A'}</div>
+                                    <div className="text-sm">
+                                      {movement.supplier || "N/A"}
+                                    </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
-                                    <div className="text-sm text-gray-600">{movement.notes || '-'}</div>
+                                    <div className="text-sm text-gray-600">
+                                      {movement.notes || "-"}
+                                    </div>
                                   </td>
                                   <td className="border border-gray-300 px-4 py-2">
                                     <div className="text-xs font-mono text-blue-600">
-                                      {movement.purchaseOrderId ? movement.purchaseOrderId.slice(-8) : '-'}
+                                      {movement.purchaseOrderId
+                                        ? movement.purchaseOrderId.slice(-8)
+                                        : "-"}
                                     </div>
                                   </td>
                                 </tr>
@@ -8478,26 +9208,51 @@ export default function AdminPage() {
                           </tbody>
                         </table>
                       </div>
-                      
+
                       {/* Summary Statistics */}
                       {stockMovements.length > 0 && (
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
                           <div className="bg-green-50 p-4 rounded-lg">
-                            <div className="text-sm font-medium text-green-800">Total Purchasing</div>
+                            <div className="text-sm font-medium text-green-800">
+                              Total Purchasing
+                            </div>
                             <div className="text-lg font-bold text-green-900">
-                              {stockMovements.filter(m => m.status === 'purchasing').reduce((sum, m) => sum + (m.quantity || 0), 0)} items
+                              {stockMovements
+                                .filter((m) => m.status === "purchasing")
+                                .reduce(
+                                  (sum, m) => sum + (m.quantity || 0),
+                                  0
+                                )}{" "}
+                              items
                             </div>
                           </div>
                           <div className="bg-red-50 p-4 rounded-lg">
-                            <div className="text-sm font-medium text-red-800">Total Sales</div>
+                            <div className="text-sm font-medium text-red-800">
+                              Total Sales
+                            </div>
                             <div className="text-lg font-bold text-red-900">
-                              {stockMovements.filter(m => m.status === 'sales').reduce((sum, m) => sum + (m.quantity || 0), 0)} items
+                              {stockMovements
+                                .filter((m) => m.status === "sales")
+                                .reduce(
+                                  (sum, m) => sum + (m.quantity || 0),
+                                  0
+                                )}{" "}
+                              items
                             </div>
                           </div>
                           <div className="bg-blue-50 p-4 rounded-lg">
-                            <div className="text-sm font-medium text-blue-800">Total Value</div>
+                            <div className="text-sm font-medium text-blue-800">
+                              Total Value
+                            </div>
                             <div className="text-lg font-bold text-blue-900">
-                              ฿{stockMovements.reduce((sum, m) => sum + ((m.quantity || 0) * (m.price || 0)), 0).toFixed(2)}
+                              ฿
+                              {stockMovements
+                                .reduce(
+                                  (sum, m) =>
+                                    sum + (m.quantity || 0) * (m.price || 0),
+                                  0
+                                )
+                                .toFixed(2)}
                             </div>
                           </div>
                         </div>
@@ -8505,695 +9260,707 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                {/* Purchasing Sub-tab */}
-                {stockActiveSubTab === "purchasing" && (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Purchasing Management
-                      </h3>
-                      <button
-                        onClick={handleAddPurchasing}
-                        disabled={!checkInputPermission()}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:bg-gray-400"
-                      >
-                        <Package className="w-4 h-4" />
-                        Add Purchase
-                      </button>
-                    </div>
+                  {/* Purchasing Sub-tab */}
+                  {stockActiveSubTab === "purchasing" && (
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Purchasing Management
+                        </h3>
+                        <button
+                          onClick={handleAddPurchasing}
+                          disabled={!checkInputPermission()}
+                          className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center gap-2 disabled:bg-gray-400"
+                        >
+                          <Package className="w-4 h-4" />
+                          Add Purchase
+                        </button>
+                      </div>
 
-                    {/* Add Purchasing Form */}
-                    {showPurchasingForm && (
-                      <div className="bg-gray-50 p-6 rounded-lg mb-6">
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-lg font-semibold text-gray-900">Add New Purchase</h4>
-                          <button
-                            onClick={handleCancelPurchasing}
-                            className="text-gray-500 hover:text-gray-700"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        </div>
-
-                        <form onSubmit={handleSavePurchasing} className="space-y-6">
-                          {/* Supplier, Notes, Date and Time */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Supplier Name *
-                              </label>
-                              <input
-                                type="text"
-                                value={purchasingSupplier}
-                                onChange={(e) => setPurchasingSupplier(e.target.value)}
-                                placeholder="Enter supplier name"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Notes
-                              </label>
-                              <input
-                                type="text"
-                                value={purchasingNotes}
-                                onChange={(e) => setPurchasingNotes(e.target.value)}
-                                placeholder="Optional notes"
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Purchase Date *
-                              </label>
-                              <input
-                                type="date"
-                                value={purchasingDate}
-                                onChange={(e) => setPurchasingDate(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                required
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Purchase Time *
-                              </label>
-                              <input
-                                type="time"
-                                value={purchasingTime}
-                                onChange={(e) => setPurchasingTime(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                                required
-                              />
-                            </div>
+                      {/* Add Purchasing Form */}
+                      {showPurchasingForm && (
+                        <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-lg font-semibold text-gray-900">
+                              Add New Purchase
+                            </h4>
+                            <button
+                              onClick={handleCancelPurchasing}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
                           </div>
 
-                          {/* Products */}
-                          <div>
-                            <div className="flex justify-between items-center mb-4">
-                              <h5 className="text-md font-medium text-gray-900">Products</h5>
-                              <button
-                                type="button"
-                                onClick={addProductToPurchasing}
-                                className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700"
-                              >
-                                + Add Product
-                              </button>
+                          <form
+                            onSubmit={handleSavePurchasing}
+                            className="space-y-6"
+                          >
+                            {/* Supplier, Notes, Date and Time */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Supplier Name *
+                                </label>
+                                <input
+                                  type="text"
+                                  value={purchasingSupplier}
+                                  onChange={(e) =>
+                                    setPurchasingSupplier(e.target.value)
+                                  }
+                                  placeholder="Enter supplier name"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Notes
+                                </label>
+                                <input
+                                  type="text"
+                                  value={purchasingNotes}
+                                  onChange={(e) =>
+                                    setPurchasingNotes(e.target.value)
+                                  }
+                                  placeholder="Optional notes"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Purchase Date *
+                                </label>
+                                <input
+                                  type="date"
+                                  value={purchasingDate}
+                                  onChange={(e) =>
+                                    setPurchasingDate(e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                  Purchase Time *
+                                </label>
+                                <input
+                                  type="time"
+                                  value={purchasingTime}
+                                  onChange={(e) =>
+                                    setPurchasingTime(e.target.value)
+                                  }
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                                  required
+                                />
+                              </div>
                             </div>
 
-                            <div className="space-y-4">
-                              {console.log('Rendering purchasing products:', purchasingProducts)}
-                              {purchasingProducts.map((product, index) => (
-                                <div key={index} className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border border-gray-200 rounded-lg bg-white relative">
-                                  {/* Remove Button */}
-                                  {purchasingProducts.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeProductFromPurchasing(index)}
-                                      className="absolute top-2 right-2 text-red-500 hover:text-red-700"
-                                    >
-                                      <X className="w-4 h-4" />
-                                    </button>
-                                  )}
+                            {/* Products */}
+                            <div>
+                              <div className="flex justify-between items-center mb-4">
+                                <h5 className="text-md font-medium text-gray-900">
+                                  Products
+                                </h5>
+                                <button
+                                  type="button"
+                                  onClick={addProductToPurchasing}
+                                  className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm hover:bg-blue-700"
+                                >
+                                  + Add Product
+                                </button>
+                              </div>
 
-                                  {/* Product Search */}
-                                  <div className="md:col-span-2 relative">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                                    <input
-                                      type="text"
-                                      placeholder="Search products..."
-                                      value={product.productSearch || ""}
-                                      onChange={(e) => {
-                                        console.log('Input onChange - Current product.productSearch:', product.productSearch);
-                                        console.log('Input onChange - New value:', e.target.value);
-                                        updatePurchasingProductMultiple(index, {
-                                          productSearch: e.target.value,
-                                          showProductDropdown: true
-                                        });
-                                      }}
-                                      onFocus={() => {
-                                        console.log('Input onFocus - Current product.productSearch:', product.productSearch);
-                                        updatePurchasingProduct(index, 'showProductDropdown', true);
-                                      }}
-                                      onBlur={() => {
-                                        console.log('Input onBlur - Current product.productSearch:', product.productSearch);
-                                        // Use a longer timeout to ensure clicks register
-                                        setTimeout(() => updatePurchasingProduct(index, 'showProductDropdown', false), 500);
-                                      }}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                    />
-                                    
-                                    {/* Product Dropdown */}
-                                    {product.showProductDropdown && (
-                                      <div className="product-dropdown absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                        {products
-                                          .filter(p => 
-                                            !product.productSearch || 
-                                            `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(product.productSearch.toLowerCase())
-                                          )
-                                          .slice(0, 50)
-                                          .map(p => {
-                                            if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-                                              return p.variants.map(variant => {
-                                                if (variant.options && Array.isArray(variant.options)) {
-                                                  return variant.options.map(option => (
-                                                    <div
-                                                      key={`${p.id}-${variant.id}-${option.id}`}
-                                                      onMouseDown={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        console.log('Purchasing: Selecting product variant:', p.name, variant.variantName, option.name);
-                                                        updatePurchasingProductMultiple(index, {
-                                                          productId: p.id,
-                                                          productName: p.name,
-                                                          variantId: `${variant.id}-${option.id}`,
-                                                          variantName: `${variant.variantName}: ${option.name}`,
-                                                          productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`,
-                                                          showProductDropdown: false
-                                                        });
-                                                      }}
-                                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                                    >
-                                                      <div className="font-medium text-gray-900">
-                                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                              <div className="space-y-4">
+                                {console.log(
+                                  "Rendering purchasing products:",
+                                  purchasingProducts
+                                )}
+                                {purchasingProducts.map((product, index) => (
+                                  <div
+                                    key={index}
+                                    className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border border-gray-200 rounded-lg bg-white relative"
+                                  >
+                                    {/* Remove Button */}
+                                    {purchasingProducts.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          removeProductFromPurchasing(index)
+                                        }
+                                        className="absolute top-2 right-2 text-red-500 hover:text-red-700"
+                                      >
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    )}
+
+                                    {/* Product Search */}
+                                    <div className="md:col-span-2 relative">
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Product
+                                      </label>
+                                      <input
+                                        type="text"
+                                        placeholder="Search products..."
+                                        value={product.productSearch || ""}
+                                        onChange={(e) => {
+                                          console.log(
+                                            "Input onChange - Current product.productSearch:",
+                                            product.productSearch
+                                          );
+                                          console.log(
+                                            "Input onChange - New value:",
+                                            e.target.value
+                                          );
+                                          updatePurchasingProductMultiple(
+                                            index,
+                                            {
+                                              productSearch: e.target.value,
+                                              showProductDropdown: true,
+                                            }
+                                          );
+                                        }}
+                                        onFocus={() => {
+                                          console.log(
+                                            "Input onFocus - Current product.productSearch:",
+                                            product.productSearch
+                                          );
+                                          updatePurchasingProduct(
+                                            index,
+                                            "showProductDropdown",
+                                            true
+                                          );
+                                        }}
+                                        onBlur={() => {
+                                          console.log(
+                                            "Input onBlur - Current product.productSearch:",
+                                            product.productSearch
+                                          );
+                                          // Use a longer timeout to ensure clicks register
+                                          setTimeout(
+                                            () =>
+                                              updatePurchasingProduct(
+                                                index,
+                                                "showProductDropdown",
+                                                false
+                                              ),
+                                            500
+                                          );
+                                        }}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                      />
+
+                                      {/* Product Dropdown */}
+                                      {product.showProductDropdown && (
+                                        <div className="product-dropdown absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                          {products
+                                            .filter(
+                                              (p) =>
+                                                !product.productSearch ||
+                                                `${
+                                                  p.categoryName ||
+                                                  "Uncategorized"
+                                                } - ${
+                                                  p.subcategoryName ||
+                                                  "No Subcategory"
+                                                } - ${p.name}`
+                                                  .toLowerCase()
+                                                  .includes(
+                                                    product.productSearch.toLowerCase()
+                                                  )
+                                            )
+                                            .slice(0, 50)
+                                            .map((p) => {
+                                              if (
+                                                p.variants &&
+                                                Array.isArray(p.variants) &&
+                                                p.variants.length > 0
+                                              ) {
+                                                return p.variants
+                                                  .map((variant) => {
+                                                    if (
+                                                      variant.options &&
+                                                      Array.isArray(
+                                                        variant.options
+                                                      )
+                                                    ) {
+                                                      return variant.options.map(
+                                                        (option) => (
+                                                          <div
+                                                            key={`${p.id}-${variant.id}-${option.id}`}
+                                                            onMouseDown={(
+                                                              e
+                                                            ) => {
+                                                              e.preventDefault();
+                                                              e.stopPropagation();
+                                                              console.log(
+                                                                "Purchasing: Selecting product variant:",
+                                                                p.name,
+                                                                variant.variantName,
+                                                                option.name
+                                                              );
+                                                              updatePurchasingProductMultiple(
+                                                                index,
+                                                                {
+                                                                  productId:
+                                                                    p.id,
+                                                                  productName:
+                                                                    p.name,
+                                                                  variantId: `${variant.id}-${option.id}`,
+                                                                  variantName: `${variant.variantName}: ${option.name}`,
+                                                                  productSearch: `${
+                                                                    p.categoryName ||
+                                                                    "Uncategorized"
+                                                                  } - ${
+                                                                    p.subcategoryName ||
+                                                                    "No Subcategory"
+                                                                  } - ${
+                                                                    p.name
+                                                                  } - ${
+                                                                    variant.variantName
+                                                                  } - ${
+                                                                    option.name
+                                                                  }`,
+                                                                  showProductDropdown: false,
+                                                                }
+                                                              );
+                                                            }}
+                                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                          >
+                                                            <div className="font-medium text-gray-900">
+                                                              {p.categoryName ||
+                                                                "Uncategorized"}{" "}
+                                                              -{" "}
+                                                              {p.subcategoryName ||
+                                                                "No Subcategory"}{" "}
+                                                              - {p.name}
+                                                            </div>
+                                                            <div className="text-xs text-blue-600">
+                                                              {
+                                                                variant.variantName
+                                                              }
+                                                              : {option.name}
+                                                            </div>
+                                                          </div>
+                                                        )
+                                                      );
+                                                    }
+                                                    return (
+                                                      <div
+                                                        key={`${p.id}-${variant.id}`}
+                                                        onMouseDown={() => {
+                                                          console.log(
+                                                            "Purchasing: Selecting product variant (no options):",
+                                                            p.name,
+                                                            variant.name
+                                                          );
+                                                          updatePurchasingProductMultiple(
+                                                            index,
+                                                            {
+                                                              productId: p.id,
+                                                              productName:
+                                                                p.name,
+                                                              variantId:
+                                                                variant.id,
+                                                              variantName:
+                                                                variant.name ||
+                                                                `Variant ${variant.id}`,
+                                                              productSearch: `${
+                                                                p.categoryName ||
+                                                                "Uncategorized"
+                                                              } - ${
+                                                                p.subcategoryName ||
+                                                                "No Subcategory"
+                                                              } - ${p.name} - ${
+                                                                variant.name ||
+                                                                "Variant"
+                                                              }`,
+                                                              showProductDropdown: false,
+                                                            }
+                                                          );
+                                                        }}
+                                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                      >
+                                                        <div className="font-medium text-gray-900">
+                                                          {p.categoryName ||
+                                                            "Uncategorized"}{" "}
+                                                          -{" "}
+                                                          {p.subcategoryName ||
+                                                            "No Subcategory"}{" "}
+                                                          - {p.name}
+                                                        </div>
+                                                        <div className="text-xs text-blue-600">
+                                                          {variant.name ||
+                                                            "Variant"}
+                                                        </div>
                                                       </div>
-                                                      <div className="text-xs text-blue-600">
-                                                        {variant.variantName}: {option.name}
-                                                      </div>
-                                                    </div>
-                                                  ));
-                                                }
+                                                    );
+                                                  })
+                                                  .flat();
+                                              } else {
                                                 return (
                                                   <div
-                                                    key={`${p.id}-${variant.id}`}
-                                                    onMouseDown={() => {
-                                                      console.log('Purchasing: Selecting product variant (no options):', p.name, variant.name);
-                                                      updatePurchasingProductMultiple(index, {
-                                                        productId: p.id,
-                                                        productName: p.name,
-                                                        variantId: variant.id,
-                                                        variantName: variant.name || `Variant ${variant.id}`,
-                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`,
-                                                        showProductDropdown: false
-                                                      });
+                                                    key={p.id}
+                                                    onMouseDown={(e) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      console.log(
+                                                        "Purchasing: Selecting product (no variants):",
+                                                        p.name
+                                                      );
+                                                      updatePurchasingProductMultiple(
+                                                        index,
+                                                        {
+                                                          productId: p.id,
+                                                          productName: p.name,
+                                                          variantId: "",
+                                                          variantName: "",
+                                                          productSearch: `${
+                                                            p.categoryName ||
+                                                            "Uncategorized"
+                                                          } - ${
+                                                            p.subcategoryName ||
+                                                            "No Subcategory"
+                                                          } - ${p.name}`,
+                                                          showProductDropdown: false,
+                                                        }
+                                                      );
                                                     }}
                                                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
                                                   >
                                                     <div className="font-medium text-gray-900">
-                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                                    </div>
-                                                    <div className="text-xs text-blue-600">
-                                                      {variant.name || 'Variant'}
+                                                      {p.categoryName ||
+                                                        "Uncategorized"}{" "}
+                                                      -{" "}
+                                                      {p.subcategoryName ||
+                                                        "No Subcategory"}{" "}
+                                                      - {p.name}
                                                     </div>
                                                   </div>
                                                 );
-                                              }).flat();
-                                            } else {
-                                              return (
-                                                <div
-                                                  key={p.id}
-                                                  onMouseDown={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    console.log('Purchasing: Selecting product (no variants):', p.name);
-                                                    updatePurchasingProductMultiple(index, {
-                                                      productId: p.id,
-                                                      productName: p.name,
-                                                      variantId: '',
-                                                      variantName: '',
-                                                      productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`,
-                                                      showProductDropdown: false
-                                                    });
-                                                  }}
-                                                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                                >
-                                                  <div className="font-medium text-gray-900">
-                                                    {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                                  </div>
-                                                </div>
-                                              );
-                                            }
-                                          }).flat()}
-                                        
-                                        {product.productSearch && products.filter(p => 
-                                          `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(product.productSearch.toLowerCase())
-                                        ).length === 0 && (
-                                          <div className="px-3 py-2 text-gray-500 text-sm">
-                                            No products found matching &quot;{product.productSearch}&quot;
-                                          </div>
-                                        )}
+                                              }
+                                            })
+                                            .flat()}
+
+                                          {product.productSearch &&
+                                            products.filter((p) =>
+                                              `${
+                                                p.categoryName ||
+                                                "Uncategorized"
+                                              } - ${
+                                                p.subcategoryName ||
+                                                "No Subcategory"
+                                              } - ${p.name}`
+                                                .toLowerCase()
+                                                .includes(
+                                                  product.productSearch.toLowerCase()
+                                                )
+                                            ).length === 0 && (
+                                              <div className="px-3 py-2 text-gray-500 text-sm">
+                                                No products found matching
+                                                &quot;{product.productSearch}
+                                                &quot;
+                                              </div>
+                                            )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Quantity */}
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Quantity
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={product.quantity}
+                                        onChange={(e) =>
+                                          updatePurchasingProduct(
+                                            index,
+                                            "quantity",
+                                            parseInt(e.target.value) || 0
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                      />
+                                    </div>
+
+                                    {/* Buy Price */}
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Buy Price (฿)
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={product.buyPrice}
+                                        onChange={(e) =>
+                                          updatePurchasingProduct(
+                                            index,
+                                            "buyPrice",
+                                            parseFloat(e.target.value) || 0
+                                          )
+                                        }
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                                      />
+                                    </div>
+
+                                    {/* Total */}
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Total
+                                      </label>
+                                      <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-medium">
+                                        ฿
+                                        {(
+                                          (product.quantity || 0) *
+                                          (product.buyPrice || 0)
+                                        ).toFixed(2)}
                                       </div>
-                                    )}
-                                  </div>
+                                    </div>
 
-                                  {/* Quantity */}
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
-                                    <input
-                                      type="number"
-                                      min="1"
-                                      value={product.quantity}
-                                      onChange={(e) => updatePurchasingProduct(index, 'quantity', parseInt(e.target.value) || 0)}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                    />
-                                  </div>
-
-                                  {/* Buy Price */}
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Buy Price (฿)</label>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      step="0.01"
-                                      value={product.buyPrice}
-                                      onChange={(e) => updatePurchasingProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
-                                    />
-                                  </div>
-
-                                  {/* Total */}
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Total</label>
-                                    <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-sm font-medium">
-                                      ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                                    {/* Current Stock */}
+                                    <div>
+                                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Current Stock
+                                      </label>
+                                      <div className="px-3 py-2 bg-blue-50 border border-gray-300 rounded-md text-sm font-medium text-blue-700">
+                                        {product.productId
+                                          ? (() => {
+                                              const selectedProduct =
+                                                products.find(
+                                                  (p) =>
+                                                    p.id === product.productId
+                                                );
+                                              return selectedProduct
+                                                ? getCurrentStock(
+                                                    selectedProduct
+                                                  )
+                                                : 0;
+                                            })()
+                                          : 0}
+                                      </div>
                                     </div>
                                   </div>
-
-                                  {/* Current Stock */}
-                                  <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Current Stock</label>
-                                    <div className="px-3 py-2 bg-blue-50 border border-gray-300 rounded-md text-sm font-medium text-blue-700">
-                                      {product.productId ? (() => {
-                                        const selectedProduct = products.find(p => p.id === product.productId);
-                                        return selectedProduct ? getCurrentStock(selectedProduct) : 0;
-                                      })() : 0}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Form Actions */}
-                          <div className="flex justify-end space-x-4 pt-4 border-t">
-                            <button
-                              type="button"
-                              onClick={handleCancelPurchasing}
-                              disabled={isPurchasingSaving}
-                              className={`px-4 py-2 rounded-md ${
-                                isPurchasingSaving
-                                  ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                                  : "text-gray-700 bg-gray-200 hover:bg-gray-300"
-                              }`}
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              type="submit"
-                              disabled={isPurchasingSaving}
-                              className={`px-4 py-2 text-white rounded-md flex items-center space-x-2 ${
-                                isPurchasingSaving
-                                  ? "bg-gray-400 cursor-not-allowed"
-                                  : "bg-green-600 hover:bg-green-700"
-                              }`}
-                            >
-                              {isPurchasingSaving && (
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                              )}
-                              <span>
-                                {isPurchasingSaving ? "Saving..." : "Save Purchase"}
-                              </span>
-                            </button>
-                          </div>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Recent Purchases */}
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 mb-4">Recent Purchases</h4>
-                      <div className="space-y-4">
-                        {(() => {
-                          // Group purchases by purchase order (orderId or date+supplier+time combination)
-                          const purchaseOrders = stockMovements
-                            .filter(m => m.status === 'purchasing')
-                            .reduce((orders, movement) => {
-                              // Use orderId if available, otherwise create a key from date+supplier+time
-                              const orderKey = movement.orderId || 
-                                `${movement.supplier}-${movement.date}-${movement.time}`;
-                              
-                              if (!orders[orderKey]) {
-                                orders[orderKey] = {
-                                  id: orderKey,
-                                  orderId: movement.orderId,
-                                  supplier: movement.supplier,
-                                  date: movement.date,
-                                  time: movement.time,
-                                  createdAt: movement.createdAt,
-                                  items: [],
-                                  totalValue: 0
-                                };
-                              }
-                              
-                              orders[orderKey].items.push(movement);
-                              orders[orderKey].totalValue += (movement.quantity || 0) * (movement.price || 0);
-                              
-                              return orders;
-                            }, {});
-
-                          const sortedOrders = Object.values(purchaseOrders)
-                            .sort((a, b) => {
-                              const dateA = a.createdAt ? new Date(a.createdAt.seconds * 1000) : new Date(a.date + ' ' + a.time);
-                              const dateB = b.createdAt ? new Date(b.createdAt.seconds * 1000) : new Date(b.date + ' ' + b.time);
-                              return dateB - dateA;
-                            })
-                            .slice(0, 10);
-
-                          if (sortedOrders.length === 0) {
-                            return (
-                              <div className="border border-gray-300 rounded-lg p-8 text-center text-gray-500">
-                                No purchases found. Click &quot;Add Purchase&quot; to get started.
+                                ))}
                               </div>
-                            );
-                          }
+                            </div>
 
-                          return sortedOrders.map((order) => (
-                            <div key={order.id} className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow">
-                              <div className="p-4">
-                                <div className="flex justify-between items-start">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-4 mb-2">
-                                      <h5 className="font-semibold text-gray-900">
-                                        Purchase Order #{order.orderId || order.id.substring(0, 8)}
-                                      </h5>
-                                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
-                                      <div>
-                                        <span className="font-medium">Date:</span><br />
-                                        {order.createdAt ? 
-                                          new Date(order.createdAt.seconds * 1000).toLocaleDateString() : 
-                                          order.date || 'N/A'
-                                        }
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">Time:</span><br />
-                                        {order.createdAt ? 
-                                          new Date(order.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                                          order.time || 'N/A'
-                                        }
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">Supplier:</span><br />
-                                        {order.supplier}
-                                      </div>
-                                      <div>
-                                        <span className="font-medium">Total Value:</span><br />
-                                        <span className="font-semibold text-green-600">
-                                          ฿{order.totalValue.toFixed(2)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  
-                                  <button
-                                    onClick={() => {
-                                      setSelectedPurchaseOrder(order);
-                                      setShowPurchaseDetails(true);
-                                    }}
-                                    className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            {/* Form Actions */}
+                            <div className="flex justify-end space-x-4 pt-4 border-t">
+                              <button
+                                type="button"
+                                onClick={handleCancelPurchasing}
+                                disabled={isPurchasingSaving}
+                                className={`px-4 py-2 rounded-md ${
+                                  isPurchasingSaving
+                                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                                    : "text-gray-700 bg-gray-200 hover:bg-gray-300"
+                                }`}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isPurchasingSaving}
+                                className={`px-4 py-2 text-white rounded-md flex items-center space-x-2 ${
+                                  isPurchasingSaving
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-green-600 hover:bg-green-700"
+                                }`}
+                              >
+                                {isPurchasingSaving && (
+                                  <svg
+                                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
                                   >
-                                    View Details
-                                  </button>
-                                </div>
-                              </div>
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                )}
+                                <span>
+                                  {isPurchasingSaving
+                                    ? "Saving..."
+                                    : "Save Purchase"}
+                                </span>
+                              </button>
                             </div>
-                          ));
-                        })()}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Stock Alerts Sub-tab */}
-                {stockActiveSubTab === "alerts" && (
-                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                    <div className="flex justify-between items-center mb-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Stock Alerts Management
-                      </h3>
-                    </div>
-
-                    {/* Create New Alert Form */}
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                      <h4 className="text-md font-medium text-gray-900 mb-4">Create New Stock Alert</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        {/* Product Selection - Searchable Dropdown */}
-                        <div className="relative">
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Select Product
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="Search products..."
-                            value={alertProductSearch}
-                            onChange={(e) => {
-                              setAlertProductSearch(e.target.value);
-                              setShowAlertProductDropdown(true);
-                            }}
-                            onFocus={() => setShowAlertProductDropdown(true)}
-                            onBlur={() => {
-                              // Delay hiding to allow click events to register
-                              setTimeout(() => setShowAlertProductDropdown(false), 150);
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          />
-                          
-                          {/* Dropdown List */}
-                          {showAlertProductDropdown && (
-                            <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                              {products
-                                .filter(p => {
-                                  if (!alertProductSearch) return true;
-                                  const searchTerm = alertProductSearch.toLowerCase();
-                                  const productMatch = `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(searchTerm);
-                                  
-                                  // Also search in variants
-                                  let variantMatch = false;
-                                  if (p.variants && Array.isArray(p.variants)) {
-                                    variantMatch = p.variants.some(variant => {
-                                      const variantNameMatch = (variant.variantName || '').toLowerCase().includes(searchTerm);
-                                      const optionsMatch = variant.options && Array.isArray(variant.options) && variant.options.some(option => 
-                                        (option.name || '').toLowerCase().includes(searchTerm)
-                                      );
-                                      return variantNameMatch || optionsMatch;
-                                    });
-                                  }
-                                  
-                                  return productMatch || variantMatch;
-                                })
-                                .slice(0, 50)
-                                .map(p => {
-                                  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-                                    return p.variants.map(variant => {
-                                      if (variant.options && Array.isArray(variant.options)) {
-                                        return variant.options.map(option => (
-                                          <div
-                                            key={`${p.id}-${variant.id}-${option.id}`}
-                                            onMouseDown={(e) => {
-                                              e.preventDefault();
-                                              e.stopPropagation();
-                                              console.log('Stock Alert: Selecting product variant:', p.name, variant.variantName, option.name);
-                                              const productWithVariant = {
-                                                ...p,
-                                                variantId: `${variant.id}-${option.id}`,
-                                                variantName: `${variant.variantName}: ${option.name}`,
-                                                selectedVariant: variant,
-                                                selectedOption: option
-                                              };
-                                              setSelectedProductForAlert(productWithVariant);
-                                              setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
-                                              setShowAlertProductDropdown(false);
-                                            }}
-                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                          >
-                                            <div className="font-medium text-gray-900">
-                                              {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                            </div>
-                                            <div className="text-xs text-blue-600">
-                                              {variant.variantName}: {option.name}
-                                            </div>
-                                            <div className="text-xs text-gray-500">
-                                              Current Stock: {stockCalculationsLoaded ? getCurrentStock(p, `${variant.id}-${option.id}`) : 'Loading...'}
-                                            </div>
-                                          </div>
-                                        ));
-                                      }
-                                      return (
-                                        <div
-                                          key={`${p.id}-${variant.id}`}
-                                          onMouseDown={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            console.log('Stock Alert: Selecting product variant (no options):', p.name, variant.name);
-                                            const productWithVariant = {
-                                              ...p,
-                                              variantId: variant.id,
-                                              variantName: variant.name || `Variant ${variant.id}`,
-                                              selectedVariant: variant
-                                            };
-                                            setSelectedProductForAlert(productWithVariant);
-                                            setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
-                                            setShowAlertProductDropdown(false);
-                                          }}
-                                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                        >
-                                          <div className="font-medium text-gray-900">
-                                            {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                          </div>
-                                          <div className="text-xs text-blue-600">
-                                            {variant.name || 'Variant'}
-                                          </div>
-                                          <div className="text-xs text-gray-500">
-                                            Current Stock: {stockCalculationsLoaded ? getCurrentStock(p, variant.id) : 'Loading...'}
-                                          </div>
-                                        </div>
-                                      );
-                                    }).flat();
-                                  } else {
-                                    return (
-                                      <div
-                                        key={p.id}
-                                        onMouseDown={(e) => {
-                                          e.preventDefault();
-                                          e.stopPropagation();
-                                          console.log('Stock Alert: Selecting product (no variants):', p.name);
-                                          setSelectedProductForAlert(p);
-                                          setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
-                                          setShowAlertProductDropdown(false);
-                                        }}
-                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                      >
-                                        <div className="font-medium text-gray-900">
-                                          {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          Current Stock: {stockCalculationsLoaded ? getCurrentStock(p) : 'Loading...'}
-                                        </div>
-                                      </div>
-                                    );
-                                  }
-                                }).flat()}
-                              
-                              {alertProductSearch && products.filter(p => 
-                                `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
-                              ).length === 0 && (
-                                <div className="px-3 py-2 text-gray-500 text-sm">
-                                  No products found matching &quot;{alertProductSearch}&quot;
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Kiosk Alert Level */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Alert at Kiosk (qty)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={alertKioskLevel}
-                            onChange={(e) => setAlertKioskLevel(e.target.value)}
-                            placeholder="e.g., 5"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          />
-                        </div>
-
-                        {/* Admin Alert Level */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Alert at Admin (qty)
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            value={alertAdminLevel}
-                            onChange={(e) => setAlertAdminLevel(e.target.value)}
-                            placeholder="e.g., 2"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          />
-                        </div>
-
-                        {/* Stock Zero Action */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            When Stock = 0
-                          </label>
-                          <select
-                            value={stockZeroAction}
-                            onChange={(e) => setStockZeroAction(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
-                          >
-                            <option value="disable">Disable Product</option>
-                            <option value="keepVisible">Keep Visible (Can Order)</option>
-                          </select>
-                        </div>
-
-                        {/* Create Button */}
-                        <div className="flex items-end">
-                          <button
-                            onClick={createStockAlert}
-                            disabled={!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel}
-                            className={`w-full px-4 py-2 text-white text-sm font-medium rounded-md ${
-                              !selectedProductForAlert || !alertKioskLevel || !alertAdminLevel
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-yellow-600 hover:bg-yellow-700"
-                            }`}
-                          >
-                            Create Alert
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Current Stock Display */}
-                      {selectedProductForAlert && (
-                        <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                          <p className="text-sm text-blue-800">
-                            <strong>Current Stock:</strong> {stockCalculationsLoaded ? getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId) : 'Loading...'} units
-                            {selectedProductForAlert.variantName && (
-                              <span className="block text-xs text-blue-600 mt-1">
-                                Variant: {selectedProductForAlert.variantName}
-                              </span>
-                            )}
-                          </p>
+                          </form>
                         </div>
                       )}
-                    </div>
 
-                    {/* Edit Alert Form */}
-                    {showEditAlertForm && (
-                      <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-md font-medium text-gray-900">Edit Stock Alert</h4>
-                          <button
-                            onClick={cancelEditAlert}
-                            className="text-gray-600 hover:text-gray-800"
-                          >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                      {/* Recent Purchases */}
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                          Recent Purchases
+                        </h4>
+                        <div className="space-y-4">
+                          {(() => {
+                            // Group purchases by purchase order (orderId or date+supplier+time combination)
+                            const purchaseOrders = stockMovements
+                              .filter((m) => m.status === "purchasing")
+                              .reduce((orders, movement) => {
+                                // Use orderId if available, otherwise create a key from date+supplier+time
+                                const orderKey =
+                                  movement.orderId ||
+                                  `${movement.supplier}-${movement.date}-${movement.time}`;
+
+                                if (!orders[orderKey]) {
+                                  orders[orderKey] = {
+                                    id: orderKey,
+                                    orderId: movement.orderId,
+                                    supplier: movement.supplier,
+                                    date: movement.date,
+                                    time: movement.time,
+                                    createdAt: movement.createdAt,
+                                    items: [],
+                                    totalValue: 0,
+                                  };
+                                }
+
+                                orders[orderKey].items.push(movement);
+                                orders[orderKey].totalValue +=
+                                  (movement.quantity || 0) *
+                                  (movement.price || 0);
+
+                                return orders;
+                              }, {});
+
+                            const sortedOrders = Object.values(purchaseOrders)
+                              .sort((a, b) => {
+                                const dateA = a.createdAt
+                                  ? new Date(a.createdAt.seconds * 1000)
+                                  : new Date(a.date + " " + a.time);
+                                const dateB = b.createdAt
+                                  ? new Date(b.createdAt.seconds * 1000)
+                                  : new Date(b.date + " " + b.time);
+                                return dateB - dateA;
+                              })
+                              .slice(0, 10);
+
+                            if (sortedOrders.length === 0) {
+                              return (
+                                <div className="border border-gray-300 rounded-lg p-8 text-center text-gray-500">
+                                  No purchases found. Click &quot;Add
+                                  Purchase&quot; to get started.
+                                </div>
+                              );
+                            }
+
+                            return sortedOrders.map((order) => (
+                              <div
+                                key={order.id}
+                                className="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+                              >
+                                <div className="p-4">
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-4 mb-2">
+                                        <h5 className="font-semibold text-gray-900">
+                                          Purchase Order #
+                                          {order.orderId ||
+                                            order.id.substring(0, 8)}
+                                        </h5>
+                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                          {order.items.length} item
+                                          {order.items.length !== 1 ? "s" : ""}
+                                        </span>
+                                      </div>
+
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                                        <div>
+                                          <span className="font-medium">
+                                            Date:
+                                          </span>
+                                          <br />
+                                          {order.createdAt
+                                            ? new Date(
+                                                order.createdAt.seconds * 1000
+                                              ).toLocaleDateString()
+                                            : order.date || "N/A"}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">
+                                            Time:
+                                          </span>
+                                          <br />
+                                          {order.createdAt
+                                            ? new Date(
+                                                order.createdAt.seconds * 1000
+                                              ).toLocaleTimeString([], {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                              })
+                                            : order.time || "N/A"}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">
+                                            Supplier:
+                                          </span>
+                                          <br />
+                                          {order.supplier}
+                                        </div>
+                                        <div>
+                                          <span className="font-medium">
+                                            Total Value:
+                                          </span>
+                                          <br />
+                                          <span className="font-semibold text-green-600">
+                                            ฿{order.totalValue.toFixed(2)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <button
+                                      onClick={() => {
+                                        setSelectedPurchaseOrder(order);
+                                        setShowPurchaseDetails(true);
+                                      }}
+                                      className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                      View Details
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ));
+                          })()}
                         </div>
-                        
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Stock Alerts Sub-tab */}
+                  {stockActiveSubTab === "alerts" && (
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="flex justify-between items-center mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          Stock Alerts Management
+                        </h3>
+                      </div>
+
+                      {/* Create New Alert Form */}
+                      <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Create New Stock Alert
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                           {/* Product Selection - Searchable Dropdown */}
                           <div className="relative">
@@ -9203,103 +9970,268 @@ export default function AdminPage() {
                             <input
                               type="text"
                               placeholder="Search products..."
-                              value={editAlertProductSearch}
+                              value={alertProductSearch}
                               onChange={(e) => {
-                                setEditAlertProductSearch(e.target.value);
-                                setShowEditAlertProductDropdown(true);
+                                setAlertProductSearch(e.target.value);
+                                setShowAlertProductDropdown(true);
                               }}
-                              onFocus={() => setShowEditAlertProductDropdown(true)}
+                              onFocus={() => setShowAlertProductDropdown(true)}
                               onBlur={() => {
-                                setTimeout(() => setShowEditAlertProductDropdown(false), 200);
+                                // Delay hiding to allow click events to register
+                                setTimeout(
+                                  () => setShowAlertProductDropdown(false),
+                                  150
+                                );
                               }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             />
-                            
-                            {/* Dropdown */}
-                            {showEditAlertProductDropdown && editAlertProductSearch && (
-                              <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                                {products.filter(p => {
-                                  if (!editAlertProductSearch) return true;
-                                  const searchTerm = editAlertProductSearch.toLowerCase();
-                                  return `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(searchTerm);
-                                }).slice(0, 10).map(p => {
-                                  if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-                                    // Product with variants
-                                    return p.variants.map(variant => {
-                                      if (variant.options && Array.isArray(variant.options)) {
-                                        return variant.options.map(option => (
-                                          <div
-                                            key={`${p.id}-${variant.id}-${option.id}`}
-                                            onMouseDown={() => {
-                                              setEditSelectedProductForAlert({
-                                                ...p,
-                                                selectedVariantId: `${variant.id}-${option.id}`,
-                                                selectedVariantName: `${variant.variantName}: ${option.name}`
-                                              });
-                                              setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
-                                              setShowEditAlertProductDropdown(false);
-                                            }}
-                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                          >
-                                            <div className="font-medium text-gray-900">
-                                              {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+
+                            {/* Dropdown List */}
+                            {showAlertProductDropdown && (
+                              <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                {products
+                                  .filter((p) => {
+                                    if (!alertProductSearch) return true;
+                                    const searchTerm =
+                                      alertProductSearch.toLowerCase();
+                                    const productMatch = `${
+                                      p.categoryName || "Uncategorized"
+                                    } - ${
+                                      p.subcategoryName || "No Subcategory"
+                                    } - ${p.name}`
+                                      .toLowerCase()
+                                      .includes(searchTerm);
+
+                                    // Also search in variants
+                                    let variantMatch = false;
+                                    if (
+                                      p.variants &&
+                                      Array.isArray(p.variants)
+                                    ) {
+                                      variantMatch = p.variants.some(
+                                        (variant) => {
+                                          const variantNameMatch = (
+                                            variant.variantName || ""
+                                          )
+                                            .toLowerCase()
+                                            .includes(searchTerm);
+                                          const optionsMatch =
+                                            variant.options &&
+                                            Array.isArray(variant.options) &&
+                                            variant.options.some((option) =>
+                                              (option.name || "")
+                                                .toLowerCase()
+                                                .includes(searchTerm)
+                                            );
+                                          return (
+                                            variantNameMatch || optionsMatch
+                                          );
+                                        }
+                                      );
+                                    }
+
+                                    return productMatch || variantMatch;
+                                  })
+                                  .slice(0, 50)
+                                  .map((p) => {
+                                    if (
+                                      p.variants &&
+                                      Array.isArray(p.variants) &&
+                                      p.variants.length > 0
+                                    ) {
+                                      return p.variants
+                                        .map((variant) => {
+                                          if (
+                                            variant.options &&
+                                            Array.isArray(variant.options)
+                                          ) {
+                                            return variant.options.map(
+                                              (option) => (
+                                                <div
+                                                  key={`${p.id}-${variant.id}-${option.id}`}
+                                                  onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    console.log(
+                                                      "Stock Alert: Selecting product variant:",
+                                                      p.name,
+                                                      variant.variantName,
+                                                      option.name
+                                                    );
+                                                    const productWithVariant = {
+                                                      ...p,
+                                                      variantId: `${variant.id}-${option.id}`,
+                                                      variantName: `${variant.variantName}: ${option.name}`,
+                                                      selectedVariant: variant,
+                                                      selectedOption: option,
+                                                    };
+                                                    setSelectedProductForAlert(
+                                                      productWithVariant
+                                                    );
+                                                    setAlertProductSearch(
+                                                      `${
+                                                        p.categoryName ||
+                                                        "Uncategorized"
+                                                      } - ${
+                                                        p.subcategoryName ||
+                                                        "No Subcategory"
+                                                      } - ${p.name} - ${
+                                                        variant.variantName
+                                                      } - ${option.name}`
+                                                    );
+                                                    setShowAlertProductDropdown(
+                                                      false
+                                                    );
+                                                  }}
+                                                  className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                >
+                                                  <div className="font-medium text-gray-900">
+                                                    {p.categoryName ||
+                                                      "Uncategorized"}{" "}
+                                                    -{" "}
+                                                    {p.subcategoryName ||
+                                                      "No Subcategory"}{" "}
+                                                    - {p.name}
+                                                  </div>
+                                                  <div className="text-xs text-blue-600">
+                                                    {variant.variantName}:{" "}
+                                                    {option.name}
+                                                  </div>
+                                                  <div className="text-xs text-gray-500">
+                                                    Current Stock:{" "}
+                                                    {stockCalculationsLoaded
+                                                      ? getCurrentStock(
+                                                          p,
+                                                          `${variant.id}-${option.id}`
+                                                        )
+                                                      : "Loading..."}
+                                                  </div>
+                                                </div>
+                                              )
+                                            );
+                                          }
+                                          return (
+                                            <div
+                                              key={`${p.id}-${variant.id}`}
+                                              onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                console.log(
+                                                  "Stock Alert: Selecting product variant (no options):",
+                                                  p.name,
+                                                  variant.name
+                                                );
+                                                const productWithVariant = {
+                                                  ...p,
+                                                  variantId: variant.id,
+                                                  variantName:
+                                                    variant.name ||
+                                                    `Variant ${variant.id}`,
+                                                  selectedVariant: variant,
+                                                };
+                                                setSelectedProductForAlert(
+                                                  productWithVariant
+                                                );
+                                                setAlertProductSearch(
+                                                  `${
+                                                    p.categoryName ||
+                                                    "Uncategorized"
+                                                  } - ${
+                                                    p.subcategoryName ||
+                                                    "No Subcategory"
+                                                  } - ${p.name} - ${
+                                                    variant.name || "Variant"
+                                                  }`
+                                                );
+                                                setShowAlertProductDropdown(
+                                                  false
+                                                );
+                                              }}
+                                              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                            >
+                                              <div className="font-medium text-gray-900">
+                                                {p.categoryName ||
+                                                  "Uncategorized"}{" "}
+                                                -{" "}
+                                                {p.subcategoryName ||
+                                                  "No Subcategory"}{" "}
+                                                - {p.name}
+                                              </div>
+                                              <div className="text-xs text-blue-600">
+                                                {variant.name || "Variant"}
+                                              </div>
+                                              <div className="text-xs text-gray-500">
+                                                Current Stock:{" "}
+                                                {stockCalculationsLoaded
+                                                  ? getCurrentStock(
+                                                      p,
+                                                      variant.id
+                                                    )
+                                                  : "Loading..."}
+                                              </div>
                                             </div>
-                                            <div className="text-xs text-blue-600">
-                                              {variant.variantName}: {option.name}
-                                            </div>
-                                          </div>
-                                        ));
-                                      }
+                                          );
+                                        })
+                                        .flat();
+                                    } else {
                                       return (
                                         <div
-                                          key={`${p.id}-${variant.id}`}
-                                          onMouseDown={() => {
-                                            setEditSelectedProductForAlert({
-                                              ...p,
-                                              selectedVariantId: variant.id,
-                                              selectedVariantName: variant.name || `Variant ${variant.id}`
-                                            });
-                                            setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
-                                            setShowEditAlertProductDropdown(false);
+                                          key={p.id}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log(
+                                              "Stock Alert: Selecting product (no variants):",
+                                              p.name
+                                            );
+                                            setSelectedProductForAlert(p);
+                                            setAlertProductSearch(
+                                              `${
+                                                p.categoryName ||
+                                                "Uncategorized"
+                                              } - ${
+                                                p.subcategoryName ||
+                                                "No Subcategory"
+                                              } - ${p.name}`
+                                            );
+                                            setShowAlertProductDropdown(false);
                                           }}
                                           className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
                                         >
                                           <div className="font-medium text-gray-900">
-                                            {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                            {p.categoryName || "Uncategorized"}{" "}
+                                            -{" "}
+                                            {p.subcategoryName ||
+                                              "No Subcategory"}{" "}
+                                            - {p.name}
                                           </div>
-                                          <div className="text-xs text-blue-600">
-                                            {variant.name || `Variant ${variant.id}`}
+                                          <div className="text-xs text-gray-500">
+                                            Current Stock:{" "}
+                                            {stockCalculationsLoaded
+                                              ? getCurrentStock(p)
+                                              : "Loading..."}
                                           </div>
                                         </div>
                                       );
-                                    });
-                                  }
-                                  
-                                  // Product without variants
-                                  return (
-                                    <div
-                                      key={p.id}
-                                      onMouseDown={() => {
-                                        setEditSelectedProductForAlert({...p, selectedVariantId: null, selectedVariantName: ''});
-                                        setEditAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
-                                        setShowEditAlertProductDropdown(false);
-                                      }}
-                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                                    >
-                                      <div className="font-medium text-gray-900">
-                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                      </div>
+                                    }
+                                  })
+                                  .flat()}
+
+                                {alertProductSearch &&
+                                  products.filter((p) =>
+                                    `${p.categoryName || "Uncategorized"} - ${
+                                      p.subcategoryName || "No Subcategory"
+                                    } - ${p.name}`
+                                      .toLowerCase()
+                                      .includes(
+                                        alertProductSearch.toLowerCase()
+                                      )
+                                  ).length === 0 && (
+                                    <div className="px-3 py-2 text-gray-500 text-sm">
+                                      No products found matching &quot;
+                                      {alertProductSearch}&quot;
                                     </div>
-                                  );
-                                })}
-                                
-                                {editAlertProductSearch && products.filter(p => 
-                                  `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(editAlertProductSearch.toLowerCase())
-                                ).length === 0 && (
-                                  <div className="px-3 py-2 text-sm text-gray-500">
-                                    No products found matching &quot;{editAlertProductSearch}&quot;
-                                  </div>
-                                )}
+                                  )}
                               </div>
                             )}
                           </div>
@@ -9307,212 +10239,604 @@ export default function AdminPage() {
                           {/* Kiosk Alert Level */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Kiosk Alert Level
+                              Alert at Kiosk (qty)
                             </label>
                             <input
                               type="number"
-                              placeholder="e.g., 10"
-                              value={editAlertKioskLevel}
-                              onChange={(e) => setEditAlertKioskLevel(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               min="0"
+                              value={alertKioskLevel}
+                              onChange={(e) =>
+                                setAlertKioskLevel(e.target.value)
+                              }
+                              placeholder="e.g., 5"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             />
                           </div>
 
                           {/* Admin Alert Level */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Admin Alert Level
+                              Alert at Admin (qty)
                             </label>
                             <input
                               type="number"
-                              placeholder="e.g., 5"
-                              value={editAlertAdminLevel}
-                              onChange={(e) => setEditAlertAdminLevel(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                               min="0"
+                              value={alertAdminLevel}
+                              onChange={(e) =>
+                                setAlertAdminLevel(e.target.value)
+                              }
+                              placeholder="e.g., 2"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             />
                           </div>
 
                           {/* Stock Zero Action */}
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                              When Stock is 0
+                              When Stock = 0
                             </label>
                             <select
-                              value={editStockZeroAction}
-                              onChange={(e) => setEditStockZeroAction(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              value={stockZeroAction}
+                              onChange={(e) =>
+                                setStockZeroAction(e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                             >
                               <option value="disable">Disable Product</option>
-                              <option value="keepVisible">Keep Visible</option>
+                              <option value="keepVisible">
+                                Keep Visible (Can Order)
+                              </option>
                             </select>
                           </div>
 
-                          {/* Update Button */}
-                          <div className="flex items-end space-x-2">
+                          {/* Create Button */}
+                          <div className="flex items-end">
                             <button
-                              onClick={saveEditAlert}
-                              disabled={!editSelectedProductForAlert || !editAlertKioskLevel || !editAlertAdminLevel}
-                              className={`flex-1 px-4 py-2 text-white text-sm font-medium rounded-md ${
-                                !editSelectedProductForAlert || !editAlertKioskLevel || !editAlertAdminLevel
+                              onClick={createStockAlert}
+                              disabled={
+                                !selectedProductForAlert ||
+                                !alertKioskLevel ||
+                                !alertAdminLevel
+                              }
+                              className={`w-full px-4 py-2 text-white text-sm font-medium rounded-md ${
+                                !selectedProductForAlert ||
+                                !alertKioskLevel ||
+                                !alertAdminLevel
                                   ? "bg-gray-400 cursor-not-allowed"
-                                  : "bg-blue-600 hover:bg-blue-700"
+                                  : "bg-yellow-600 hover:bg-yellow-700"
                               }`}
                             >
-                              Update Alert
-                            </button>
-                            <button
-                              onClick={cancelEditAlert}
-                              className="px-4 py-2 text-gray-700 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50"
-                            >
-                              Cancel
+                              Create Alert
                             </button>
                           </div>
                         </div>
 
-                        {/* Current Stock Display for Edit */}
-                        {editSelectedProductForAlert && (
-                          <div className="mt-4 p-3 bg-blue-100 rounded-md">
+                        {/* Current Stock Display */}
+                        {selectedProductForAlert && (
+                          <div className="mt-4 p-3 bg-blue-50 rounded-md">
                             <p className="text-sm text-blue-800">
-                              <strong>Current Stock:</strong> {stockCalculationsLoaded ? getCurrentStock(editSelectedProductForAlert, editSelectedProductForAlert?.selectedVariantId) : 'Loading...'} units
-                              {editSelectedProductForAlert.selectedVariantName && (
+                              <strong>Current Stock:</strong>{" "}
+                              {stockCalculationsLoaded
+                                ? getCurrentStock(
+                                    selectedProductForAlert,
+                                    selectedProductForAlert?.variantId
+                                  )
+                                : "Loading..."}{" "}
+                              units
+                              {selectedProductForAlert.variantName && (
                                 <span className="block text-xs text-blue-600 mt-1">
-                                  Variant: {editSelectedProductForAlert.selectedVariantName}
+                                  Variant: {selectedProductForAlert.variantName}
                                 </span>
                               )}
                             </p>
                           </div>
                         )}
                       </div>
-                    )}
 
-                    {/* Existing Alerts List */}
-                    <div>
-                      <h4 className="text-md font-medium text-gray-900 mb-4">
-                        Existing Stock Alerts ({stockAlerts.length})
-                      </h4>
-                      
-                      {stockAlerts.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
-                          No stock alerts configured yet.
-                        </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Product
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Current Stock
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Kiosk Alert
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Admin Alert
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Zero Stock Action
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                  Actions
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
-                              {stockAlerts.map((alert) => {
-                                const product = products.find(p => p.id === alert.productId);
-                                const currentStock = product ? getCurrentStock(product, alert.variantId) : 0;
-                                const isKioskAlert = currentStock <= alert.alertKioskLevel;
-                                const isAdminAlert = currentStock <= alert.alertAdminLevel;
-                                
-                                return (
-                                  <tr key={alert.id} className={`${(isKioskAlert || isAdminAlert) ? 'bg-red-50' : ''}`}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="text-sm font-medium text-gray-900">
-                                        {alert.productName || 'Unknown Product'}
-                                      </div>
-                                      {alert.variantName && (
-                                        <div className="text-xs text-blue-600">
-                                          {alert.variantName}
+                      {/* Edit Alert Form */}
+                      {showEditAlertForm && (
+                        <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200">
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-md font-medium text-gray-900">
+                              Edit Stock Alert
+                            </h4>
+                            <button
+                              onClick={cancelEditAlert}
+                              className="text-gray-600 hover:text-gray-800"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            {/* Product Selection - Searchable Dropdown */}
+                            <div className="relative">
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Select Product
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Search products..."
+                                value={editAlertProductSearch}
+                                onChange={(e) => {
+                                  setEditAlertProductSearch(e.target.value);
+                                  setShowEditAlertProductDropdown(true);
+                                }}
+                                onFocus={() =>
+                                  setShowEditAlertProductDropdown(true)
+                                }
+                                onBlur={() => {
+                                  setTimeout(
+                                    () =>
+                                      setShowEditAlertProductDropdown(false),
+                                    200
+                                  );
+                                }}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+
+                              {/* Dropdown */}
+                              {showEditAlertProductDropdown &&
+                                editAlertProductSearch && (
+                                  <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                                    {products
+                                      .filter((p) => {
+                                        if (!editAlertProductSearch)
+                                          return true;
+                                        const searchTerm =
+                                          editAlertProductSearch.toLowerCase();
+                                        return `${
+                                          p.categoryName || "Uncategorized"
+                                        } - ${
+                                          p.subcategoryName || "No Subcategory"
+                                        } - ${p.name}`
+                                          .toLowerCase()
+                                          .includes(searchTerm);
+                                      })
+                                      .slice(0, 10)
+                                      .map((p) => {
+                                        if (
+                                          p.variants &&
+                                          Array.isArray(p.variants) &&
+                                          p.variants.length > 0
+                                        ) {
+                                          // Product with variants
+                                          return p.variants.map((variant) => {
+                                            if (
+                                              variant.options &&
+                                              Array.isArray(variant.options)
+                                            ) {
+                                              return variant.options.map(
+                                                (option) => (
+                                                  <div
+                                                    key={`${p.id}-${variant.id}-${option.id}`}
+                                                    onMouseDown={() => {
+                                                      setEditSelectedProductForAlert(
+                                                        {
+                                                          ...p,
+                                                          selectedVariantId: `${variant.id}-${option.id}`,
+                                                          selectedVariantName: `${variant.variantName}: ${option.name}`,
+                                                        }
+                                                      );
+                                                      setEditAlertProductSearch(
+                                                        `${
+                                                          p.categoryName ||
+                                                          "Uncategorized"
+                                                        } - ${
+                                                          p.subcategoryName ||
+                                                          "No Subcategory"
+                                                        } - ${p.name} - ${
+                                                          variant.variantName
+                                                        } - ${option.name}`
+                                                      );
+                                                      setShowEditAlertProductDropdown(
+                                                        false
+                                                      );
+                                                    }}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                  >
+                                                    <div className="font-medium text-gray-900">
+                                                      {p.categoryName ||
+                                                        "Uncategorized"}{" "}
+                                                      -{" "}
+                                                      {p.subcategoryName ||
+                                                        "No Subcategory"}{" "}
+                                                      - {p.name}
+                                                    </div>
+                                                    <div className="text-xs text-blue-600">
+                                                      {variant.variantName}:{" "}
+                                                      {option.name}
+                                                    </div>
+                                                  </div>
+                                                )
+                                              );
+                                            }
+                                            return (
+                                              <div
+                                                key={`${p.id}-${variant.id}`}
+                                                onMouseDown={() => {
+                                                  setEditSelectedProductForAlert(
+                                                    {
+                                                      ...p,
+                                                      selectedVariantId:
+                                                        variant.id,
+                                                      selectedVariantName:
+                                                        variant.name ||
+                                                        `Variant ${variant.id}`,
+                                                    }
+                                                  );
+                                                  setEditAlertProductSearch(
+                                                    `${
+                                                      p.categoryName ||
+                                                      "Uncategorized"
+                                                    } - ${
+                                                      p.subcategoryName ||
+                                                      "No Subcategory"
+                                                    } - ${p.name} - ${
+                                                      variant.name || "Variant"
+                                                    }`
+                                                  );
+                                                  setShowEditAlertProductDropdown(
+                                                    false
+                                                  );
+                                                }}
+                                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                              >
+                                                <div className="font-medium text-gray-900">
+                                                  {p.categoryName ||
+                                                    "Uncategorized"}{" "}
+                                                  -{" "}
+                                                  {p.subcategoryName ||
+                                                    "No Subcategory"}{" "}
+                                                  - {p.name}
+                                                </div>
+                                                <div className="text-xs text-blue-600">
+                                                  {variant.name ||
+                                                    `Variant ${variant.id}`}
+                                                </div>
+                                              </div>
+                                            );
+                                          });
+                                        }
+
+                                        // Product without variants
+                                        return (
+                                          <div
+                                            key={p.id}
+                                            onMouseDown={() => {
+                                              setEditSelectedProductForAlert({
+                                                ...p,
+                                                selectedVariantId: null,
+                                                selectedVariantName: "",
+                                              });
+                                              setEditAlertProductSearch(
+                                                `${
+                                                  p.categoryName ||
+                                                  "Uncategorized"
+                                                } - ${
+                                                  p.subcategoryName ||
+                                                  "No Subcategory"
+                                                } - ${p.name}`
+                                              );
+                                              setShowEditAlertProductDropdown(
+                                                false
+                                              );
+                                            }}
+                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                                          >
+                                            <div className="font-medium text-gray-900">
+                                              {p.categoryName ||
+                                                "Uncategorized"}{" "}
+                                              -{" "}
+                                              {p.subcategoryName ||
+                                                "No Subcategory"}{" "}
+                                              - {p.name}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+
+                                    {editAlertProductSearch &&
+                                      products.filter((p) =>
+                                        `${
+                                          p.categoryName || "Uncategorized"
+                                        } - ${
+                                          p.subcategoryName || "No Subcategory"
+                                        } - ${p.name}`
+                                          .toLowerCase()
+                                          .includes(
+                                            editAlertProductSearch.toLowerCase()
+                                          )
+                                      ).length === 0 && (
+                                        <div className="px-3 py-2 text-sm text-gray-500">
+                                          No products found matching &quot;
+                                          {editAlertProductSearch}&quot;
                                         </div>
                                       )}
-                                      <div className="text-xs text-gray-500">
-                                        ID: {alert.productId}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className={`text-sm font-medium ${
-                                        (isKioskAlert || isAdminAlert) ? 'text-red-600' : 'text-gray-900'
-                                      }`}>
-                                        {currentStock}
-                                      </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        isKioskAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                      }`}>
-                                        {alert.alertKioskLevel}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        isAdminAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                      }`}>
-                                        {alert.alertAdminLevel}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                        alert.stockZeroAction === 'disable' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
-                                      }`}>
-                                        {alert.stockZeroAction === 'disable' ? 'Disable' : 'Keep Visible'}
-                                      </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      {(isKioskAlert || isAdminAlert) ? (
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                                          ⚠️ ALERT
-                                        </span>
-                                      ) : (
-                                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                                          ✅ OK
-                                        </span>
-                                      )}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                      <div className="flex space-x-2">
-                                        <button
-                                          onClick={() => startEditAlert(alert)}
-                                          className="text-blue-600 hover:text-blue-900 text-sm"
-                                        >
-                                          Edit
-                                        </button>
-                                        <button
-                                          onClick={() => deleteStockAlert(alert.id)}
-                                          className="text-red-600 hover:text-red-900 text-sm"
-                                        >
-                                          Delete
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                  </div>
+                                )}
+                            </div>
+
+                            {/* Kiosk Alert Level */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Kiosk Alert Level
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 10"
+                                value={editAlertKioskLevel}
+                                onChange={(e) =>
+                                  setEditAlertKioskLevel(e.target.value)
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                min="0"
+                              />
+                            </div>
+
+                            {/* Admin Alert Level */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Admin Alert Level
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="e.g., 5"
+                                value={editAlertAdminLevel}
+                                onChange={(e) =>
+                                  setEditAlertAdminLevel(e.target.value)
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                min="0"
+                              />
+                            </div>
+
+                            {/* Stock Zero Action */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                When Stock is 0
+                              </label>
+                              <select
+                                value={editStockZeroAction}
+                                onChange={(e) =>
+                                  setEditStockZeroAction(e.target.value)
+                                }
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              >
+                                <option value="disable">Disable Product</option>
+                                <option value="keepVisible">
+                                  Keep Visible
+                                </option>
+                              </select>
+                            </div>
+
+                            {/* Update Button */}
+                            <div className="flex items-end space-x-2">
+                              <button
+                                onClick={saveEditAlert}
+                                disabled={
+                                  !editSelectedProductForAlert ||
+                                  !editAlertKioskLevel ||
+                                  !editAlertAdminLevel
+                                }
+                                className={`flex-1 px-4 py-2 text-white text-sm font-medium rounded-md ${
+                                  !editSelectedProductForAlert ||
+                                  !editAlertKioskLevel ||
+                                  !editAlertAdminLevel
+                                    ? "bg-gray-400 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-700"
+                                }`}
+                              >
+                                Update Alert
+                              </button>
+                              <button
+                                onClick={cancelEditAlert}
+                                className="px-4 py-2 text-gray-700 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Current Stock Display for Edit */}
+                          {editSelectedProductForAlert && (
+                            <div className="mt-4 p-3 bg-blue-100 rounded-md">
+                              <p className="text-sm text-blue-800">
+                                <strong>Current Stock:</strong>{" "}
+                                {stockCalculationsLoaded
+                                  ? getCurrentStock(
+                                      editSelectedProductForAlert,
+                                      editSelectedProductForAlert?.selectedVariantId
+                                    )
+                                  : "Loading..."}{" "}
+                                units
+                                {editSelectedProductForAlert.selectedVariantName && (
+                                  <span className="block text-xs text-blue-600 mt-1">
+                                    Variant:{" "}
+                                    {
+                                      editSelectedProductForAlert.selectedVariantName
+                                    }
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
+
+                      {/* Existing Alerts List */}
+                      <div>
+                        <h4 className="text-md font-medium text-gray-900 mb-4">
+                          Existing Stock Alerts ({stockAlerts.length})
+                        </h4>
+
+                        {stockAlerts.length === 0 ? (
+                          <div className="text-center py-8 text-gray-500">
+                            No stock alerts configured yet.
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Product
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Current Stock
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Kiosk Alert
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Admin Alert
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Zero Stock Action
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Status
+                                  </th>
+                                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {stockAlerts.map((alert) => {
+                                  const product = products.find(
+                                    (p) => p.id === alert.productId
+                                  );
+                                  const currentStock = product
+                                    ? getCurrentStock(product, alert.variantId)
+                                    : 0;
+                                  const isKioskAlert =
+                                    currentStock <= alert.alertKioskLevel;
+                                  const isAdminAlert =
+                                    currentStock <= alert.alertAdminLevel;
+
+                                  return (
+                                    <tr
+                                      key={alert.id}
+                                      className={`${
+                                        isKioskAlert || isAdminAlert
+                                          ? "bg-red-50"
+                                          : ""
+                                      }`}
+                                    >
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="text-sm font-medium text-gray-900">
+                                          {alert.productName ||
+                                            "Unknown Product"}
+                                        </div>
+                                        {alert.variantName && (
+                                          <div className="text-xs text-blue-600">
+                                            {alert.variantName}
+                                          </div>
+                                        )}
+                                        <div className="text-xs text-gray-500">
+                                          ID: {alert.productId}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div
+                                          className={`text-sm font-medium ${
+                                            isKioskAlert || isAdminAlert
+                                              ? "text-red-600"
+                                              : "text-gray-900"
+                                          }`}
+                                        >
+                                          {currentStock}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            isKioskAlert
+                                              ? "bg-red-100 text-red-800"
+                                              : "bg-green-100 text-green-800"
+                                          }`}
+                                        >
+                                          {alert.alertKioskLevel}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            isAdminAlert
+                                              ? "bg-red-100 text-red-800"
+                                              : "bg-green-100 text-green-800"
+                                          }`}
+                                        >
+                                          {alert.alertAdminLevel}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <span
+                                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                            alert.stockZeroAction === "disable"
+                                              ? "bg-red-100 text-red-800"
+                                              : "bg-blue-100 text-blue-800"
+                                          }`}
+                                        >
+                                          {alert.stockZeroAction === "disable"
+                                            ? "Disable"
+                                            : "Keep Visible"}
+                                        </span>
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        {isKioskAlert || isAdminAlert ? (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                            ⚠️ ALERT
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                            ✅ OK
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex space-x-2">
+                                          <button
+                                            onClick={() =>
+                                              startEditAlert(alert)
+                                            }
+                                            className="text-blue-600 hover:text-blue-900 text-sm"
+                                          >
+                                            Edit
+                                          </button>
+                                          <button
+                                            onClick={() =>
+                                              deleteStockAlert(alert.id)
+                                            }
+                                            className="text-red-600 hover:text-red-900 text-sm"
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-                
+                  )}
                 </div>
               )}
 
@@ -9577,15 +10901,20 @@ export default function AdminPage() {
                             type="number"
                             step="0.001"
                             value={bathToUsdRate}
-                            onChange={(e) => setBathToUsdRate(parseFloat(e.target.value) || 0)}
+                            onChange={(e) =>
+                              setBathToUsdRate(parseFloat(e.target.value) || 0)
+                            }
                             placeholder={
-                              loadingSettings ? "Loading..." : "Enter USD value for 1 Bath"
+                              loadingSettings
+                                ? "Loading..."
+                                : "Enter USD value for 1 Bath"
                             }
                             disabled={loadingSettings}
                             className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                           />
                           <p className="text-sm text-gray-500">
-                            How much USD is equal to 1 Thai Bath (e.g., 0.029 means 1 Bath = $0.029 USD)
+                            How much USD is equal to 1 Thai Bath (e.g., 0.029
+                            means 1 Bath = $0.029 USD)
                           </p>
                         </div>
                       </div>
@@ -9601,54 +10930,71 @@ export default function AdminPage() {
                               type="checkbox"
                               id="nonMemberCash"
                               checked={nonMemberPaymentSettings.cash}
-                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
-                                ...prev,
-                                cash: e.target.checked
-                              }))}
+                              onChange={(e) =>
+                                setNonMemberPaymentSettings((prev) => ({
+                                  ...prev,
+                                  cash: e.target.checked,
+                                }))
+                              }
                               disabled={loadingSettings}
                               className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
                             />
-                            <label htmlFor="nonMemberCash" className="text-sm text-gray-700">
+                            <label
+                              htmlFor="nonMemberCash"
+                              className="text-sm text-gray-700"
+                            >
                               💵 Cash Payment
                             </label>
                           </div>
-                          
+
                           <div className="flex items-center space-x-3">
                             <input
                               type="checkbox"
                               id="nonMemberCard"
                               checked={nonMemberPaymentSettings.card}
-                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
-                                ...prev,
-                                card: e.target.checked
-                              }))}
+                              onChange={(e) =>
+                                setNonMemberPaymentSettings((prev) => ({
+                                  ...prev,
+                                  card: e.target.checked,
+                                }))
+                              }
                               disabled={loadingSettings}
                               className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
                             />
-                            <label htmlFor="nonMemberCard" className="text-sm text-gray-700">
+                            <label
+                              htmlFor="nonMemberCard"
+                              className="text-sm text-gray-700"
+                            >
                               💳 Card Payment
                             </label>
                           </div>
-                          
+
                           <div className="flex items-center space-x-3">
                             <input
                               type="checkbox"
                               id="nonMemberCrypto"
                               checked={nonMemberPaymentSettings.crypto}
-                              onChange={(e) => setNonMemberPaymentSettings(prev => ({
-                                ...prev,
-                                crypto: e.target.checked
-                              }))}
+                              onChange={(e) =>
+                                setNonMemberPaymentSettings((prev) => ({
+                                  ...prev,
+                                  crypto: e.target.checked,
+                                }))
+                              }
                               disabled={loadingSettings}
                               className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded disabled:opacity-50"
                             />
-                            <label htmlFor="nonMemberCrypto" className="text-sm text-gray-700">
+                            <label
+                              htmlFor="nonMemberCrypto"
+                              className="text-sm text-gray-700"
+                            >
                               ₿ Crypto Payment
                             </label>
                           </div>
-                          
+
                           <p className="text-sm text-gray-500">
-                            Select which payment methods are available for non-members. Members will always have access to all payment methods.
+                            Select which payment methods are available for
+                            non-members. Members will always have access to all
+                            payment methods.
                           </p>
                         </div>
                       </div>
@@ -9681,7 +11027,7 @@ export default function AdminPage() {
                       <h3 className="text-lg font-semibold text-gray-900">
                         Crypto Payment Management
                       </h3>
-                      
+
                       <div className="flex items-center gap-4">
                         {/* Status Filter */}
                         <div>
@@ -9690,7 +11036,9 @@ export default function AdminPage() {
                           </label>
                           <select
                             value={cryptoPaymentStatusFilter}
-                            onChange={(e) => setCryptoPaymentStatusFilter(e.target.value)}
+                            onChange={(e) =>
+                              setCryptoPaymentStatusFilter(e.target.value)
+                            }
                             className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                           >
                             <option value="all">All Statuses</option>
@@ -9713,10 +11061,12 @@ export default function AdminPage() {
                             </label>
                             <button
                               onClick={() => loadCryptoPayments()}
-                              disabled={loadingCryptoPayments || refreshingAllPayments}
+                              disabled={
+                                loadingCryptoPayments || refreshingAllPayments
+                              }
                               className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
                             >
-                              {loadingCryptoPayments ? '🔄' : '↻'} Refresh List
+                              {loadingCryptoPayments ? "🔄" : "↻"} Refresh List
                             </button>
                           </div>
                           <div>
@@ -9725,10 +11075,13 @@ export default function AdminPage() {
                             </label>
                             <button
                               onClick={refreshAllPaymentStatuses}
-                              disabled={refreshingAllPayments || loadingCryptoPayments}
+                              disabled={
+                                refreshingAllPayments || loadingCryptoPayments
+                              }
                               className="px-4 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
                             >
-                              {refreshingAllPayments ? '🔄' : '🔍'} Check All Payments
+                              {refreshingAllPayments ? "🔄" : "🔍"} Check All
+                              Payments
                             </button>
                           </div>
                         </div>
@@ -9741,12 +11094,16 @@ export default function AdminPage() {
                     {loadingCryptoPayments ? (
                       <div className="p-8 text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-4"></div>
-                        <p className="text-gray-600">Loading crypto payments...</p>
+                        <p className="text-gray-600">
+                          Loading crypto payments...
+                        </p>
                       </div>
                     ) : cryptoPayments.length === 0 ? (
                       <div className="p-8 text-center">
                         <div className="text-gray-400 text-4xl mb-4">₿</div>
-                        <p className="text-gray-600">No crypto payments found</p>
+                        <p className="text-gray-600">
+                          No crypto payments found
+                        </p>
                         <p className="text-gray-500 text-sm mt-2">
                           Payments made through the kiosk will appear here
                         </p>
@@ -9788,13 +11145,14 @@ export default function AdminPage() {
                                       Order: {payment.order_id}
                                     </div>
                                     <div className="text-sm text-gray-500">
-                                      {payment.pay_currency?.toUpperCase()} Payment
+                                      {payment.pay_currency?.toUpperCase()}{" "}
+                                      Payment
                                     </div>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm text-gray-900">
-                                    {payment.customer_name || 'No Member'}
+                                    {payment.customer_name || "No Member"}
                                   </div>
                                   <div className="text-sm text-gray-500">
                                     Items: {payment.cart_items?.length || 0}
@@ -9809,20 +11167,26 @@ export default function AdminPage() {
                                       ${payment.total_usd?.toFixed(2)} USD
                                     </div>
                                     <div className="text-sm text-gray-500">
-                                      {payment.pay_amount} {payment.pay_currency?.toUpperCase()}
+                                      {payment.pay_amount}{" "}
+                                      {payment.pay_currency?.toUpperCase()}
                                     </div>
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    payment.payment_status === 'finished' || payment.payment_status === 'confirmed'
-                                      ? 'bg-green-100 text-green-800'
-                                      : payment.payment_status === 'waiting'
-                                      ? 'bg-yellow-100 text-yellow-800'
-                                      : payment.payment_status === 'confirming' || payment.payment_status === 'sending'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-red-100 text-red-800'
-                                  }`}>
+                                  <span
+                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      payment.payment_status === "finished" ||
+                                      payment.payment_status === "confirmed"
+                                        ? "bg-green-100 text-green-800"
+                                        : payment.payment_status === "waiting"
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : payment.payment_status ===
+                                            "confirming" ||
+                                          payment.payment_status === "sending"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                  >
                                     {payment.payment_status}
                                   </span>
                                 </td>
@@ -9845,11 +11209,16 @@ export default function AdminPage() {
                                     View Details
                                   </button>
                                   <button
-                                    onClick={() => checkCryptoPaymentStatus(payment.payment_id)}
+                                    onClick={() =>
+                                      checkCryptoPaymentStatus(
+                                        payment.payment_id
+                                      )
+                                    }
                                     disabled={checkingCryptoStatus}
                                     className="text-green-600 hover:text-green-900 disabled:opacity-50"
                                   >
-                                    {checkingCryptoStatus ? '🔄' : '↻'} Check Status
+                                    {checkingCryptoStatus ? "🔄" : "↻"} Check
+                                    Status
                                   </button>
                                 </td>
                               </tr>
@@ -9872,7 +11241,9 @@ export default function AdminPage() {
               <div className="mt-3">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">
-                    Purchase Order Details - #{selectedPurchaseOrder.orderId || selectedPurchaseOrder.id.substring(0, 8)}
+                    Purchase Order Details - #
+                    {selectedPurchaseOrder.orderId ||
+                      selectedPurchaseOrder.id.substring(0, 8)}
                   </h3>
                   <button
                     onClick={() => {
@@ -9882,8 +11253,18 @@ export default function AdminPage() {
                     className="text-gray-400 hover:text-gray-600"
                   >
                     <span className="sr-only">Close</span>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="h-6 w-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
@@ -9892,30 +11273,47 @@ export default function AdminPage() {
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Date</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Date
+                      </label>
                       <p className="mt-1 text-sm text-gray-900">
-                        {selectedPurchaseOrder.createdAt ? 
-                          new Date(selectedPurchaseOrder.createdAt.seconds * 1000).toLocaleDateString() : 
-                          selectedPurchaseOrder.date || 'N/A'
-                        }
+                        {selectedPurchaseOrder.createdAt
+                          ? new Date(
+                              selectedPurchaseOrder.createdAt.seconds * 1000
+                            ).toLocaleDateString()
+                          : selectedPurchaseOrder.date || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Time</label>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Time
+                      </label>
                       <p className="mt-1 text-sm text-gray-900">
-                        {selectedPurchaseOrder.createdAt ? 
-                          new Date(selectedPurchaseOrder.createdAt.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 
-                          selectedPurchaseOrder.time || 'N/A'
-                        }
+                        {selectedPurchaseOrder.createdAt
+                          ? new Date(
+                              selectedPurchaseOrder.createdAt.seconds * 1000
+                            ).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : selectedPurchaseOrder.time || "N/A"}
                       </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Supplier</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPurchaseOrder.supplier}</p>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Supplier
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedPurchaseOrder.supplier}
+                      </p>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">Total Items</label>
-                      <p className="mt-1 text-sm text-gray-900">{selectedPurchaseOrder.items.length}</p>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Total Items
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {selectedPurchaseOrder.items.length}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -9925,39 +11323,61 @@ export default function AdminPage() {
                   <table className="w-full border-collapse border border-gray-300">
                     <thead>
                       <tr className="bg-gray-50">
-                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Product</th>
-                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">Variant</th>
-                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Quantity</th>
-                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Buy Price</th>
-                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">Line Total</th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                          Product
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900">
+                          Variant
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">
+                          Quantity
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">
+                          Buy Price
+                        </th>
+                        <th className="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-900">
+                          Line Total
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedPurchaseOrder.items.map((item, index) => (
                         <tr key={index} className="hover:bg-gray-50">
                           <td className="border border-gray-300 px-4 py-2">
-                            <div className="font-medium">{item.productName}</div>
+                            <div className="font-medium">
+                              {item.productName}
+                            </div>
                           </td>
                           <td className="border border-gray-300 px-4 py-2">
                             <div className="text-sm text-gray-600">
-                              {item.variantName || 'No variant'}
+                              {item.variantName || "No variant"}
                             </div>
                           </td>
                           <td className="border border-gray-300 px-4 py-2 text-right">
-                            <div className="font-medium text-green-600">+{item.quantity}</div>
+                            <div className="font-medium text-green-600">
+                              +{item.quantity}
+                            </div>
                           </td>
                           <td className="border border-gray-300 px-4 py-2 text-right">
-                            <div className="font-medium">฿{item.price ? item.price.toFixed(2) : '0.00'}</div>
+                            <div className="font-medium">
+                              ฿{item.price ? item.price.toFixed(2) : "0.00"}
+                            </div>
                           </td>
                           <td className="border border-gray-300 px-4 py-2 text-right">
                             <div className="font-medium text-green-600">
-                              ฿{((item.quantity || 0) * (item.price || 0)).toFixed(2)}
+                              ฿
+                              {(
+                                (item.quantity || 0) * (item.price || 0)
+                              ).toFixed(2)}
                             </div>
                           </td>
                         </tr>
                       ))}
                       <tr className="bg-gray-100 font-semibold">
-                        <td colSpan="4" className="border border-gray-300 px-4 py-2 text-right">
+                        <td
+                          colSpan="4"
+                          className="border border-gray-300 px-4 py-2 text-right"
+                        >
                           Total Purchase Value:
                         </td>
                         <td className="border border-gray-300 px-4 py-2 text-right text-green-600">
@@ -9998,8 +11418,18 @@ export default function AdminPage() {
                     onClick={handleCancelStockIn}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M6 18L18 6M6 6l12 12"
+                      ></path>
                     </svg>
                   </button>
                 </div>
@@ -10014,7 +11444,12 @@ export default function AdminPage() {
                       <input
                         type="text"
                         value={stockInForm.supplier}
-                        onChange={(e) => setStockInForm({...stockInForm, supplier: e.target.value})}
+                        onChange={(e) =>
+                          setStockInForm({
+                            ...stockInForm,
+                            supplier: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                         placeholder="Enter supplier name"
                         required
@@ -10027,7 +11462,12 @@ export default function AdminPage() {
                       <input
                         type="date"
                         value={stockInForm.date}
-                        onChange={(e) => setStockInForm({...stockInForm, date: e.target.value})}
+                        onChange={(e) =>
+                          setStockInForm({
+                            ...stockInForm,
+                            date: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                         required
                       />
@@ -10039,7 +11479,12 @@ export default function AdminPage() {
                       <input
                         type="time"
                         value={stockInForm.time}
-                        onChange={(e) => setStockInForm({...stockInForm, time: e.target.value})}
+                        onChange={(e) =>
+                          setStockInForm({
+                            ...stockInForm,
+                            time: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                         required
                       />
@@ -10049,7 +11494,9 @@ export default function AdminPage() {
                   {/* Products Section */}
                   <div>
                     <div className="flex justify-between items-center mb-4">
-                      <h4 className="text-md font-medium text-gray-900">Products</h4>
+                      <h4 className="text-md font-medium text-gray-900">
+                        Products
+                      </h4>
                       <button
                         type="button"
                         onClick={addProductToStockIn}
@@ -10061,11 +11508,18 @@ export default function AdminPage() {
 
                     <div className="space-y-3">
                       {stockInForm.products.map((product, index) => {
-                        const selectedProduct = products.find(p => p.id === product.productId);
-                        const hasVariants = selectedProduct?.hasVariants && selectedProduct?.variants?.length > 0;
-                        
+                        const selectedProduct = products.find(
+                          (p) => p.id === product.productId
+                        );
+                        const hasVariants =
+                          selectedProduct?.hasVariants &&
+                          selectedProduct?.variants?.length > 0;
+
                         return (
-                          <div key={index} className="flex gap-3 items-start p-4 border border-gray-200 rounded-lg">
+                          <div
+                            key={index}
+                            className="flex gap-3 items-start p-4 border border-gray-200 rounded-lg"
+                          >
                             <div className="flex-1">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Product *
@@ -10076,21 +11530,37 @@ export default function AdminPage() {
                                   placeholder="Search products..."
                                   value={product.productSearch || ""}
                                   onChange={(e) => {
-                                    console.log('Input onChange:', e.target.value);
-                                    updateStockInProduct(index, 'productSearch', e.target.value);
+                                    console.log(
+                                      "Input onChange:",
+                                      e.target.value
+                                    );
+                                    updateStockInProduct(
+                                      index,
+                                      "productSearch",
+                                      e.target.value
+                                    );
                                   }}
                                   onFocus={() => {
-                                    console.log('Input onFocus, current product state:', product);
-                                    updateStockInProduct(index, 'showProductDropdown', true);
+                                    console.log(
+                                      "Input onFocus, current product state:",
+                                      product
+                                    );
+                                    updateStockInProduct(
+                                      index,
+                                      "showProductDropdown",
+                                      true
+                                    );
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                                 />
-                                
+
                                 {/* Debug display */}
                                 <div className="mt-1 text-xs text-gray-500">
-                                  Debug: productId={product.productId}, productName={product.productName}, productSearch={product.productSearch}
+                                  Debug: productId={product.productId},
+                                  productName={product.productName},
+                                  productSearch={product.productSearch}
                                 </div>
-                                
+
                                 {product.showProductDropdown && (
                                   <>
                                     <div
@@ -10098,16 +11568,28 @@ export default function AdminPage() {
                                       onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        updateStockInProduct(index, 'showProductDropdown', false);
+                                        updateStockInProduct(
+                                          index,
+                                          "showProductDropdown",
+                                          false
+                                        );
                                       }}
                                     ></div>
                                     <div className="absolute z-20 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                                       {products
                                         .filter((p) => {
-                                          const searchTerm = (product.productSearch || "").toLowerCase();
-                                          const productName = (p.name || "").toLowerCase();
-                                          const categoryName = (p.categoryName || "").toLowerCase();
-                                          const subcategoryName = (p.subcategoryName || "").toLowerCase();
+                                          const searchTerm = (
+                                            product.productSearch || ""
+                                          ).toLowerCase();
+                                          const productName = (
+                                            p.name || ""
+                                          ).toLowerCase();
+                                          const categoryName = (
+                                            p.categoryName || ""
+                                          ).toLowerCase();
+                                          const subcategoryName = (
+                                            p.subcategoryName || ""
+                                          ).toLowerCase();
                                           return (
                                             productName.includes(searchTerm) ||
                                             categoryName.includes(searchTerm) ||
@@ -10117,72 +11599,146 @@ export default function AdminPage() {
                                         .slice(0, 20)
                                         .map((p) => {
                                           // For products with variants, show each variant option as a separate entry
-                                          if (p.hasVariants && p.variants?.length > 0) {
-                                            return p.variants.map((variant) => {
-                                              if (variant.options && variant.options.length > 0) {
-                                                return variant.options.map((option) => (
-                                                  <div
-                                                    key={`${p.id}-${variant.id}-${option.id}`}
-                                                    onClick={(e) => {
-                                                      e.preventDefault();
-                                                      e.stopPropagation();
-                                                      console.log('Clicking product variant:', {
-                                                        productId: p.id,
-                                                        productName: p.name,
-                                                        variantId: `${variant.id}-${option.id}`,
-                                                        variantName: `${variant.variantName}: ${option.name}`,
-                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`
-                                                      });
-                                                      
-                                                      // Update all fields at once to avoid race conditions
-                                                      updateStockInProductMultiple(index, {
-                                                        productId: p.id,
-                                                        productName: p.name,
-                                                        variantId: `${variant.id}-${option.id}`,
-                                                        variantName: `${variant.variantName}: ${option.name}`,
-                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`,
-                                                        showProductDropdown: false
-                                                      });
-                                                    }}
-                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                                  >
-                                                    <div className="font-medium text-gray-900">
-                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                          if (
+                                            p.hasVariants &&
+                                            p.variants?.length > 0
+                                          ) {
+                                            return p.variants
+                                              .map((variant) => {
+                                                if (
+                                                  variant.options &&
+                                                  variant.options.length > 0
+                                                ) {
+                                                  return variant.options.map(
+                                                    (option) => (
+                                                      <div
+                                                        key={`${p.id}-${variant.id}-${option.id}`}
+                                                        onClick={(e) => {
+                                                          e.preventDefault();
+                                                          e.stopPropagation();
+                                                          console.log(
+                                                            "Clicking product variant:",
+                                                            {
+                                                              productId: p.id,
+                                                              productName:
+                                                                p.name,
+                                                              variantId: `${variant.id}-${option.id}`,
+                                                              variantName: `${variant.variantName}: ${option.name}`,
+                                                              productSearch: `${
+                                                                p.categoryName ||
+                                                                "Uncategorized"
+                                                              } - ${
+                                                                p.subcategoryName ||
+                                                                "No Subcategory"
+                                                              } - ${p.name} - ${
+                                                                variant.variantName
+                                                              } - ${
+                                                                option.name
+                                                              }`,
+                                                            }
+                                                          );
+
+                                                          // Update all fields at once to avoid race conditions
+                                                          updateStockInProductMultiple(
+                                                            index,
+                                                            {
+                                                              productId: p.id,
+                                                              productName:
+                                                                p.name,
+                                                              variantId: `${variant.id}-${option.id}`,
+                                                              variantName: `${variant.variantName}: ${option.name}`,
+                                                              productSearch: `${
+                                                                p.categoryName ||
+                                                                "Uncategorized"
+                                                              } - ${
+                                                                p.subcategoryName ||
+                                                                "No Subcategory"
+                                                              } - ${p.name} - ${
+                                                                variant.variantName
+                                                              } - ${
+                                                                option.name
+                                                              }`,
+                                                              showProductDropdown: false,
+                                                            }
+                                                          );
+                                                        }}
+                                                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                      >
+                                                        <div className="font-medium text-gray-900">
+                                                          {p.categoryName ||
+                                                            "Uncategorized"}{" "}
+                                                          -{" "}
+                                                          {p.subcategoryName ||
+                                                            "No Subcategory"}{" "}
+                                                          - {p.name}
+                                                        </div>
+                                                        <div className="text-blue-600 font-medium">
+                                                          {variant.variantName}:{" "}
+                                                          {option.name}
+                                                          {option.price &&
+                                                            ` - ฿${option.price.toFixed(
+                                                              2
+                                                            )}`}
+                                                          {option.memberPrice &&
+                                                            ` (Member: ฿${option.memberPrice.toFixed(
+                                                              2
+                                                            )})`}
+                                                        </div>
+                                                      </div>
+                                                    )
+                                                  );
+                                                } else {
+                                                  return (
+                                                    <div
+                                                      key={`${p.id}-${variant.id}`}
+                                                      onClick={() => {
+                                                        updateStockInProductMultiple(
+                                                          index,
+                                                          {
+                                                            productId: p.id,
+                                                            productName: p.name,
+                                                            variantId:
+                                                              variant.id,
+                                                            variantName:
+                                                              variant.name ||
+                                                              `Variant ${variant.id}`,
+                                                            productSearch: `${
+                                                              p.categoryName ||
+                                                              "Uncategorized"
+                                                            } - ${
+                                                              p.subcategoryName ||
+                                                              "No Subcategory"
+                                                            } - ${p.name} - ${
+                                                              variant.name ||
+                                                              "Variant"
+                                                            }`,
+                                                            showProductDropdown: false,
+                                                          }
+                                                        );
+                                                      }}
+                                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                                    >
+                                                      <div className="font-medium text-gray-900">
+                                                        {p.categoryName ||
+                                                          "Uncategorized"}{" "}
+                                                        -{" "}
+                                                        {p.subcategoryName ||
+                                                          "No Subcategory"}{" "}
+                                                        - {p.name}
+                                                      </div>
+                                                      <div className="text-blue-600 font-medium">
+                                                        {variant.name ||
+                                                          `Variant ${variant.id}`}
+                                                        {variant.price &&
+                                                          ` - ฿${variant.price.toFixed(
+                                                            2
+                                                          )}`}
+                                                      </div>
                                                     </div>
-                                                    <div className="text-blue-600 font-medium">
-                                                      {variant.variantName}: {option.name}
-                                                      {option.price && ` - ฿${option.price.toFixed(2)}`}
-                                                      {option.memberPrice && ` (Member: ฿${option.memberPrice.toFixed(2)})`}
-                                                    </div>
-                                                  </div>
-                                                ));
-                                              } else {
-                                                return (
-                                                  <div
-                                                    key={`${p.id}-${variant.id}`}
-                                                    onClick={() => {
-                                                      updateStockInProductMultiple(index, {
-                                                        productId: p.id,
-                                                        productName: p.name,
-                                                        variantId: variant.id,
-                                                        variantName: variant.name || `Variant ${variant.id}`,
-                                                        productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`,
-                                                        showProductDropdown: false
-                                                      });
-                                                    }}
-                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                                  >
-                                                    <div className="font-medium text-gray-900">
-                                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                                    </div>
-                                                    <div className="text-blue-600 font-medium">
-                                                      {variant.name || `Variant ${variant.id}`}
-                                                      {variant.price && ` - ฿${variant.price.toFixed(2)}`}
-                                                    </div>
-                                                  </div>
-                                                );
-                                              }
-                                            }).flat();
+                                                  );
+                                                }
+                                              })
+                                              .flat();
                                           } else {
                                             // For products without variants
                                             return (
@@ -10191,36 +11747,62 @@ export default function AdminPage() {
                                                 onClick={(e) => {
                                                   e.preventDefault();
                                                   e.stopPropagation();
-                                                  updateStockInProductMultiple(index, {
-                                                    productId: p.id,
-                                                    productName: p.name,
-                                                    variantId: '',
-                                                    variantName: '',
-                                                    productSearch: `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`,
-                                                    showProductDropdown: false
-                                                  });
+                                                  updateStockInProductMultiple(
+                                                    index,
+                                                    {
+                                                      productId: p.id,
+                                                      productName: p.name,
+                                                      variantId: "",
+                                                      variantName: "",
+                                                      productSearch: `${
+                                                        p.categoryName ||
+                                                        "Uncategorized"
+                                                      } - ${
+                                                        p.subcategoryName ||
+                                                        "No Subcategory"
+                                                      } - ${p.name}`,
+                                                      showProductDropdown: false,
+                                                    }
+                                                  );
                                                 }}
                                                 className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
                                               >
                                                 <div className="font-medium text-gray-900">
-                                                  {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                                  {p.categoryName ||
+                                                    "Uncategorized"}{" "}
+                                                  -{" "}
+                                                  {p.subcategoryName ||
+                                                    "No Subcategory"}{" "}
+                                                  - {p.name}
                                                 </div>
                                                 <div className="text-green-600 font-medium">
                                                   Simple Product
-                                                  {p.price && ` - ฿${p.price.toFixed(2)}`}
-                                                  {p.memberPrice && ` (Member: ฿${p.memberPrice.toFixed(2)})`}
+                                                  {p.price &&
+                                                    ` - ฿${p.price.toFixed(2)}`}
+                                                  {p.memberPrice &&
+                                                    ` (Member: ฿${p.memberPrice.toFixed(
+                                                      2
+                                                    )})`}
                                                 </div>
                                               </div>
                                             );
                                           }
                                         })
                                         .flat()}
-                                      
+
                                       {products.filter((p) => {
-                                        const searchTerm = (product.productSearch || "").toLowerCase();
-                                        const productName = (p.name || "").toLowerCase();
-                                        const categoryName = (p.categoryName || "").toLowerCase();
-                                        const subcategoryName = (p.subcategoryName || "").toLowerCase();
+                                        const searchTerm = (
+                                          product.productSearch || ""
+                                        ).toLowerCase();
+                                        const productName = (
+                                          p.name || ""
+                                        ).toLowerCase();
+                                        const categoryName = (
+                                          p.categoryName || ""
+                                        ).toLowerCase();
+                                        const subcategoryName = (
+                                          p.subcategoryName || ""
+                                        ).toLowerCase();
                                         return (
                                           productName.includes(searchTerm) ||
                                           categoryName.includes(searchTerm) ||
@@ -10244,7 +11826,13 @@ export default function AdminPage() {
                                 type="number"
                                 min="1"
                                 value={product.quantity}
-                                onChange={(e) => updateStockInProduct(index, 'quantity', parseInt(e.target.value) || 0)}
+                                onChange={(e) =>
+                                  updateStockInProduct(
+                                    index,
+                                    "quantity",
+                                    parseInt(e.target.value) || 0
+                                  )
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                                 placeholder="0"
                                 required
@@ -10259,7 +11847,13 @@ export default function AdminPage() {
                                 min="0"
                                 step="0.01"
                                 value={product.buyPrice}
-                                onChange={(e) => updateStockInProduct(index, 'buyPrice', parseFloat(e.target.value) || 0)}
+                                onChange={(e) =>
+                                  updateStockInProduct(
+                                    index,
+                                    "buyPrice",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                                 placeholder="0.00"
                                 required
@@ -10270,7 +11864,11 @@ export default function AdminPage() {
                                 Total
                               </label>
                               <div className="px-3 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-                                ฿{((product.quantity || 0) * (product.buyPrice || 0)).toFixed(2)}
+                                ฿
+                                {(
+                                  (product.quantity || 0) *
+                                  (product.buyPrice || 0)
+                                ).toFixed(2)}
                               </div>
                             </div>
                             {stockInForm.products.length > 1 && (
@@ -10292,12 +11890,24 @@ export default function AdminPage() {
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Total Products:</span>
-                        <span>{stockInForm.products.reduce((sum, p) => sum + (p.quantity || 0), 0)}</span>
+                        <span>
+                          {stockInForm.products.reduce(
+                            (sum, p) => sum + (p.quantity || 0),
+                            0
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center mt-2">
                         <span className="font-medium">Total Value:</span>
                         <span className="text-lg font-bold text-green-600">
-                          ฿{stockInForm.products.reduce((sum, p) => sum + ((p.quantity || 0) * (p.buyPrice || 0)), 0).toFixed(2)}
+                          ฿
+                          {stockInForm.products
+                            .reduce(
+                              (sum, p) =>
+                                sum + (p.quantity || 0) * (p.buyPrice || 0),
+                              0
+                            )
+                            .toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -10588,13 +12198,15 @@ export default function AdminPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Category Permissions
                       <span className="text-gray-500 text-xs ml-1">
-                        (Select which categories this customer can see in the kiosk)
+                        (Select which categories this customer can see in the
+                        kiosk)
                       </span>
                     </label>
                     <div className="border border-gray-300 rounded-md p-4 max-h-48 overflow-y-auto">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm text-gray-600">
-                          {customerForm.allowedCategories.length} of {categories.length} categories selected
+                          {customerForm.allowedCategories.length} of{" "}
+                          {categories.length} categories selected
                         </span>
                         <div className="space-x-2">
                           <button
@@ -10602,7 +12214,9 @@ export default function AdminPage() {
                             onClick={() => {
                               setCustomerForm({
                                 ...customerForm,
-                                allowedCategories: categories.map(cat => cat.id)
+                                allowedCategories: categories.map(
+                                  (cat) => cat.id
+                                ),
                               });
                             }}
                             className="text-xs text-green-600 hover:text-green-800"
@@ -10614,7 +12228,7 @@ export default function AdminPage() {
                             onClick={() => {
                               setCustomerForm({
                                 ...customerForm,
-                                allowedCategories: []
+                                allowedCategories: [],
                               });
                             }}
                             className="text-xs text-red-600 hover:text-red-800"
@@ -10631,17 +12245,25 @@ export default function AdminPage() {
                           >
                             <input
                               type="checkbox"
-                              checked={customerForm.allowedCategories.includes(category.id)}
+                              checked={customerForm.allowedCategories.includes(
+                                category.id
+                              )}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setCustomerForm({
                                     ...customerForm,
-                                    allowedCategories: [...customerForm.allowedCategories, category.id]
+                                    allowedCategories: [
+                                      ...customerForm.allowedCategories,
+                                      category.id,
+                                    ],
                                   });
                                 } else {
                                   setCustomerForm({
                                     ...customerForm,
-                                    allowedCategories: customerForm.allowedCategories.filter(id => id !== category.id)
+                                    allowedCategories:
+                                      customerForm.allowedCategories.filter(
+                                        (id) => id !== category.id
+                                      ),
                                   });
                                 }
                               }}
@@ -11001,13 +12623,15 @@ export default function AdminPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-3">
                       Category Permissions
                       <span className="text-gray-500 text-xs ml-1">
-                        (Select which categories this customer can see in the kiosk)
+                        (Select which categories this customer can see in the
+                        kiosk)
                       </span>
                     </label>
                     <div className="border border-gray-300 rounded-md p-4 max-h-48 overflow-y-auto">
                       <div className="flex items-center justify-between mb-3">
                         <span className="text-sm text-gray-600">
-                          {customerForm.allowedCategories.length} of {categories.length} categories selected
+                          {customerForm.allowedCategories.length} of{" "}
+                          {categories.length} categories selected
                         </span>
                         <div className="space-x-2">
                           <button
@@ -11015,7 +12639,9 @@ export default function AdminPage() {
                             onClick={() => {
                               setCustomerForm({
                                 ...customerForm,
-                                allowedCategories: categories.map(cat => cat.id)
+                                allowedCategories: categories.map(
+                                  (cat) => cat.id
+                                ),
                               });
                             }}
                             className="text-xs text-green-600 hover:text-green-800"
@@ -11027,7 +12653,7 @@ export default function AdminPage() {
                             onClick={() => {
                               setCustomerForm({
                                 ...customerForm,
-                                allowedCategories: []
+                                allowedCategories: [],
                               });
                             }}
                             className="text-xs text-red-600 hover:text-red-800"
@@ -11044,17 +12670,25 @@ export default function AdminPage() {
                           >
                             <input
                               type="checkbox"
-                              checked={customerForm.allowedCategories.includes(category.id)}
+                              checked={customerForm.allowedCategories.includes(
+                                category.id
+                              )}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setCustomerForm({
                                     ...customerForm,
-                                    allowedCategories: [...customerForm.allowedCategories, category.id]
+                                    allowedCategories: [
+                                      ...customerForm.allowedCategories,
+                                      category.id,
+                                    ],
                                   });
                                 } else {
                                   setCustomerForm({
                                     ...customerForm,
-                                    allowedCategories: customerForm.allowedCategories.filter(id => id !== category.id)
+                                    allowedCategories:
+                                      customerForm.allowedCategories.filter(
+                                        (id) => id !== category.id
+                                      ),
                                   });
                                 }
                               }}
@@ -11285,6 +12919,9 @@ export default function AdminPage() {
                   >
                     <option value="">None</option>
                     <option value="Prerolled Page">Prerolled Page</option>
+                    <option value="Custom Joint Builder">
+                      Custom Joint Builder
+                    </option>
                   </select>
                 </div>
 
@@ -11551,6 +13188,9 @@ export default function AdminPage() {
                   >
                     <option value="">None</option>
                     <option value="Prerolled Page">Prerolled Page</option>
+                    <option value="Custom Joint Builder">
+                      Custom Joint Builder
+                    </option>
                   </select>
                 </div>
 
@@ -12867,13 +14507,16 @@ export default function AdminPage() {
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files[0];
-                            console.log("📁 IMAGE UPLOAD DEBUG - File selected (Add Product):", {
-                              fileName: file?.name,
-                              fileSize: file?.size,
-                              fileType: file?.type,
-                              isValidFile: file instanceof File,
-                              timestamp: new Date().toISOString()
-                            });
+                            console.log(
+                              "📁 IMAGE UPLOAD DEBUG - File selected (Add Product):",
+                              {
+                                fileName: file?.name,
+                                fileSize: file?.size,
+                                fileType: file?.type,
+                                isValidFile: file instanceof File,
+                                timestamp: new Date().toISOString(),
+                              }
+                            );
                             setProductImageFile(file);
                           }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -13915,10 +15558,13 @@ export default function AdminPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              console.log("🗑️ REMOVE IMAGE - Edit Product mode:", {
-                                hasLocalFile: !!productImageFile,
-                                hasExistingImage: !!productForm.mainImage
-                              });
+                              console.log(
+                                "🗑️ REMOVE IMAGE - Edit Product mode:",
+                                {
+                                  hasLocalFile: !!productImageFile,
+                                  hasExistingImage: !!productForm.mainImage,
+                                }
+                              );
                               setProductImageFile(null);
                               if (!productImageFile && productForm.mainImage) {
                                 // Mark existing images for removal
@@ -13927,7 +15573,9 @@ export default function AdminPage() {
                                   ...productForm,
                                   mainImage: null,
                                 });
-                                console.log("🗑️ Marked existing images for removal");
+                                console.log(
+                                  "🗑️ Marked existing images for removal"
+                                );
                               }
                             }}
                             className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
@@ -13944,13 +15592,16 @@ export default function AdminPage() {
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files[0];
-                            console.log("📁 IMAGE UPLOAD DEBUG - File selected (Edit Product):", {
-                              fileName: file?.name,
-                              fileSize: file?.size,
-                              fileType: file?.type,
-                              isValidFile: file instanceof File,
-                              timestamp: new Date().toISOString()
-                            });
+                            console.log(
+                              "📁 IMAGE UPLOAD DEBUG - File selected (Edit Product):",
+                              {
+                                fileName: file?.name,
+                                fileSize: file?.size,
+                                fileType: file?.type,
+                                isValidFile: file instanceof File,
+                                timestamp: new Date().toISOString(),
+                              }
+                            );
                             setProductImageFile(file);
                           }}
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -14164,7 +15815,9 @@ export default function AdminPage() {
                                                     {editingVariantValues.imageUrl && (
                                                       <div className="relative">
                                                         <Image
-                                                          src={editingVariantValues.imageUrl}
+                                                          src={
+                                                            editingVariantValues.imageUrl
+                                                          }
                                                           alt="Option preview"
                                                           width={48}
                                                           height={48}
@@ -14172,11 +15825,13 @@ export default function AdminPage() {
                                                         />
                                                         <button
                                                           type="button"
-                                                          onClick={() => 
-                                                            setEditingVariantValues(v => ({
-                                                              ...v,
-                                                              imageUrl: ""
-                                                            }))
+                                                          onClick={() =>
+                                                            setEditingVariantValues(
+                                                              (v) => ({
+                                                                ...v,
+                                                                imageUrl: "",
+                                                              })
+                                                            )
                                                           }
                                                           className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
                                                         >
@@ -14191,22 +15846,32 @@ export default function AdminPage() {
                                                         type="file"
                                                         accept="image/*"
                                                         onChange={async (e) => {
-                                                          const file = e.target.files[0];
+                                                          const file =
+                                                            e.target.files[0];
                                                           if (file) {
                                                             try {
-                                                              const imageUrl = await uploadSingleVariantImage(
-                                                                file, 
-                                                                editingProduct.id, 
-                                                                variantGroup.id, 
-                                                                editingVariantOption.id
+                                                              const imageUrl =
+                                                                await uploadSingleVariantImage(
+                                                                  file,
+                                                                  editingProduct.id,
+                                                                  variantGroup.id,
+                                                                  editingVariantOption.id
+                                                                );
+                                                              setEditingVariantValues(
+                                                                (v) => ({
+                                                                  ...v,
+                                                                  imageUrl:
+                                                                    imageUrl,
+                                                                })
                                                               );
-                                                              setEditingVariantValues(v => ({
-                                                                ...v,
-                                                                imageUrl: imageUrl
-                                                              }));
                                                             } catch (error) {
-                                                              console.error('Error uploading image:', error);
-                                                              alert('Failed to upload image. Please try again.');
+                                                              console.error(
+                                                                "Error uploading image:",
+                                                                error
+                                                              );
+                                                              alert(
+                                                                "Failed to upload image. Please try again."
+                                                              );
                                                             }
                                                           }
                                                         }}
@@ -14255,7 +15920,8 @@ export default function AdminPage() {
                                                               editingVariantValues.memberPrice
                                                             ) || 0,
                                                       unit: editingVariantValues.unit.trim(),
-                                                      imageUrl: editingVariantValues.imageUrl.trim(),
+                                                      imageUrl:
+                                                        editingVariantValues.imageUrl.trim(),
                                                     };
                                                     const updatedProductForm = {
                                                       ...productForm,
@@ -14368,7 +16034,8 @@ export default function AdminPage() {
                                                           ? ""
                                                           : option.memberPrice.toString(),
                                                       unit: option.unit || "",
-                                                      imageUrl: option.imageUrl || "",
+                                                      imageUrl:
+                                                        option.imageUrl || "",
                                                     });
                                                   }}
                                                   className="text-blue-600 hover:text-blue-800 text-xs"
@@ -14394,7 +16061,9 @@ export default function AdminPage() {
                                                       variants: updatedVariants,
                                                     });
                                                     // Sync with variants state
-                                                    setVariants(updatedVariants);
+                                                    setVariants(
+                                                      updatedVariants
+                                                    );
                                                   }}
                                                   className="text-red-600 hover:text-red-800 text-xs"
                                                 >
@@ -14437,7 +16106,10 @@ export default function AdminPage() {
                           <label className="block text-xs font-medium text-gray-700 mb-2">
                             Add Options to this Variant Group:
                           </label>
-                          <div className="space-y-2" id="edit-variant-options-list">
+                          <div
+                            className="space-y-2"
+                            id="edit-variant-options-list"
+                          >
                             {/* Options will be added here dynamically */}
                           </div>
 
@@ -14506,13 +16178,17 @@ export default function AdminPage() {
                                   {editOptionImageFile && (
                                     <div className="relative">
                                       <img
-                                        src={URL.createObjectURL(editOptionImageFile)}
+                                        src={URL.createObjectURL(
+                                          editOptionImageFile
+                                        )}
                                         alt="Option preview"
                                         className="w-16 h-16 object-cover rounded border"
                                       />
                                       <button
                                         type="button"
-                                        onClick={() => setEditOptionImageFile(null)}
+                                        onClick={() =>
+                                          setEditOptionImageFile(null)
+                                        }
                                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
                                       >
                                         ×
@@ -14525,7 +16201,11 @@ export default function AdminPage() {
                                     <input
                                       type="file"
                                       accept="image/*"
-                                      onChange={(e) => setEditOptionImageFile(e.target.files[0])}
+                                      onChange={(e) =>
+                                        setEditOptionImageFile(
+                                          e.target.files[0]
+                                        )
+                                      }
                                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                       id="edit-option-image-upload"
                                     />
@@ -14577,16 +16257,20 @@ export default function AdminPage() {
                                       if (editOptionImageFile) {
                                         optionImageData = {
                                           file: editOptionImageFile,
-                                          url: URL.createObjectURL(editOptionImageFile),
+                                          url: URL.createObjectURL(
+                                            editOptionImageFile
+                                          ),
                                           name: editOptionImageFile.name,
                                         };
                                       }
 
                                       // Add to temporary options list display
-                                      const optionsList = document.getElementById(
-                                        "edit-variant-options-list"
-                                      );
-                                      const optionDiv = document.createElement("div");
+                                      const optionsList =
+                                        document.getElementById(
+                                          "edit-variant-options-list"
+                                        );
+                                      const optionDiv =
+                                        document.createElement("div");
                                       optionDiv.className =
                                         "flex items-center justify-between bg-white p-2 rounded border";
 
@@ -14616,10 +16300,18 @@ export default function AdminPage() {
                                       optionsList.appendChild(optionDiv);
 
                                       // Clear inputs
-                                      document.getElementById("edit-option-name-input").value = "";
-                                      document.getElementById("edit-option-price-input").value = "";
-                                      document.getElementById("edit-option-unit-input").value = "";
-                                      document.getElementById("edit-option-member-price-input").value = "";
+                                      document.getElementById(
+                                        "edit-option-name-input"
+                                      ).value = "";
+                                      document.getElementById(
+                                        "edit-option-price-input"
+                                      ).value = "";
+                                      document.getElementById(
+                                        "edit-option-unit-input"
+                                      ).value = "";
+                                      document.getElementById(
+                                        "edit-option-member-price-input"
+                                      ).value = "";
                                       setEditOptionImageFile(null);
                                     } else {
                                       alert("Please enter option name");
@@ -14663,24 +16355,29 @@ export default function AdminPage() {
                               const options = [];
                               for (let i = 0; i < optionElements.length; i++) {
                                 const optionElement = optionElements[i];
-                                const optionText = optionElement.querySelector("span").textContent;
+                                const optionText =
+                                  optionElement.querySelector(
+                                    "span"
+                                  ).textContent;
                                 const parts = optionText.split(" - ฿");
                                 const name = parts[0];
                                 const remainder = parts[1] || "0";
-                                
+
                                 let price = 0;
                                 let memberPrice = undefined;
                                 let unit = "";
-                                
+
                                 // Extract unit if present in parentheses at end
-                                const unitMatch = remainder.match(/\(([^)]+)\)$/);
+                                const unitMatch =
+                                  remainder.match(/\(([^)]+)\)$/);
                                 if (unitMatch) {
                                   unit = unitMatch[1];
                                 }
                                 const remainderNoUnit = unitMatch
                                   ? remainder.replace(unitMatch[0], "").trim()
                                   : remainder.trim();
-                                const memberMatch = remainderNoUnit.match(/(.*) \/M ฿(.*)/);
+                                const memberMatch =
+                                  remainderNoUnit.match(/(.*) \/M ฿(.*)/);
                                 if (memberMatch) {
                                   price = parseFloat(memberMatch[1]) || 0;
                                   const mp = parseFloat(memberMatch[2]);
@@ -14690,13 +16387,16 @@ export default function AdminPage() {
                                 }
 
                                 // Get image data if exists
-                                const imageData = optionElement._imageData || null;
+                                const imageData =
+                                  optionElement._imageData || null;
 
                                 options.push({
                                   id: Date.now().toString() + i,
                                   name: name,
                                   price: price,
-                                  ...(memberPrice !== undefined ? { memberPrice } : {}),
+                                  ...(memberPrice !== undefined
+                                    ? { memberPrice }
+                                    : {}),
                                   unit: unit,
                                   image: imageData ? imageData.file : null,
                                   imageUrl: imageData ? imageData.url : "",
@@ -14713,7 +16413,10 @@ export default function AdminPage() {
                               };
 
                               // Add to product form variants
-                              const updatedVariants = [...(productForm.variants || []), newVariantGroup];
+                              const updatedVariants = [
+                                ...(productForm.variants || []),
+                                newVariantGroup,
+                              ];
                               setProductForm({
                                 ...productForm,
                                 variants: updatedVariants,
@@ -14722,8 +16425,12 @@ export default function AdminPage() {
                               setVariants(updatedVariants);
 
                               // Clear form
-                              document.getElementById("edit-variant-group-name").value = "";
-                              document.getElementById("edit-variant-options-list").innerHTML = "";
+                              document.getElementById(
+                                "edit-variant-group-name"
+                              ).value = "";
+                              document.getElementById(
+                                "edit-variant-options-list"
+                              ).innerHTML = "";
                               setEditOptionImageFile(null);
                             }}
                             className="w-full px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700"
@@ -15527,12 +17234,16 @@ export default function AdminPage() {
                           <div className="inline-flex items-center space-x-2">
                             <select
                               value={newPaymentMethod}
-                              onChange={(e) => setNewPaymentMethod(e.target.value)}
+                              onChange={(e) =>
+                                setNewPaymentMethod(e.target.value)
+                              }
                               className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="cash">Cash</option>
                               <option value="crypto">Crypto</option>
-                              <option value="bank_transfer">Bank Transfer</option>
+                              <option value="bank_transfer">
+                                Bank Transfer
+                              </option>
                             </select>
                             <button
                               onClick={handleUpdatePaymentMethod}
@@ -15551,7 +17262,8 @@ export default function AdminPage() {
                         ) : (
                           <div className="inline-flex items-center space-x-2">
                             <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 capitalize">
-                              {selectedTransactionDetails.paymentMethod || "N/A"}
+                              {selectedTransactionDetails.paymentMethod ||
+                                "N/A"}
                             </span>
                             <button
                               onClick={handleStartEditPaymentMethod}
@@ -15638,7 +17350,11 @@ export default function AdminPage() {
                                             key={key}
                                             className="inline-block bg-gray-100 rounded-full px-2 py-1 text-xs mr-1 mb-1"
                                           >
-                                            {key}: {value?.name || (typeof value === 'string' ? value : JSON.stringify(value))}
+                                            {key}:{" "}
+                                            {value?.name ||
+                                              (typeof value === "string"
+                                                ? value
+                                                : JSON.stringify(value))}
                                           </span>
                                         )
                                       )}
@@ -15827,12 +17543,16 @@ export default function AdminPage() {
                           <div className="inline-flex items-center space-x-2">
                             <select
                               value={newPaymentMethod}
-                              onChange={(e) => setNewPaymentMethod(e.target.value)}
+                              onChange={(e) =>
+                                setNewPaymentMethod(e.target.value)
+                              }
                               className="px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                               <option value="cash">Cash</option>
                               <option value="crypto">Crypto</option>
-                              <option value="bank_transfer">Bank Transfer</option>
+                              <option value="bank_transfer">
+                                Bank Transfer
+                              </option>
                             </select>
                             <button
                               onClick={handleUpdatePaymentMethod}
@@ -16240,20 +17960,34 @@ export default function AdminPage() {
               <div className="mt-3">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-lg font-medium text-gray-900">Stock Alert Management</h3>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Stock Alert Management
+                  </h3>
                   <button
                     onClick={() => setShowStockAlertModal(false)}
                     className="text-gray-400 hover:text-gray-600"
                   >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   </button>
                 </div>
 
                 {/* Create New Alert Form */}
                 <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                  <h4 className="text-md font-medium text-gray-900 mb-4">Create New Stock Alert</h4>
+                  <h4 className="text-md font-medium text-gray-900 mb-4">
+                    Create New Stock Alert
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Product Selection - Searchable Dropdown */}
                     <div className="relative">
@@ -16271,87 +18005,150 @@ export default function AdminPage() {
                         onFocus={() => setShowAlertProductDropdown(true)}
                         onBlur={() => {
                           // Delay hiding to allow click events to register
-                          setTimeout(() => setShowAlertProductDropdown(false), 150);
+                          setTimeout(
+                            () => setShowAlertProductDropdown(false),
+                            150
+                          );
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
                       />
-                      
+
                       {/* Dropdown List */}
                       {showAlertProductDropdown && (
                         <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                           {products
-                            .filter(p => 
-                              !alertProductSearch || 
-                              `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
+                            .filter(
+                              (p) =>
+                                !alertProductSearch ||
+                                `${p.categoryName || "Uncategorized"} - ${
+                                  p.subcategoryName || "No Subcategory"
+                                } - ${p.name}`
+                                  .toLowerCase()
+                                  .includes(alertProductSearch.toLowerCase())
                             )
                             .slice(0, 50)
-                            .map(p => {
-                              if (p.variants && Array.isArray(p.variants) && p.variants.length > 0) {
-                                return p.variants.map(variant => {
-                                  if (variant.options && Array.isArray(variant.options)) {
-                                    return variant.options.map(option => (
+                            .map((p) => {
+                              if (
+                                p.variants &&
+                                Array.isArray(p.variants) &&
+                                p.variants.length > 0
+                              ) {
+                                return p.variants
+                                  .map((variant) => {
+                                    if (
+                                      variant.options &&
+                                      Array.isArray(variant.options)
+                                    ) {
+                                      return variant.options.map((option) => (
+                                        <div
+                                          key={`${p.id}-${variant.id}-${option.id}`}
+                                          onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            console.log(
+                                              "Stock Alert: Selecting product variant:",
+                                              p.name,
+                                              variant.variantName,
+                                              option.name
+                                            );
+                                            const productWithVariant = {
+                                              ...p,
+                                              variantId: `${variant.id}-${option.id}`,
+                                              variantName: `${variant.variantName}: ${option.name}`,
+                                              selectedVariant: variant,
+                                              selectedOption: option,
+                                            };
+                                            setSelectedProductForAlert(
+                                              productWithVariant
+                                            );
+                                            setAlertProductSearch(
+                                              `${
+                                                p.categoryName ||
+                                                "Uncategorized"
+                                              } - ${
+                                                p.subcategoryName ||
+                                                "No Subcategory"
+                                              } - ${p.name} - ${
+                                                variant.variantName
+                                              } - ${option.name}`
+                                            );
+                                            setShowAlertProductDropdown(false);
+                                          }}
+                                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
+                                        >
+                                          <div className="font-medium text-gray-900">
+                                            {p.categoryName || "Uncategorized"}{" "}
+                                            -{" "}
+                                            {p.subcategoryName ||
+                                              "No Subcategory"}{" "}
+                                            - {p.name}
+                                          </div>
+                                          <div className="text-xs text-blue-600">
+                                            {variant.variantName}: {option.name}
+                                          </div>
+                                          <div className="text-xs text-gray-500">
+                                            Current Stock:{" "}
+                                            {getCurrentStock(
+                                              p,
+                                              `${variant.id}-${option.id}`
+                                            )}
+                                          </div>
+                                        </div>
+                                      ));
+                                    }
+                                    return (
                                       <div
-                                        key={`${p.id}-${variant.id}-${option.id}`}
+                                        key={`${p.id}-${variant.id}`}
                                         onMouseDown={(e) => {
                                           e.preventDefault();
                                           e.stopPropagation();
-                                          console.log('Stock Alert: Selecting product variant:', p.name, variant.variantName, option.name);
+                                          console.log(
+                                            "Stock Alert: Selecting product variant (no options):",
+                                            p.name,
+                                            variant.name
+                                          );
                                           const productWithVariant = {
                                             ...p,
-                                            variantId: `${variant.id}-${option.id}`,
-                                            variantName: `${variant.variantName}: ${option.name}`,
+                                            variantId: variant.id,
+                                            variantName:
+                                              variant.name ||
+                                              `Variant ${variant.id}`,
                                             selectedVariant: variant,
-                                            selectedOption: option
                                           };
-                                          setSelectedProductForAlert(productWithVariant);
-                                          setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.variantName} - ${option.name}`);
+                                          setSelectedProductForAlert(
+                                            productWithVariant
+                                          );
+                                          setAlertProductSearch(
+                                            `${
+                                              p.categoryName || "Uncategorized"
+                                            } - ${
+                                              p.subcategoryName ||
+                                              "No Subcategory"
+                                            } - ${p.name} - ${
+                                              variant.name || "Variant"
+                                            }`
+                                          );
                                           setShowAlertProductDropdown(false);
                                         }}
                                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
                                       >
                                         <div className="font-medium text-gray-900">
-                                          {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                          {p.categoryName || "Uncategorized"} -{" "}
+                                          {p.subcategoryName ||
+                                            "No Subcategory"}{" "}
+                                          - {p.name}
                                         </div>
                                         <div className="text-xs text-blue-600">
-                                          {variant.variantName}: {option.name}
+                                          {variant.name || "Variant"}
                                         </div>
                                         <div className="text-xs text-gray-500">
-                                          Current Stock: {getCurrentStock(p, `${variant.id}-${option.id}`)}
+                                          Current Stock:{" "}
+                                          {getCurrentStock(p, variant.id)}
                                         </div>
                                       </div>
-                                    ));
-                                  }
-                                  return (
-                                    <div
-                                      key={`${p.id}-${variant.id}`}
-                                      onMouseDown={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        console.log('Stock Alert: Selecting product variant (no options):', p.name, variant.name);
-                                        const productWithVariant = {
-                                          ...p,
-                                          variantId: variant.id,
-                                          variantName: variant.name || `Variant ${variant.id}`,
-                                          selectedVariant: variant
-                                        };
-                                        setSelectedProductForAlert(productWithVariant);
-                                        setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name} - ${variant.name || 'Variant'}`);
-                                        setShowAlertProductDropdown(false);
-                                      }}
-                                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
-                                    >
-                                      <div className="font-medium text-gray-900">
-                                        {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
-                                      </div>
-                                      <div className="text-xs text-blue-600">
-                                        {variant.name || 'Variant'}
-                                      </div>
-                                      <div className="text-xs text-gray-500">
-                                        Current Stock: {getCurrentStock(p, variant.id)}
-                                      </div>
-                                    </div>
-                                  );
-                                }).flat();
+                                    );
+                                  })
+                                  .flat();
                               } else {
                                 return (
                                   <div
@@ -16359,15 +18156,26 @@ export default function AdminPage() {
                                     onMouseDown={(e) => {
                                       e.preventDefault();
                                       e.stopPropagation();
-                                      console.log('Stock Alert: Selecting product (no variants):', p.name);
+                                      console.log(
+                                        "Stock Alert: Selecting product (no variants):",
+                                        p.name
+                                      );
                                       setSelectedProductForAlert(p);
-                                      setAlertProductSearch(`${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`);
+                                      setAlertProductSearch(
+                                        `${
+                                          p.categoryName || "Uncategorized"
+                                        } - ${
+                                          p.subcategoryName || "No Subcategory"
+                                        } - ${p.name}`
+                                      );
                                       setShowAlertProductDropdown(false);
                                     }}
                                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
                                   >
                                     <div className="font-medium text-gray-900">
-                                      {p.categoryName || 'Uncategorized'} - {p.subcategoryName || 'No Subcategory'} - {p.name}
+                                      {p.categoryName || "Uncategorized"} -{" "}
+                                      {p.subcategoryName || "No Subcategory"} -{" "}
+                                      {p.name}
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       Current Stock: {getCurrentStock(p)}
@@ -16375,15 +18183,22 @@ export default function AdminPage() {
                                   </div>
                                 );
                               }
-                            }).flat()}
-                          
-                          {alertProductSearch && products.filter(p => 
-                            `${p.categoryName || 'Uncategorized'} - ${p.subcategoryName || 'No Subcategory'} - ${p.name}`.toLowerCase().includes(alertProductSearch.toLowerCase())
-                          ).length === 0 && (
-                            <div className="px-3 py-2 text-gray-500 text-sm">
-                              No products found matching &quot;{alertProductSearch}&quot;
-                            </div>
-                          )}
+                            })
+                            .flat()}
+
+                          {alertProductSearch &&
+                            products.filter((p) =>
+                              `${p.categoryName || "Uncategorized"} - ${
+                                p.subcategoryName || "No Subcategory"
+                              } - ${p.name}`
+                                .toLowerCase()
+                                .includes(alertProductSearch.toLowerCase())
+                            ).length === 0 && (
+                              <div className="px-3 py-2 text-gray-500 text-sm">
+                                No products found matching &quot;
+                                {alertProductSearch}&quot;
+                              </div>
+                            )}
                         </div>
                       )}
                     </div>
@@ -16422,9 +18237,15 @@ export default function AdminPage() {
                     <div className="flex items-end">
                       <button
                         onClick={createStockAlert}
-                        disabled={!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel}
+                        disabled={
+                          !selectedProductForAlert ||
+                          !alertKioskLevel ||
+                          !alertAdminLevel
+                        }
                         className={`w-full px-4 py-2 text-white text-sm font-medium rounded-md ${
-                          !selectedProductForAlert || !alertKioskLevel || !alertAdminLevel
+                          !selectedProductForAlert ||
+                          !alertKioskLevel ||
+                          !alertAdminLevel
                             ? "bg-gray-400 cursor-not-allowed"
                             : "bg-yellow-600 hover:bg-yellow-700"
                         }`}
@@ -16438,7 +18259,12 @@ export default function AdminPage() {
                   {selectedProductForAlert && (
                     <div className="mt-4 p-3 bg-blue-50 rounded-md">
                       <p className="text-sm text-blue-800">
-                        <strong>Current Stock:</strong> {getCurrentStock(selectedProductForAlert, selectedProductForAlert?.variantId)} units
+                        <strong>Current Stock:</strong>{" "}
+                        {getCurrentStock(
+                          selectedProductForAlert,
+                          selectedProductForAlert?.variantId
+                        )}{" "}
+                        units
                         {selectedProductForAlert.variantName && (
                           <span className="block text-xs text-blue-600 mt-1">
                             Variant: {selectedProductForAlert.variantName}
@@ -16454,7 +18280,7 @@ export default function AdminPage() {
                   <h4 className="text-md font-medium text-gray-900 mb-4">
                     Existing Stock Alerts ({stockAlerts.length})
                   </h4>
-                  
+
                   {stockAlerts.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
                       No stock alerts configured yet.
@@ -16486,16 +18312,29 @@ export default function AdminPage() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {stockAlerts.map((alert) => {
-                            const product = products.find(p => p.id === alert.productId);
-                            const currentStock = product ? getCurrentStock(product, alert.variantId) : 0;
-                            const isKioskAlert = currentStock <= alert.alertKioskLevel;
-                            const isAdminAlert = currentStock <= alert.alertAdminLevel;
-                            
+                            const product = products.find(
+                              (p) => p.id === alert.productId
+                            );
+                            const currentStock = product
+                              ? getCurrentStock(product, alert.variantId)
+                              : 0;
+                            const isKioskAlert =
+                              currentStock <= alert.alertKioskLevel;
+                            const isAdminAlert =
+                              currentStock <= alert.alertAdminLevel;
+
                             return (
-                              <tr key={alert.id} className={`${(isKioskAlert || isAdminAlert) ? 'bg-red-50' : ''}`}>
+                              <tr
+                                key={alert.id}
+                                className={`${
+                                  isKioskAlert || isAdminAlert
+                                    ? "bg-red-50"
+                                    : ""
+                                }`}
+                              >
                                 <td className="px-6 py-4 whitespace-nowrap">
                                   <div className="text-sm font-medium text-gray-900">
-                                    {alert.productName || 'Unknown Product'}
+                                    {alert.productName || "Unknown Product"}
                                   </div>
                                   {alert.variantName && (
                                     <div className="text-xs text-blue-600">
@@ -16507,28 +18346,40 @@ export default function AdminPage() {
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className={`text-sm font-medium ${
-                                    (isKioskAlert || isAdminAlert) ? 'text-red-600' : 'text-gray-900'
-                                  }`}>
+                                  <div
+                                    className={`text-sm font-medium ${
+                                      isKioskAlert || isAdminAlert
+                                        ? "text-red-600"
+                                        : "text-gray-900"
+                                    }`}
+                                  >
                                     {currentStock}
                                   </div>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    isKioskAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                  }`}>
+                                  <span
+                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      isKioskAlert
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
                                     {alert.alertKioskLevel}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                    isAdminAlert ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                                  }`}>
+                                  <span
+                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      isAdminAlert
+                                        ? "bg-red-100 text-red-800"
+                                        : "bg-green-100 text-green-800"
+                                    }`}
+                                  >
                                     {alert.alertAdminLevel}
                                   </span>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap">
-                                  {(isKioskAlert || isAdminAlert) ? (
+                                  {isKioskAlert || isAdminAlert ? (
                                     <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
                                       ⚠️ ALERT
                                     </span>
@@ -16577,8 +18428,18 @@ export default function AdminPage() {
             <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
               <div className="flex items-center justify-between">
                 <h3 className="text-xl font-bold text-gray-900 flex items-center">
-                  <svg className="w-6 h-6 mr-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-6 h-6 mr-3 text-purple-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   Crypto Payment Details
                 </h3>
@@ -16597,44 +18458,62 @@ export default function AdminPage() {
             {/* Modal Content */}
             <div className="p-6 space-y-6">
               {/* Payment Status Banner */}
-              <div className={`p-4 rounded-lg border ${
-                selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
-                  ? 'bg-green-50 border-green-200'
-                  : selectedCryptoPayment.payment_status === 'waiting'
-                  ? 'bg-yellow-50 border-yellow-200'
-                  : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
-                  ? 'bg-blue-50 border-blue-200'
-                  : 'bg-red-50 border-red-200'
-              }`}>
+              <div
+                className={`p-4 rounded-lg border ${
+                  selectedCryptoPayment.payment_status === "finished" ||
+                  selectedCryptoPayment.payment_status === "confirmed"
+                    ? "bg-green-50 border-green-200"
+                    : selectedCryptoPayment.payment_status === "waiting"
+                    ? "bg-yellow-50 border-yellow-200"
+                    : selectedCryptoPayment.payment_status === "confirming" ||
+                      selectedCryptoPayment.payment_status === "sending"
+                    ? "bg-blue-50 border-blue-200"
+                    : "bg-red-50 border-red-200"
+                }`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`w-3 h-3 rounded-full mr-3 ${
-                      selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
-                        ? 'bg-green-500'
-                        : selectedCryptoPayment.payment_status === 'waiting'
-                        ? 'bg-yellow-500'
-                        : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
-                        ? 'bg-blue-500 animate-pulse'
-                        : 'bg-red-500'
-                    }`}></div>
-                    <span className={`font-semibold capitalize ${
-                      selectedCryptoPayment.payment_status === 'finished' || selectedCryptoPayment.payment_status === 'confirmed'
-                        ? 'text-green-800'
-                        : selectedCryptoPayment.payment_status === 'waiting'
-                        ? 'text-yellow-800'
-                        : selectedCryptoPayment.payment_status === 'confirming' || selectedCryptoPayment.payment_status === 'sending'
-                        ? 'text-blue-800'
-                        : 'text-red-800'
-                    }`}>
+                    <div
+                      className={`w-3 h-3 rounded-full mr-3 ${
+                        selectedCryptoPayment.payment_status === "finished" ||
+                        selectedCryptoPayment.payment_status === "confirmed"
+                          ? "bg-green-500"
+                          : selectedCryptoPayment.payment_status === "waiting"
+                          ? "bg-yellow-500"
+                          : selectedCryptoPayment.payment_status ===
+                              "confirming" ||
+                            selectedCryptoPayment.payment_status === "sending"
+                          ? "bg-blue-500 animate-pulse"
+                          : "bg-red-500"
+                      }`}
+                    ></div>
+                    <span
+                      className={`font-semibold capitalize ${
+                        selectedCryptoPayment.payment_status === "finished" ||
+                        selectedCryptoPayment.payment_status === "confirmed"
+                          ? "text-green-800"
+                          : selectedCryptoPayment.payment_status === "waiting"
+                          ? "text-yellow-800"
+                          : selectedCryptoPayment.payment_status ===
+                              "confirming" ||
+                            selectedCryptoPayment.payment_status === "sending"
+                          ? "text-blue-800"
+                          : "text-red-800"
+                      }`}
+                    >
                       {selectedCryptoPayment.payment_status}
                     </span>
                   </div>
                   <button
-                    onClick={() => checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)}
+                    onClick={() =>
+                      checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)
+                    }
                     disabled={checkingCryptoStatus}
                     className="px-3 py-1 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 text-sm"
                   >
-                    {checkingCryptoStatus ? '🔄 Checking...' : '↻ Refresh Status'}
+                    {checkingCryptoStatus
+                      ? "🔄 Checking..."
+                      : "↻ Refresh Status"}
                   </button>
                 </div>
               </div>
@@ -16643,24 +18522,34 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Basic Payment Info */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Payment Information</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Payment Information
+                  </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment ID:</span>
-                      <span className="font-mono text-gray-900">{selectedCryptoPayment.payment_id}</span>
+                      <span className="font-mono text-gray-900">
+                        {selectedCryptoPayment.payment_id}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Order ID:</span>
-                      <span className="font-mono text-gray-900">{selectedCryptoPayment.order_id}</span>
+                      <span className="font-mono text-gray-900">
+                        {selectedCryptoPayment.order_id}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Created:</span>
-                      <span className="text-gray-900">{selectedCryptoPayment.created_at?.toLocaleString()}</span>
+                      <span className="text-gray-900">
+                        {selectedCryptoPayment.created_at?.toLocaleString()}
+                      </span>
                     </div>
                     {selectedCryptoPayment.expiration_date && (
                       <div className="flex justify-between">
                         <span className="text-gray-600">Expires:</span>
-                        <span className="text-gray-900">{selectedCryptoPayment.expiration_date?.toLocaleString()}</span>
+                        <span className="text-gray-900">
+                          {selectedCryptoPayment.expiration_date?.toLocaleString()}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -16668,15 +18557,21 @@ export default function AdminPage() {
 
                 {/* Customer Info */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
+                  <h4 className="font-semibold text-gray-900 mb-3">
+                    Customer Information
+                  </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Name:</span>
-                      <span className="text-gray-900">{selectedCryptoPayment.customer_name || 'No Member'}</span>
+                      <span className="text-gray-900">
+                        {selectedCryptoPayment.customer_name || "No Member"}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Items:</span>
-                      <span className="text-gray-900">{selectedCryptoPayment.cart_items?.length || 0} items</span>
+                      <span className="text-gray-900">
+                        {selectedCryptoPayment.cart_items?.length || 0} items
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -16684,36 +18579,50 @@ export default function AdminPage() {
 
               {/* Amount Information */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
-                <h4 className="font-semibold text-gray-900 mb-3">Amount Details</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Amount Details
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                   <div className="text-center">
                     <div className="text-gray-600">Thai Baht</div>
-                    <div className="text-2xl font-bold text-green-600">฿{selectedCryptoPayment.total_bath?.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      ฿{selectedCryptoPayment.total_bath?.toFixed(2)}
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-gray-600">USD Amount</div>
-                    <div className="text-2xl font-bold text-blue-600">${selectedCryptoPayment.total_usd?.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-blue-600">
+                      ${selectedCryptoPayment.total_usd?.toFixed(2)}
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-gray-600">{selectedCryptoPayment.pay_currency?.toUpperCase()}</div>
-                    <div className="text-2xl font-bold text-purple-600">{selectedCryptoPayment.pay_amount}</div>
+                    <div className="text-gray-600">
+                      {selectedCryptoPayment.pay_currency?.toUpperCase()}
+                    </div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {selectedCryptoPayment.pay_amount}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Crypto Details */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-900 mb-3">Cryptocurrency Details</h4>
+                <h4 className="font-semibold text-gray-900 mb-3">
+                  Cryptocurrency Details
+                </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
                     <div className="text-gray-600 mb-1">Payment Address:</div>
                     <div className="font-mono bg-white p-2 rounded border text-xs break-all">
-                      {selectedCryptoPayment.pay_address || 'N/A'}
+                      {selectedCryptoPayment.pay_address || "N/A"}
                     </div>
                   </div>
                   {selectedCryptoPayment.payin_hash && (
                     <div>
-                      <div className="text-gray-600 mb-1">Transaction Hash:</div>
+                      <div className="text-gray-600 mb-1">
+                        Transaction Hash:
+                      </div>
                       <div className="font-mono bg-white p-2 rounded border text-xs break-all">
                         {selectedCryptoPayment.payin_hash}
                       </div>
@@ -16723,7 +18632,8 @@ export default function AdminPage() {
                     <div>
                       <div className="text-gray-600 mb-1">Actually Paid:</div>
                       <div className="font-mono bg-white p-2 rounded border">
-                        {selectedCryptoPayment.actually_paid} {selectedCryptoPayment.pay_currency?.toUpperCase()}
+                        {selectedCryptoPayment.actually_paid}{" "}
+                        {selectedCryptoPayment.pay_currency?.toUpperCase()}
                       </div>
                     </div>
                   )}
@@ -16731,7 +18641,8 @@ export default function AdminPage() {
                     <div>
                       <div className="text-gray-600 mb-1">Outcome Amount:</div>
                       <div className="font-mono bg-white p-2 rounded border">
-                        {selectedCryptoPayment.outcome_amount} {selectedCryptoPayment.outcome_currency?.toUpperCase()}
+                        {selectedCryptoPayment.outcome_amount}{" "}
+                        {selectedCryptoPayment.outcome_currency?.toUpperCase()}
                       </div>
                     </div>
                   )}
@@ -16739,27 +18650,41 @@ export default function AdminPage() {
               </div>
 
               {/* Cart Items */}
-              {selectedCryptoPayment.cart_items && selectedCryptoPayment.cart_items.length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-semibold text-gray-900 mb-3">Order Items</h4>
-                  <div className="space-y-2">
-                    {selectedCryptoPayment.cart_items.map((item, index) => (
-                      <div key={index} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                        <div>
-                          <div className="font-medium text-gray-900">{item.name}</div>
-                          {item.variant && (
-                            <div className="text-sm text-gray-600">{item.variant}</div>
-                          )}
+              {selectedCryptoPayment.cart_items &&
+                selectedCryptoPayment.cart_items.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-900 mb-3">
+                      Order Items
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedCryptoPayment.cart_items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0"
+                        >
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {item.name}
+                            </div>
+                            {item.variant && (
+                              <div className="text-sm text-gray-600">
+                                {item.variant}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-gray-900">
+                              Qty: {item.quantity}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              ฿{(item.price * item.quantity).toFixed(2)}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-gray-900">Qty: {item.quantity}</div>
-                          <div className="text-sm text-gray-600">฿{(item.price * item.quantity).toFixed(2)}</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Raw Payment Data (for debugging) */}
               <details className="border border-gray-200 rounded-lg">
@@ -16775,22 +18700,49 @@ export default function AdminPage() {
             {/* Modal Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
               <button
-                onClick={() => checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)}
+                onClick={() =>
+                  checkCryptoPaymentStatus(selectedCryptoPayment.payment_id)
+                }
                 disabled={checkingCryptoStatus}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
               >
                 {checkingCryptoStatus ? (
                   <>
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     Checking...
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    <svg
+                      className="w-4 h-4 mr-2"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      />
                     </svg>
                     Refresh Status
                   </>

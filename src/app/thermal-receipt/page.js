@@ -112,6 +112,25 @@ export default function ThermalReceiptPage() {
             {orderData?.items.map((item, index) => (
               <div key={index} style={{ marginBottom: "2mm" }}>
                 <div style={{ fontWeight: "bold" }}>{item.name}</div>
+
+                {/* Custom Joint Details */}
+                {item.isCustomJoint && item.details && (
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      marginLeft: "2mm",
+                      marginTop: "1mm",
+                    }}
+                  >
+                    {item.details.map((detail, idx) => (
+                      <div key={idx} style={{ marginBottom: "0.5mm" }}>
+                        • {detail}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Regular Product Variants */}
                 {item.variants && Object.keys(item.variants).length > 0 && (
                   <div style={{ fontSize: "10px", marginLeft: "2mm" }}>
                     {Object.entries(item.variants).map(
@@ -123,13 +142,13 @@ export default function ThermalReceiptPage() {
                     )}
                   </div>
                 )}
+
                 <div
                   style={{ display: "flex", justifyContent: "space-between" }}
                 >
                   <span>Qty: {item.quantity || 1}</span>
                   <span>฿{item.price * (item.quantity || 1)}</span>
                 </div>
-
               </div>
             ))}
             <div
@@ -152,7 +171,7 @@ export default function ThermalReceiptPage() {
                 <span>฿{orderData?.originalTotal || orderData?.total}</span>
               </div>
             )}
-            
+
             {/* Show points used if any */}
             {orderData?.pointsUsed > 0 && (
               <div
@@ -167,14 +186,15 @@ export default function ThermalReceiptPage() {
                 <span>-฿{orderData.pointsUsedValue || 0}</span>
               </div>
             )}
-            
+
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 fontSize: "14px",
                 fontWeight: "bold",
-                borderTop: orderData?.pointsUsed > 0 ? "1px solid #000" : "none",
+                borderTop:
+                  orderData?.pointsUsed > 0 ? "1px solid #000" : "none",
                 paddingTop: orderData?.pointsUsed > 0 ? "1mm" : "0",
                 marginTop: orderData?.pointsUsed > 0 ? "1mm" : "0",
               }}
@@ -204,7 +224,8 @@ export default function ThermalReceiptPage() {
                 {orderData?.cashbackPoints > 0 && (
                   <div style={{ marginTop: "1mm" }}>
                     <div style={{ fontSize: "9px" }}>
-                      Points Earned: +{orderData.cashbackPoints} (pending approval)
+                      Points Earned: +{orderData.cashbackPoints} (pending
+                      approval)
                     </div>
                   </div>
                 )}
