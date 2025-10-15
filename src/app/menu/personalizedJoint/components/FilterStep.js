@@ -89,7 +89,7 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
             {selectedFilter === filter.id && (
               <div className="absolute top-6 right-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full flex items-center justify-center shadow-lg animate-scaleIn">
-                  <FaCheck className="text-lg" />
+                  <span className="text-lg">✓</span>
                 </div>
               </div>
             )}

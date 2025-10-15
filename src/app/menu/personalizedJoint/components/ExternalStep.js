@@ -92,8 +92,8 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
       {/* Info Box */}
       <div className="p-4 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl border border-blue-400/30">
         <div className="flex items-start space-x-3">
-          <div className="text-2xl">
-            <FaInfoCircle className="text-blue-400" />
+          <div className="text-2xl text-blue-400">
+            ℹ️
           </div>
           <div className="text-sm">
             <div className="font-bold mb-1">
@@ -151,7 +151,7 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
               (option.type === "wrap" && selectedWrap === option.id)) && (
               <div className="absolute top-6 right-6">
                 <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full flex items-center justify-center shadow-lg animate-scaleIn">
-                  <FaCheck className="text-lg" />
+                  <span className="text-lg">✓</span>
                 </div>
               </div>
             )}
