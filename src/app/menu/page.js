@@ -335,20 +335,22 @@ export default function MenuPage() {
         exchangeRate: bathToUsdRate,
       });
 
-      // Fetch minimum amounts for popular currencies
-      const popularCurrencies = [
-        "btc",
-        "eth",
-        "ltc",
-        "usdt",
-        "bnb",
-        "ada",
-        "xrp",
-        "doge",
+      // Fetch minimum amounts for ordered currencies
+      const orderedCurrencies = [
+        { code: "usdterc20", displayName: "USDT (ETH)", network: "ERC20" },
+        { code: "usdttrc20", displayName: "USDT (TRX)", network: "TRC20" },
+        { code: "btc", displayName: "BTC", network: null },
+        { code: "eth", displayName: "ETH", network: null },
+        { code: "xrp", displayName: "XRP", network: null },
+        { code: "trx", displayName: "TRX", network: null },
+        { code: "usdc", displayName: "USDC", network: null },
+        { code: "sol", displayName: "SOL", network: null },
+        { code: "ada", displayName: "ADA", network: null },
       ];
       const minimums = {};
 
-      for (const currency of popularCurrencies) {
+      for (const item of orderedCurrencies) {
+        const currency = item.code;
         const currencyData = currencies.find(
           (c) =>
             (c.code && c.code.toLowerCase() === currency) ||
@@ -360,6 +362,9 @@ export default function MenuPage() {
             minAmount: minData.minAmount,
             minAmountInBath: convertUsdToBath(minData.fiatEquivalent),
             fiatEquivalent: minData.fiatEquivalent,
+            displayName: item.displayName,
+            network: item.network,
+            available: currencyData,
           };
 
           console.log(`${currency.toUpperCase()} minimum:`, {
@@ -2762,20 +2767,6 @@ export default function MenuPage() {
               <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">
                 Prerolls
               </h1>
-
-              {/* Custom Joint Builder Button */}
-              <div className="flex justify-center mt-6 mb-4">
-                <button
-                  onClick={() => {
-                    router.push("/personalized-joint");
-                  }}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-2xl font-bold text-xl shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center space-x-3"
-                >
-                  <span className="text-2xl">🔧</span>
-                  <span>Custom Joint Builder</span>
-                  <span className="text-2xl">✨</span>
-                </button>
-              </div>
             </div>
 
             {/* 4x4 Grid - header row 150px, image cells 220px */}
@@ -5597,135 +5588,114 @@ export default function MenuPage() {
 
                 {/* Currency Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {availableCurrencies
-                    .filter((currency) => {
-                      const code = currency.code || currency.currency;
-                      if (
-                        !code ||
-                        ![
-                          "btc",
-                          "eth",
-                          "ltc",
-                          "usdt",
-                          "bnb",
-                          "ada",
-                          "xrp",
-                          "doge",
-                        ].includes(code.toLowerCase())
-                      ) {
-                        return false;
-                      }
+                  {[
+                    { code: "usdterc20", displayName: "USDT (ETH)" },
+                    { code: "usdttrc20", displayName: "USDT (TRX)" },
+                    { code: "btc", displayName: "BTC" },
+                    { code: "eth", displayName: "ETH" },
+                    { code: "xrp", displayName: "XRP" },
+                    { code: "trx", displayName: "TRX" },
+                    { code: "usdc", displayName: "USDC" },
+                    { code: "sol", displayName: "SOL" },
+                    { code: "ada", displayName: "ADA" },
+                  ].map((item) => {
+                    const currencyCode = item.code.toLowerCase();
+                    const minimum = currencyMinimums[currencyCode];
+                    const totalOrderInBath = getTotalPrice();
+                    const totalOrderInUsd = convertBathToUsd(totalOrderInBath);
 
-                      // Check minimum requirement - convert Bath to USD first
-                      const currencyCode = code.toLowerCase();
-                      const minimum = currencyMinimums[currencyCode];
+                    // Find currency in available currencies
+                    const currency = availableCurrencies.find(
+                      (c) =>
+                        (c.code && c.code.toLowerCase() === currencyCode) ||
+                        (c.currency &&
+                          c.currency.toLowerCase() === currencyCode)
+                    );
 
-                      if (!minimum) {
-                        return true; // If no minimum data, show the currency
-                      }
+                    // Check if order meets minimum requirement
+                    const meetsMinimum = minimum
+                      ? totalOrderInUsd >= minimum.fiatEquivalent
+                      : false;
 
-                      // Convert total order from Bath to USD
-                      const totalOrderInBath = getTotalPrice();
-                      const totalOrderInUsd =
-                        convertBathToUsd(totalOrderInBath);
+                    const isDisabled = !currency || !meetsMinimum;
 
-                      // Check if order meets minimum requirement in USD
-                      const meetsMinimum =
-                        totalOrderInUsd >= minimum.fiatEquivalent;
-
-                      console.log(`Currency ${currencyCode.toUpperCase()}:`, {
-                        totalOrderInBath: totalOrderInBath.toFixed(2),
-                        totalOrderInUsd: totalOrderInUsd.toFixed(2),
-                        minimumUsd: minimum.fiatEquivalent?.toFixed(2),
-                        meetsMinimum,
-                      });
-
-                      return meetsMinimum;
-                    })
-                    .map((currency) => {
-                      const currencyCode = (
-                        currency.code || currency.currency
-                      ).toLowerCase();
-                      const minimum = currencyMinimums[currencyCode];
-                      const totalOrderInBath = getTotalPrice();
-                      const totalOrderInUsd =
-                        convertBathToUsd(totalOrderInBath);
-                      const canAfford =
-                        !minimum || totalOrderInUsd >= minimum.fiatEquivalent;
-
-                      return (
-                        <button
-                          key={currency.code || currency.currency}
-                          onClick={() => {
+                    return (
+                      <button
+                        key={item.code}
+                        onClick={() => {
+                          if (!isDisabled && currency) {
                             setSelectedCryptoCurrency(currency);
                             setShowCryptoModal(false);
                             console.log("Selected crypto currency:", currency);
-                          }}
-                          className="p-4 rounded-lg border-2 transition-all border-gray-200 hover:border-green-500 hover:bg-green-50 cursor-pointer"
-                        >
-                          <div className="text-center">
-                            {/* Currency Logo */}
-                            <div className="w-12 h-12 mx-auto mb-2 relative">
-                              <img
-                                src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(
-                                  currency
-                                )}.svg`}
-                                alt={
-                                  currency.name || currencyCode.toUpperCase()
-                                }
-                                className="w-full h-full object-contain"
-                                onError={(e) => {
-                                  // First fallback: try original currency code
-                                  if (
-                                    !e.target.src.includes(currencyCode) &&
-                                    getCryptoIconSymbol(currency) !==
-                                      currencyCode
-                                  ) {
-                                    e.target.src = `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${currencyCode}.svg`;
-                                  }
-                                  // Second fallback: NOWPayments logo if available
-                                  else if (
-                                    currency.logo_url &&
-                                    !e.target.src.includes("nowpayments")
-                                  ) {
-                                    e.target.src = `https://api.nowpayments.io${currency.logo_url}`;
-                                  }
-                                  // Final fallback: text icon
-                                  else {
+                          }
+                        }}
+                        disabled={isDisabled}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          isDisabled
+                            ? "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed"
+                            : "border-gray-200 hover:border-green-500 hover:bg-green-50 cursor-pointer"
+                        }`}
+                      >
+                        <div className="text-center">
+                          {/* Currency Logo */}
+                          <div className="w-12 h-12 mx-auto mb-2 relative">
+                            {currency ? (
+                              <>
+                                <img
+                                  src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/svg/color/${getCryptoIconSymbol(
+                                    { code: currencyCode }
+                                  )}.svg`}
+                                  alt={item.displayName}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
                                     e.target.style.display = "none";
                                     e.target.nextSibling.style.display = "flex";
-                                  }
-                                }}
-                              />
-                              <div
-                                className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg"
-                                style={{ display: "none" }}
-                              >
+                                  }}
+                                />
+                                <div
+                                  className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg"
+                                  style={{ display: "none" }}
+                                >
+                                  {currencyCode.charAt(0).toUpperCase()}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full bg-gray-300 rounded-full flex items-center justify-center text-xl font-bold text-gray-500">
                                 {currencyCode.charAt(0).toUpperCase()}
-                              </div>
-                            </div>
-
-                            {/* Currency Info */}
-                            <div className="font-semibold text-lg">
-                              {(
-                                currency.code || currency.currency
-                              ).toUpperCase()}
-                            </div>
-                            <div className="text-sm text-gray-600 mb-2">
-                              {currency.name || currencyCode.toUpperCase()}
-                            </div>
-
-                            {/* Minimum Amount - Optional display */}
-                            {minimum && (
-                              <div className="text-xs text-green-600">
-                                Min: ฿
-                                {minimum.minAmountInBath?.toFixed(2) || "N/A"}
                               </div>
                             )}
                           </div>
-                        </button>
-                      );
-                    })}
+
+                          {/* Currency Info */}
+                          <div className="font-semibold text-lg">
+                            {item.displayName}
+                          </div>
+
+                          {/* Status and Minimum Amount */}
+                          {isDisabled ? (
+                            <div className="mt-2">
+                              <div className="text-xs text-red-600 font-semibold">
+                                Unavailable
+                              </div>
+                              {minimum && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Min: ฿
+                                  {minimum.minAmountInBath?.toFixed(0) || "N/A"}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            minimum && (
+                              <div className="text-xs text-green-600 mt-2">
+                                Min: ฿
+                                {minimum.minAmountInBath?.toFixed(0) || "N/A"}
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Information Note */}

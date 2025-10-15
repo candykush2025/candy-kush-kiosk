@@ -51,7 +51,9 @@ export default function ReviewStep({ config, onPrev }) {
       {/* Filter Section */}
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
         <h3 className="text-xl font-bold mb-4 flex items-center">
-          <span className="text-sm mr-2 px-2 py-1 bg-blue-400/20 rounded">FILTER</span>
+          <span className="text-sm mr-2 px-2 py-1 bg-blue-400/20 rounded">
+            FILTER
+          </span>
           Filter
         </h3>
         <div className="space-y-2">
@@ -71,7 +73,9 @@ export default function ReviewStep({ config, onPrev }) {
       {/* Filling Section */}
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
         <h3 className="text-xl font-bold mb-4 flex items-center">
-          <span className="text-sm mr-2 px-2 py-1 bg-green-400/20 rounded">FILL</span>
+          <span className="text-sm mr-2 px-2 py-1 bg-green-400/20 rounded">
+            FILL
+          </span>
           Filling Composition
         </h3>
 
@@ -147,7 +151,9 @@ export default function ReviewStep({ config, onPrev }) {
       {(config.external?.coating || config.external?.wrap) && (
         <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
           <h3 className="text-xl font-bold mb-4 flex items-center">
-            <span className="text-sm mr-2 px-2 py-1 bg-yellow-400/20 rounded">EXTRA</span>
+            <span className="text-sm mr-2 px-2 py-1 bg-yellow-400/20 rounded">
+              EXTRA
+            </span>
             External Enhancements
           </h3>
           <div className="space-y-2">
