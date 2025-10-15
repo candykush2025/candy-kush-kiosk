@@ -92,14 +92,12 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
       {/* Info Box */}
       <div className="p-4 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-xl border border-blue-400/30">
         <div className="flex items-start space-x-3">
-          <div className="text-2xl text-blue-400">
-            ℹ️
-          </div>
+          <div className="text-2xl text-blue-400">ℹ️</div>
           <div className="text-sm">
             <div className="font-bold mb-1">
               External enhancements are optional
             </div>
-            <div className="text-green-200">
+            <div>
               These premium additions enhance potency, flavor, and appearance.
               You can select one coating and one wrap, or skip this step
               entirely.

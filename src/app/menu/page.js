@@ -343,7 +343,7 @@ export default function MenuPage() {
         { code: "eth", displayName: "ETH", network: null },
         { code: "xrp", displayName: "XRP", network: null },
         { code: "trx", displayName: "TRX", network: null },
-        { code: "usdc", displayName: "USDC", network: null },
+        { code: "usdc", displayName: "USDC (ETH)", network: "ERC20" },
         { code: "sol", displayName: "SOL", network: null },
         { code: "ada", displayName: "ADA", network: null },
       ];
@@ -5595,7 +5595,7 @@ export default function MenuPage() {
                     { code: "eth", displayName: "ETH" },
                     { code: "xrp", displayName: "XRP" },
                     { code: "trx", displayName: "TRX" },
-                    { code: "usdc", displayName: "USDC" },
+                    { code: "usdc", displayName: "USDC (ETH)" },
                     { code: "sol", displayName: "SOL" },
                     { code: "ada", displayName: "ADA" },
                   ].map((item) => {
