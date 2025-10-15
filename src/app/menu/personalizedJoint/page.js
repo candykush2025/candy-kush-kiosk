@@ -163,74 +163,73 @@ export default function CustomJointBuilder() {
         />
       </div>
 
-      {/* Main Content Area */}
+      {/* Live Preview Section */}
+      <div className="relative z-10 px-8 mb-8">
+        <div className="max-w-7xl mx-auto">
+          <JointVisualizer config={jointConfig} />
+        </div>
+      </div>
+
+      {/* Main Content Area - Configuration Steps */}
       <div className="relative z-10 px-8 pb-8">
         <div className="max-w-7xl mx-auto">
-          <div className="flex gap-6">
-            {/* Left Side - Configuration Steps */}
-            <div className="flex-1 bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-              <div className="transition-all duration-500 ease-in-out">
-                {currentStep === 1 && (
-                  <PaperStep
-                    config={jointConfig}
-                    updateConfig={updateConfig}
-                    onNext={nextStep}
-                  />
-                )}
-                {currentStep === 2 && (
-                  <FilterStep
-                    config={jointConfig}
-                    updateConfig={updateConfig}
-                    onNext={nextStep}
-                    onPrev={prevStep}
-                  />
-                )}
-                {currentStep === 3 && (
-                  <FillingStep
-                    config={jointConfig}
-                    updateConfig={updateConfig}
-                    onNext={nextStep}
-                    onPrev={prevStep}
-                  />
-                )}
-                {currentStep === 4 && (
-                  <ExternalStep
-                    config={jointConfig}
-                    updateConfig={updateConfig}
-                    onNext={nextStep}
-                    onPrev={prevStep}
-                  />
-                )}
-                {currentStep === 5 && (
-                  <ReviewStep config={jointConfig} onPrev={prevStep} />
-                )}
-              </div>
-
-              {/* Navigation Buttons (for steps that need manual navigation) */}
-              {currentStep !== 5 && (
-                <div className="flex justify-between mt-8 pt-6 border-t border-white/20">
-                  <button
-                    onClick={prevStep}
-                    disabled={currentStep === 1}
-                    className="px-6 py-3 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-medium transition-all duration-300 border border-white/20"
-                  >
-                    ← Previous
-                  </button>
-                  <button
-                    onClick={nextStep}
-                    disabled={!canProceed()}
-                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    Next →
-                  </button>
-                </div>
+          <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+            <div className="transition-all duration-500 ease-in-out">
+              {currentStep === 1 && (
+                <PaperStep
+                  config={jointConfig}
+                  updateConfig={updateConfig}
+                  onNext={nextStep}
+                />
+              )}
+              {currentStep === 2 && (
+                <FilterStep
+                  config={jointConfig}
+                  updateConfig={updateConfig}
+                  onNext={nextStep}
+                  onPrev={prevStep}
+                />
+              )}
+              {currentStep === 3 && (
+                <FillingStep
+                  config={jointConfig}
+                  updateConfig={updateConfig}
+                  onNext={nextStep}
+                  onPrev={prevStep}
+                />
+              )}
+              {currentStep === 4 && (
+                <ExternalStep
+                  config={jointConfig}
+                  updateConfig={updateConfig}
+                  onNext={nextStep}
+                  onPrev={prevStep}
+                />
+              )}
+              {currentStep === 5 && (
+                <ReviewStep config={jointConfig} onPrev={prevStep} />
               )}
             </div>
 
-            {/* Right Side - Live Joint Visualizer */}
-            <div className="w-96 flex-shrink-0">
-              <JointVisualizer config={jointConfig} />
-            </div>
+            {/* Navigation Buttons (for steps that need manual navigation) */}
+            {currentStep !== 5 && (
+              <div className="flex justify-between mt-8 pt-6 border-t border-white/20">
+                <button
+                  onClick={prevStep}
+                  disabled={currentStep === 1}
+                  className="px-6 py-3 bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-medium transition-all duration-300 border border-white/20"
+                >
+                  ← Previous
+                </button>
+                <button
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

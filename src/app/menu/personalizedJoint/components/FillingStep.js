@@ -174,21 +174,18 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
         <div className="relative h-8 bg-white/10 rounded-full overflow-hidden">
           {wormEnabled && wormWeight > 0 && (
             <div
-              className="absolute left-0 top-0 h-full bg-gradient-to-r from-amber-500 to-orange-500"
+              className="absolute top-1/2 -translate-y-1/2 h-full bg-gradient-to-r from-amber-500 to-orange-500"
               style={{ width: `${(wormWeight / totalCapacity) * 100}%` }}
             ></div>
           )}
           {flowerItems.map((item, index) => {
             const prevWeight =
               wormWeight +
-              flowerItems
-                .slice(0, index)
-                .reduce((sum, f) => sum + f.weight, 0) +
-              hashItems.reduce((sum, h) => sum + h.weight, 0);
+              flowerItems.slice(0, index).reduce((sum, f) => sum + f.weight, 0);
             return (
               <div
                 key={item.id}
-                className="absolute top-0 h-full bg-gradient-to-r from-green-500 to-emerald-500"
+                className="absolute top-1/2 -translate-y-1/2 h-full bg-gradient-to-r from-green-500 to-emerald-500"
                 style={{
                   left: `${(prevWeight / totalCapacity) * 100}%`,
                   width: `${(item.weight / totalCapacity) * 100}%`,
@@ -204,7 +201,7 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
             return (
               <div
                 key={item.id}
-                className="absolute top-0 h-full bg-gradient-to-r from-yellow-600 to-amber-700"
+                className="absolute top-1/2 -translate-y-1/2 h-full bg-gradient-to-r from-yellow-600 to-amber-700"
                 style={{
                   left: `${(prevWeight / totalCapacity) * 100}%`,
                   width: `${(item.weight / totalCapacity) * 100}%`,

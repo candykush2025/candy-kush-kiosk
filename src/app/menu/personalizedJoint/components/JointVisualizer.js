@@ -59,12 +59,12 @@ export default function JointVisualizer({ config }) {
   };
 
   return (
-    <div className="sticky top-8">
-      <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-        <h3 className="text-2xl font-bold mb-6 text-center">Live Preview</h3>
+    <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+      <h3 className="text-2xl font-bold mb-6 text-center">Live Preview</h3>
 
-        {/* 3D Joint Visualization */}
-        <div className="relative h-[500px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
+      <div className="grid grid-cols-2 gap-8">
+        {/* Left - Visual Preview */}
+        <div className="relative w-full h-[550px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
           {/* Background ambient effect */}
           {config.paper && (flowerCount > 0 || hashCount > 0) && (
             <div className="absolute inset-0 flex items-center justify-center opacity-20">
@@ -380,186 +380,189 @@ export default function JointVisualizer({ config }) {
           )}
         </div>
 
-        {/* Specifications */}
-        <div className="mt-6 p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl space-y-3 text-sm border border-green-500/20 backdrop-blur-sm">
-          <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
-            <span className="text-green-200 flex items-center">
-              <span className="w-2 h-2 bg-green-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
-              Capacity
-            </span>
-            <span className="font-bold text-lg">{capacity.toFixed(1)}g</span>
-          </div>
-          <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
-            <span className="text-green-200 flex items-center">
-              <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
-              Flower Strains
-            </span>
-            <span className="font-bold">{flowerCount}</span>
-          </div>
-          <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
-            <span className="text-green-200 flex items-center">
-              <span className="w-2 h-2 bg-amber-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
-              Hash Types
-            </span>
-            <span className="font-bold">{hashCount}</span>
-          </div>
-          <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
-            <span className="text-green-200 flex items-center">
-              <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
-              Worm (Donut)
-            </span>
-            <span className="font-bold flex items-center gap-1">
-              {hasWorm ? (
-                <>
-                  <span className="text-green-400">✓</span> Yes
-                </>
-              ) : (
-                <>
-                  <span className="text-red-400">✗</span> No
-                </>
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
-            <span className="text-green-200 flex items-center">
-              <span className="w-2 h-2 bg-orange-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
-              External Coating
-            </span>
-            <span className="font-bold flex items-center gap-1">
-              {hasCoating || hasWrap ? (
-                <>
-                  <span className="text-green-400">✓</span> Yes
-                </>
-              ) : (
-                <>
-                  <span className="text-red-400">✗</span> No
-                </>
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between items-center pt-3 mt-2 border-t border-green-500/30 bg-gradient-to-r from-green-500/20 to-emerald-500/20 p-3 rounded-xl">
-            <span className="text-green-300 font-semibold text-base">
-              Total Price
-            </span>
-            <span className="font-bold text-2xl text-green-400 animate-pulse">
-              ฿{config.totalPrice.toFixed(0)}
-            </span>
+        {/* Right - Order Details */}
+        <div>
+          {/* Specifications */}
+          <div className="p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl space-y-3 text-sm border border-green-500/20 backdrop-blur-sm">
+            <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
+              <span className="text-green-200 flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
+                Capacity
+              </span>
+              <span className="font-bold text-lg">{capacity.toFixed(1)}g</span>
+            </div>
+            <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
+              <span className="text-green-200 flex items-center">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
+                Flower Strains
+              </span>
+              <span className="font-bold">{flowerCount}</span>
+            </div>
+            <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
+              <span className="text-green-200 flex items-center">
+                <span className="w-2 h-2 bg-amber-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
+                Hash Types
+              </span>
+              <span className="font-bold">{hashCount}</span>
+            </div>
+            <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
+              <span className="text-green-200 flex items-center">
+                <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
+                Worm (Donut)
+              </span>
+              <span className="font-bold flex items-center gap-1">
+                {hasWorm ? (
+                  <>
+                    <span className="text-green-400">✓</span> Yes
+                  </>
+                ) : (
+                  <>
+                    <span className="text-red-400">✗</span> No
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between items-center group hover:bg-white/5 p-2 rounded-lg transition-all">
+              <span className="text-green-200 flex items-center">
+                <span className="w-2 h-2 bg-orange-400 rounded-full mr-2 group-hover:scale-125 transition-transform"></span>
+                External Coating
+              </span>
+              <span className="font-bold flex items-center gap-1">
+                {hasCoating || hasWrap ? (
+                  <>
+                    <span className="text-green-400">✓</span> Yes
+                  </>
+                ) : (
+                  <>
+                    <span className="text-red-400">✗</span> No
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-3 mt-2 border-t border-green-500/30 bg-gradient-to-r from-green-500/20 to-emerald-500/20 p-3 rounded-xl">
+              <span className="text-green-300 font-semibold text-base">
+                Total Price
+              </span>
+              <span className="font-bold text-2xl text-green-400 animate-pulse">
+                ฿{config.totalPrice.toFixed(0)}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <style jsx>{`
-        @keyframes rotate-y-180 {
-          from {
-            transform: rotateY(0deg);
+        <style jsx>{`
+          @keyframes rotate-y-180 {
+            from {
+              transform: rotateY(0deg);
+            }
+            to {
+              transform: rotateY(180deg);
+            }
           }
-          to {
-            transform: rotateY(180deg);
+          @keyframes shimmer {
+            0%,
+            100% {
+              opacity: 0.5;
+            }
+            50% {
+              opacity: 0.8;
+            }
           }
-        }
-        @keyframes shimmer {
-          0%,
-          100% {
-            opacity: 0.5;
+          @keyframes sparkle {
+            0%,
+            100% {
+              opacity: 0;
+              transform: scale(0);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1);
+            }
           }
-          50% {
-            opacity: 0.8;
+          @keyframes smoke {
+            0% {
+              opacity: 1;
+              transform: translateY(0) scale(0.7) rotate(0deg);
+            }
+            20% {
+              opacity: 0.85;
+              transform: translateY(-25px) scale(1.1) rotate(10deg);
+            }
+            40% {
+              opacity: 0.65;
+              transform: translateY(-50px) scale(1.5) rotate(-5deg);
+            }
+            60% {
+              opacity: 0.45;
+              transform: translateY(-80px) scale(2) rotate(15deg);
+            }
+            80% {
+              opacity: 0.2;
+              transform: translateY(-110px) scale(2.5) rotate(-10deg);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(-140px) scale(3) rotate(5deg);
+            }
           }
-        }
-        @keyframes sparkle {
-          0%,
-          100% {
-            opacity: 0;
-            transform: scale(0);
+          @keyframes smokeParticle {
+            0% {
+              opacity: 0.9;
+              transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+            }
+            25% {
+              opacity: 0.7;
+              transform: translateY(-30px) translateX(var(--drift, 10px))
+                scale(1.4) rotate(120deg);
+            }
+            50% {
+              opacity: 0.5;
+              transform: translateY(-65px) translateX(var(--drift, 20px))
+                scale(1.7) rotate(240deg);
+            }
+            75% {
+              opacity: 0.25;
+              transform: translateY(-100px) translateX(var(--drift, 30px))
+                scale(1.3) rotate(360deg);
+            }
+            100% {
+              opacity: 0;
+              transform: translateY(-130px) translateX(var(--drift, 35px))
+                scale(0.8) rotate(480deg);
+            }
           }
-          50% {
-            opacity: 1;
-            transform: scale(1);
+          @keyframes glow {
+            0%,
+            100% {
+              opacity: 0.3;
+              transform: scale(1);
+            }
+            50% {
+              opacity: 0.6;
+              transform: scale(1.2);
+            }
           }
-        }
-        @keyframes smoke {
-          0% {
-            opacity: 1;
-            transform: translateY(0) scale(0.7) rotate(0deg);
+          .rotate-y-180 {
+            animation: rotate-y-180 0.6s ease-in-out;
           }
-          20% {
-            opacity: 0.85;
-            transform: translateY(-25px) scale(1.1) rotate(10deg);
+          .animate-shimmer {
+            animation: shimmer 2s ease-in-out infinite;
           }
-          40% {
-            opacity: 0.65;
-            transform: translateY(-50px) scale(1.5) rotate(-5deg);
+          .animate-sparkle {
+            animation: sparkle 1.5s ease-in-out infinite;
           }
-          60% {
-            opacity: 0.45;
-            transform: translateY(-80px) scale(2) rotate(15deg);
+          .animate-smoke {
+            animation: smoke ease-out infinite;
           }
-          80% {
-            opacity: 0.2;
-            transform: translateY(-110px) scale(2.5) rotate(-10deg);
+          .animate-smokeParticle {
+            animation: smokeParticle ease-out infinite;
+            --drift: ${Math.random() * 30 - 15}px;
           }
-          100% {
-            opacity: 0;
-            transform: translateY(-140px) scale(3) rotate(5deg);
+          .animate-glow {
+            animation: glow 1s ease-in-out infinite;
           }
-        }
-        @keyframes smokeParticle {
-          0% {
-            opacity: 0.9;
-            transform: translateY(0) translateX(0) scale(1) rotate(0deg);
-          }
-          25% {
-            opacity: 0.7;
-            transform: translateY(-30px) translateX(var(--drift, 10px))
-              scale(1.4) rotate(120deg);
-          }
-          50% {
-            opacity: 0.5;
-            transform: translateY(-65px) translateX(var(--drift, 20px))
-              scale(1.7) rotate(240deg);
-          }
-          75% {
-            opacity: 0.25;
-            transform: translateY(-100px) translateX(var(--drift, 30px))
-              scale(1.3) rotate(360deg);
-          }
-          100% {
-            opacity: 0;
-            transform: translateY(-130px) translateX(var(--drift, 35px))
-              scale(0.8) rotate(480deg);
-          }
-        }
-        @keyframes glow {
-          0%,
-          100% {
-            opacity: 0.3;
-            transform: scale(1);
-          }
-          50% {
-            opacity: 0.6;
-            transform: scale(1.2);
-          }
-        }
-        .rotate-y-180 {
-          animation: rotate-y-180 0.6s ease-in-out;
-        }
-        .animate-shimmer {
-          animation: shimmer 2s ease-in-out infinite;
-        }
-        .animate-sparkle {
-          animation: sparkle 1.5s ease-in-out infinite;
-        }
-        .animate-smoke {
-          animation: smoke ease-out infinite;
-        }
-        .animate-smokeParticle {
-          animation: smokeParticle ease-out infinite;
-          --drift: ${Math.random() * 30 - 15}px;
-        }
-        .animate-glow {
-          animation: glow 1s ease-in-out infinite;
-        }
-      `}</style>
+        `}</style>
+      </div>
     </div>
   );
 }
