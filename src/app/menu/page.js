@@ -337,15 +337,14 @@ export default function MenuPage() {
 
       // Fetch minimum amounts for ordered currencies
       const orderedCurrencies = [
-        { code: "usdterc20", displayName: "USDT (ETH)", network: "ERC20" },
-        { code: "usdttrc20", displayName: "USDT (TRX)", network: "TRC20" },
+        { code: "usdterc20", displayName: "USDT (ERC)", network: "ERC20" },
+        { code: "usdttrc20", displayName: "USDT (TRC)", network: "TRC20" },
         { code: "btc", displayName: "BTC", network: null },
         { code: "eth", displayName: "ETH", network: null },
         { code: "xrp", displayName: "XRP", network: null },
         { code: "trx", displayName: "TRX", network: null },
-        { code: "usdc", displayName: "USDC (ETH)", network: "ERC20" },
+        { code: "usdc", displayName: "USDC (ERC)", network: "ERC20" },
         { code: "sol", displayName: "SOL", network: null },
-        { code: "ada", displayName: "ADA", network: null },
       ];
       const minimums = {};
 
@@ -5589,15 +5588,14 @@ export default function MenuPage() {
                 {/* Currency Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {[
-                    { code: "usdterc20", displayName: "USDT (ETH)" },
-                    { code: "usdttrc20", displayName: "USDT (TRX)" },
+                    { code: "usdterc20", displayName: "USDT (ERC)" },
+                    { code: "usdttrc20", displayName: "USDT (TRC)" },
                     { code: "btc", displayName: "BTC" },
                     { code: "eth", displayName: "ETH" },
                     { code: "xrp", displayName: "XRP" },
                     { code: "trx", displayName: "TRX" },
-                    { code: "usdc", displayName: "USDC (ETH)" },
+                    { code: "usdc", displayName: "USDC (ERC)" },
                     { code: "sol", displayName: "SOL" },
-                    { code: "ada", displayName: "ADA" },
                   ].map((item) => {
                     const currencyCode = item.code.toLowerCase();
                     const minimum = currencyMinimums[currencyCode];
