@@ -3783,29 +3783,37 @@ export default function MenuPage() {
                                     .map((product) => (
                                       <div
                                         key={product.id}
-                                        className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
+                                        className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border relative ${
                                           selectedProduct?.id === product.id
                                             ? "transform scale-105 shadow-lg border-green-500"
                                             : "border-gray-100"
                                         } `}
                                         style={{
-                                          backgroundImage:
-                                            product.backgroundImage
-                                              ? `url(${product.backgroundImage})`
-                                              : "none",
-                                          backgroundSize:
-                                            product.backgroundFit || "cover",
-                                          backgroundPosition: "center",
-                                          backgroundRepeat: "no-repeat",
                                           backgroundColor:
                                             product.backgroundImage
                                               ? "transparent"
-                                              : "white",
+                                              : "rgba(255, 255, 255, 0.8)",
                                         }}
                                         onClick={() =>
                                           handleProductSelect(product)
                                         }
                                       >
+                                        {/* Background Image with 80% Opacity */}
+                                        {product.backgroundImage && (
+                                          <div
+                                            className="absolute inset-0 rounded-xl -z-10"
+                                            style={{
+                                              backgroundImage: `url(${product.backgroundImage})`,
+                                              backgroundSize:
+                                                product.backgroundFit ||
+                                                "cover",
+                                              backgroundPosition: "center",
+                                              backgroundRepeat: "no-repeat",
+                                              opacity: 0.8,
+                                            }}
+                                          ></div>
+                                        )}
+
                                         {product.mainImage && (
                                           <div className="w-full aspect-[3/4] mb-2 relative">
                                             <Image
@@ -3868,7 +3876,7 @@ export default function MenuPage() {
                           .map((product) => (
                             <div
                               key={product.id}
-                              className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border ${
+                              className={`cursor-pointer hover:shadow-md transition-all duration-300 rounded-xl p-3 border relative ${
                                 selectedProduct?.id === product.id
                                   ? "transform scale-105 shadow-lg border-green-500"
                                   : "border-gray-100"
