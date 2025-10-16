@@ -980,6 +980,7 @@ export default function MenuPage() {
     if (category.specialPage === "Prerolled Page") {
       console.log("✅ Navigating to prerolls section");
       setShowPersonalizedJoints(true);
+      setShowCustomJointBuilder(false); // Close custom joint builder
       setSelectedCategory(null);
       return;
     }
@@ -988,10 +989,14 @@ export default function MenuPage() {
     if (category.specialPage === "Custom Joint Builder") {
       console.log("✅ Opening Custom Joint Builder");
       setShowCustomJointBuilder(true);
+      setShowPersonalizedJoints(false); // Close prerolled page
       setSelectedCategory(null);
       return;
     }
 
+    // Regular category - close all special pages
+    setShowCustomJointBuilder(false);
+    setShowPersonalizedJoints(false);
     setSelectedCategory(category.id); // Use category.id (database ID) for filtering
 
     // Filter subcategories and products based on selected category database ID
@@ -3658,11 +3663,27 @@ export default function MenuPage() {
                 />
               </div>
             ) : (
-              <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col">
+              <div className="h-full bg-white rounded-3xl shadow-lg flex flex-col overflow-hidden">
                 {selectedCategory ? (
                   <div
                     id="kiosk-right-list"
-                    className="p-6 overflow-y-auto flex-1 custom-scrollbar"
+                    className="p-6 overflow-y-auto flex-1 custom-scrollbar rounded-3xl"
+                    style={{
+                      backgroundImage: categories.find(
+                        (cat) => cat.id === selectedCategory
+                      )?.backgroundImage
+                        ? `url(${
+                            categories.find(
+                              (cat) => cat.id === selectedCategory
+                            ).backgroundImage
+                          })`
+                        : "none",
+                      backgroundSize:
+                        categories.find((cat) => cat.id === selectedCategory)
+                          ?.backgroundFit || "cover",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat",
+                    }}
                   >
                     {/* Subcategories */}
                     {getFilteredSubcategories().length > 0 && (
