@@ -4080,6 +4080,23 @@ export default function MenuPage() {
               </div>
             </div>
 
+            {/* Product Image & Name */}
+            {selectedProduct.mainImage && (
+              <div className="p-6 bg-white flex flex-col items-center">
+                <div className="w-96 h-96 relative mb-4">
+                  <Image
+                    src={selectedProduct.mainImage}
+                    alt={selectedProduct.name}
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <h4 className="text-xl font-bold text-gray-800 text-center">
+                  {selectedProduct.name}
+                </h4>
+              </div>
+            )}
+
             {/* Content */}
             <div className="flex flex-col justify-between flex-1 overflow-y-auto">
               {selectedProduct.hasVariants &&
