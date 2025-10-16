@@ -3678,7 +3678,7 @@ export default function MenuPage() {
                           return (
                             <div
                               key={subcategory.id}
-                              className={`pb-2 rounded-lg overflow-hidden transition-all duration-300 ${
+                              className={`pb-2 rounded-2xl overflow-hidden transition-all duration-300 ${
                                 isExpanded ? "shadow-lg" : "shadow-sm"
                               }`}
                               style={{
@@ -3699,7 +3699,7 @@ export default function MenuPage() {
                                 onClick={() =>
                                   handleSubcategoryToggle(subcategory.id)
                                 }
-                                className="flex items-center mb-2 w-full text-left hover:bg-black/10 p-4 transition-all duration-200"
+                                className="flex items-center mb-2 w-full text-left hover:bg-black/10 p-8 transition-all duration-200"
                               >
                                 {subcategory.image && (
                                   <div className="w-16 h-16 mr-3 relative flex-shrink-0 rounded-lg overflow-hidden">
@@ -3714,12 +3714,9 @@ export default function MenuPage() {
                                 )}
                                 <div className="flex-1 flex items-center justify-between">
                                   <h5
-                                    className="font-bold text-lg"
+                                    className="font-bold text-2xl"
                                     style={{
                                       color: subcategory.textColor || "#959595",
-                                      textShadow: subcategory.backgroundImage
-                                        ? "1px 1px 2px rgba(0,0,0,0.7)"
-                                        : "none",
                                     }}
                                   >
                                     {subcategory.name}
