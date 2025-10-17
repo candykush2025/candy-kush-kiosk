@@ -126,7 +126,7 @@ export default function ModelCacheManager() {
           <p className="font-semibold mb-1">ℹ️ About Cache</p>
           <ul className="list-disc list-inside space-y-1">
             <li>3D models are automatically cached for faster loading</li>
-            <li>Cache is stored in your browser's IndexedDB</li>
+            <li>Cache is stored in your browser&apos;s IndexedDB</li>
             <li>Models are cached when first viewed or edited</li>
             <li>Clear cache if having loading issues</li>
           </ul>
