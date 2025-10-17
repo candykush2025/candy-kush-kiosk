@@ -7047,11 +7047,15 @@ export default function AdminPage() {
                                             product.backgroundImage || "",
                                           backgroundFit:
                                             product.backgroundFit || "cover",
-                                          textColor: product.textColor || "#000000",
+                                          textColor:
+                                            product.textColor || "#000000",
                                           modelUrl: product.modelUrl || "",
-                                          modelRotationX: product.modelRotationX || 90,
-                                          modelRotationY: product.modelRotationY || 75,
-                                          modelRotationZ: product.modelRotationZ || 2.5,
+                                          modelRotationX:
+                                            product.modelRotationX || 90,
+                                          modelRotationY:
+                                            product.modelRotationY || 75,
+                                          modelRotationZ:
+                                            product.modelRotationZ || 2.5,
                                         });
                                       }}
                                       className="text-green-600 hover:text-green-900"
