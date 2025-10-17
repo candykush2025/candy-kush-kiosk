@@ -1950,6 +1950,10 @@ export default function AdminPage() {
           textColor: productForm.textColor,
           backgroundImage: productForm.backgroundImage,
           backgroundFit: productForm.backgroundFit,
+          modelUrl: productForm.modelUrl,
+          modelRotationX: productForm.modelRotationX,
+          modelRotationY: productForm.modelRotationY,
+          modelRotationZ: productForm.modelRotationZ,
         };
 
         // Debug: Check file state for edit mode
@@ -1997,6 +2001,9 @@ export default function AdminPage() {
           hadImageFile: !!productImageFile,
           subcategoryId: cleanProductData.subcategoryId,
         });
+
+        // Reload products to get updated data
+        await loadDashboardData();
 
         setEditingProduct(null);
         setProductImageFile(null); // Clear the image file state
@@ -7021,6 +7028,7 @@ export default function AdminPage() {
                                           hasVariants:
                                             product.hasVariants || false,
                                           price: product.price || 0,
+                                          memberPrice: product.memberPrice || 0,
                                           variants: product.variants || [],
                                           sku: product.sku || "",
                                           barcode: product.barcode || "",
@@ -7039,6 +7047,11 @@ export default function AdminPage() {
                                             product.backgroundImage || "",
                                           backgroundFit:
                                             product.backgroundFit || "cover",
+                                          textColor: product.textColor || "#000000",
+                                          modelUrl: product.modelUrl || "",
+                                          modelRotationX: product.modelRotationX || 90,
+                                          modelRotationY: product.modelRotationY || 75,
+                                          modelRotationZ: product.modelRotationZ || 2.5,
                                         });
                                       }}
                                       className="text-green-600 hover:text-green-900"

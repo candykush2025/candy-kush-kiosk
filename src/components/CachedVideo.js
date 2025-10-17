@@ -48,10 +48,10 @@ export default function CachedVideo({
 
         if (isMounted) {
           // Revoke old blob URL if exists
-          if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+          if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
             URL.revokeObjectURL(blobUrlRef.current);
           }
-          
+
           blobUrlRef.current = url;
           setCachedSrc(url);
           setLoadingProgress(100);
@@ -77,7 +77,7 @@ export default function CachedVideo({
     return () => {
       isMounted = false;
       // Cleanup blob URL on unmount
-      if (blobUrlRef.current && blobUrlRef.current.startsWith('blob:')) {
+      if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
