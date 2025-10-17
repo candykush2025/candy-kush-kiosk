@@ -20,6 +20,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AdminAuthGuard from "../../components/AdminAuthGuard";
+import ModelViewer from "../../components/ModelViewer";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
@@ -124,6 +125,22 @@ export default function AdminPage() {
       throw error;
     }
   };
+
+  // Load Google Model Viewer script for 3D model preview
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.type = "module";
+    script.src =
+      "https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js";
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup script on unmount
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
 
   // Initialize order list when categories loaded
   useEffect(() => {
@@ -589,6 +606,10 @@ export default function AdminPage() {
     textColor: "#000000",
     backgroundImage: "",
     backgroundFit: "contain",
+    modelUrl: "",
+    modelRotationX: 90,
+    modelRotationY: 75,
+    modelRotationZ: 2.5,
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -652,6 +673,10 @@ export default function AdminPage() {
     backgroundImage: "",
     backgroundFit: "contain",
     textColor: "#000000",
+    modelUrl: "",
+    modelRotationX: 90,
+    modelRotationY: 75,
+    modelRotationZ: 2.5,
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -710,6 +735,7 @@ export default function AdminPage() {
     useState(null);
   const [productBackgroundImageFile, setProductBackgroundImageFile] =
     useState(null);
+  const [productModelFile, setProductModelFile] = useState(null);
 
   // Loading states
   const [isCustomerSaving, setIsCustomerSaving] = useState(false);
@@ -1068,6 +1094,10 @@ export default function AdminPage() {
         images: editingProduct.images || [],
         backgroundImage: editingProduct.backgroundImage || "",
         backgroundFit: editingProduct.backgroundFit || "contain",
+        modelUrl: editingProduct.modelUrl || "",
+        modelRotationX: editingProduct.modelRotationX || 90,
+        modelRotationY: editingProduct.modelRotationY || 75,
+        modelRotationZ: editingProduct.modelRotationZ || 2.5,
         categoryName: editingProduct.categoryName || "",
         subcategoryName: editingProduct.subcategoryName || "",
         textColor: editingProduct.textColor || "#000000",
@@ -1957,7 +1987,8 @@ export default function AdminPage() {
           cleanProductData,
           imageFiles, // New image files
           productBackgroundImageFile, // Background image
-          shouldRemoveMainImages // Flag to remove existing images
+          shouldRemoveMainImages, // Flag to remove existing images
+          productModelFile || null // 3D model file
         );
 
         console.log("✅ EDIT MODE SUCCESS - Product updated successfully:", {
@@ -1971,6 +2002,7 @@ export default function AdminPage() {
         setProductImageFile(null); // Clear the image file state
         setShouldRemoveMainImages(false); // Reset removal flag
         setProductBackgroundImageFile(null);
+        setProductModelFile(null); // Clear 3D model file state
         setProductForm({
           name: "",
           description: "",
@@ -2071,7 +2103,8 @@ export default function AdminPage() {
         const result = await ProductService.createProduct(
           cleanProductData,
           imageFiles,
-          productBackgroundImageFile || null
+          productBackgroundImageFile || null,
+          productModelFile || null
         );
 
         // Debug: Confirm product was saved successfully
@@ -2101,6 +2134,10 @@ export default function AdminPage() {
           textColor: "#000000",
           backgroundImage: "",
           backgroundFit: "contain",
+          modelUrl: "",
+          modelRotationX: 90,
+          modelRotationY: 75,
+          modelRotationZ: 2.5,
           isActive: true,
           isFeatured: false,
           tags: [],
@@ -2111,6 +2148,7 @@ export default function AdminPage() {
         setProductImageFile(null);
         setOptionImageFile(null);
         setProductBackgroundImageFile(null);
+        setProductModelFile(null);
         setShowAddProduct(false);
       }
       await loadDashboardData();
@@ -14460,6 +14498,131 @@ export default function AdminPage() {
                     </p>
                   </div>
 
+                  {/* 3D Model Upload Section */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      3D Model (.glb file)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".glb,.gltf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setProductModelFile(file);
+                          // Create preview URL
+                          const modelUrl = URL.createObjectURL(file);
+                          setNewProduct({
+                            ...newProduct,
+                            modelUrl: modelUrl,
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {productModelFile && (
+                      <div className="mt-2">
+                        <p className="text-sm text-gray-600 mb-2">
+                          File: {productModelFile.name}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductModelFile(null);
+                            setNewProduct({
+                              ...newProduct,
+                              modelUrl: "",
+                            });
+                          }}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          Remove 3D model
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 3D Model Rotation Controls */}
+                    {productModelFile && (
+                      <div className="mt-4 space-y-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Initial Rotation Settings
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Horizontal (0-360°)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="360"
+                              value={newProduct.modelRotationX || 90}
+                              onChange={(e) =>
+                                setNewProduct({
+                                  ...newProduct,
+                                  modelRotationX: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Vertical (0-180°)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="180"
+                              value={newProduct.modelRotationY || 75}
+                              onChange={(e) =>
+                                setNewProduct({
+                                  ...newProduct,
+                                  modelRotationY: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Distance (0.1-10m)
+                            </label>
+                            <input
+                              type="number"
+                              min="0.1"
+                              max="10"
+                              step="0.1"
+                              value={newProduct.modelRotationZ || 2.5}
+                              onChange={(e) =>
+                                setNewProduct({
+                                  ...newProduct,
+                                  modelRotationZ: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 3D Model Preview */}
+                        <div className="mt-3">
+                          <label className="block text-xs text-gray-600 mb-2">
+                            Preview (drag to rotate, scroll to zoom)
+                          </label>
+                          <ModelViewer
+                            modelUrl={newProduct.modelUrl}
+                            rotationX={newProduct.modelRotationX || 90}
+                            rotationY={newProduct.modelRotationY || 75}
+                            rotationZ={newProduct.modelRotationZ || 2.5}
+                            autoRotate={false}
+                            className="w-full h-64 bg-white rounded-lg border-2 border-gray-200"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Product Image - Complex Upload Section */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -15327,6 +15490,138 @@ export default function AdminPage() {
                     <p className="mt-1 text-xs text-gray-500">
                       Choose the text color for this product.
                     </p>
+                  </div>
+
+                  {/* 3D Model Upload Section */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      3D Model (.glb file)
+                    </label>
+                    <input
+                      type="file"
+                      accept=".glb,.gltf"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setProductModelFile(file);
+                          // Create preview URL
+                          const modelUrl = URL.createObjectURL(file);
+                          setProductForm({
+                            ...productForm,
+                            modelUrl: modelUrl,
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {(productModelFile || productForm.modelUrl) && (
+                      <div className="mt-2">
+                        {productModelFile && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            New file: {productModelFile.name}
+                          </p>
+                        )}
+                        {!productModelFile && productForm.modelUrl && (
+                          <p className="text-sm text-gray-600 mb-2">
+                            Current model uploaded
+                          </p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProductModelFile(null);
+                            setProductForm({
+                              ...productForm,
+                              modelUrl: "",
+                            });
+                          }}
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          Remove 3D model
+                        </button>
+                      </div>
+                    )}
+
+                    {/* 3D Model Rotation Controls */}
+                    {(productModelFile || productForm.modelUrl) && (
+                      <div className="mt-4 space-y-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Initial Rotation Settings
+                        </label>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Horizontal (0-360°)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="360"
+                              value={productForm.modelRotationX || 90}
+                              onChange={(e) =>
+                                setProductForm({
+                                  ...productForm,
+                                  modelRotationX: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Vertical (0-180°)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="180"
+                              value={productForm.modelRotationY || 75}
+                              onChange={(e) =>
+                                setProductForm({
+                                  ...productForm,
+                                  modelRotationY: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 mb-1">
+                              Distance (0.1-10m)
+                            </label>
+                            <input
+                              type="number"
+                              min="0.1"
+                              max="10"
+                              step="0.1"
+                              value={productForm.modelRotationZ || 2.5}
+                              onChange={(e) =>
+                                setProductForm({
+                                  ...productForm,
+                                  modelRotationZ: parseFloat(e.target.value),
+                                })
+                              }
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        {/* 3D Model Preview */}
+                        <div className="mt-3">
+                          <label className="block text-xs text-gray-600 mb-2">
+                            Preview (drag to rotate, scroll to zoom)
+                          </label>
+                          <ModelViewer
+                            modelUrl={productForm.modelUrl}
+                            rotationX={productForm.modelRotationX || 90}
+                            rotationY={productForm.modelRotationY || 75}
+                            rotationZ={productForm.modelRotationZ || 2.5}
+                            autoRotate={false}
+                            className="w-full h-64 bg-white rounded-lg border-2 border-gray-200"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Background Image Upload */}

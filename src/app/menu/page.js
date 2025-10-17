@@ -2,7 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import CachedImage from "../../components/CachedImage";
 import CustomJointBuilder from "../../components/CustomJointBuilder";
+import ModelViewer from "../../components/ModelViewer";
 import {
   CustomerService,
   getTierColor,
@@ -59,6 +61,9 @@ export default function MenuPage() {
 
   // Image zoom states
   const [zoomedImage, setZoomedImage] = useState(null);
+
+  // 3D Model view toggle
+  const [show3DView, setShow3DView] = useState(false);
 
   // Selected size for preroll popup
   const [selectedSize, setSelectedSize] = useState(null);
@@ -967,6 +972,20 @@ export default function MenuPage() {
       setFirstWindowHeight(height);
     }
   }, [categories]);
+
+  // Load model-viewer script
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      // Check if script is already loaded
+      if (!document.querySelector('script[src*="model-viewer"]')) {
+        const script = document.createElement("script");
+        script.type = "module";
+        script.src =
+          "https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js";
+        document.head.appendChild(script);
+      }
+    }
+  }, []);
 
   // Handle category selection
   const handleCategorySelect = (category) => {
@@ -2291,6 +2310,7 @@ export default function MenuPage() {
       setCurrentVariantIndex(0);
       setSelectedVariantOptions({});
       setIsPopupClosing(false);
+      setShow3DView(false); // Reset 3D view toggle
     }, 300); // Match animation duration
   };
 
@@ -3600,9 +3620,10 @@ export default function MenuPage() {
                             : "w-3/4 mx-auto aspect-square"
                         }`}
                       >
-                        <Image
+                        <CachedImage
                           src={category.image}
                           alt={category.name}
+                          type="category"
                           fill
                           className={`rounded-lg transition-all duration-300 ${
                             selectedCategory === category.id
@@ -3612,6 +3633,7 @@ export default function MenuPage() {
                           style={{
                             objectFit: "contain",
                           }}
+                          showLoading={false}
                         />
                         {/* Cashback Badge - only show for members */}
                         {customer &&
@@ -3724,12 +3746,14 @@ export default function MenuPage() {
                               >
                                 {subcategory.image && (
                                   <div className="w-16 h-16 mr-3 relative flex-shrink-0 rounded-lg overflow-hidden">
-                                    <Image
+                                    <CachedImage
                                       src={subcategory.image}
                                       alt={subcategory.name}
+                                      type="category"
                                       fill
                                       className="object-contain rounded p-1"
                                       sizes="64px"
+                                      showLoading={false}
                                     />
                                   </div>
                                 )}
@@ -3834,11 +3858,13 @@ export default function MenuPage() {
 
                                         {product.mainImage && (
                                           <div className="w-full aspect-[3/4] mb-2 relative">
-                                            <Image
+                                            <CachedImage
                                               src={product.mainImage}
                                               alt={product.name}
+                                              type="product"
                                               fill
                                               className="object-contain rounded-lg"
+                                              showLoading={false}
                                             />
                                             {getProductCartQuantity(product) >
                                               0 && (
@@ -3915,11 +3941,13 @@ export default function MenuPage() {
                             >
                               {product.mainImage && (
                                 <div className="w-full aspect-[3/4] mb-2 relative">
-                                  <Image
+                                  <CachedImage
                                     src={product.mainImage}
                                     alt={product.name}
+                                    type="product"
                                     fill
                                     className="object-contain rounded-lg"
+                                    showLoading={false}
                                   />
                                   {getProductCartQuantity(product) > 0 && (
                                     <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
@@ -4034,16 +4062,61 @@ export default function MenuPage() {
         </div>
       </div>
       {/* overlays outside container to avoid clipping */}
+
       {/* Quantity/Variant Popup */}
       {showQuantityPopup && selectedProduct && (
         <div
-          className={`fixed inset-0 bg-black/10 flex items-end justify-center z-50 transition-opacity duration-300 ${
+          className={`fixed inset-0 flex items-end justify-center z-50 transition-opacity duration-300 ${
             isPopupClosing ? "opacity-0" : "opacity-100"
           }`}
           onClick={handleBackgroundClick}
         >
+          {/* Blurred Background Layer with 50% Opacity */}
           <div
-            className="bg-white shadow-2xl w-full transition-transform duration-300 ease-out"
+            className="absolute inset-0"
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              backdropFilter: "blur(10px)",
+              WebkitBackdropFilter: "blur(10px)",
+            }}
+          ></div>
+
+          {/* Close Button - Top Right */}
+          <button
+            onClick={closeQuantityPopup}
+            className="absolute top-8 right-8 bg-red-600 hover:bg-red-700 text-white w-16 h-16 rounded-full font-bold text-3xl transition-all duration-200 shadow-lg z-20 flex items-center justify-center"
+          >
+            ×
+          </button>
+
+          {/* Background Content - 3D Model OR Image (Clear and Normal, No Blur) */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            {selectedProduct.modelUrl ? (
+              // Show 3D Model if available with caching and loading animation
+              <ModelViewer
+                modelUrl={selectedProduct.modelUrl}
+                rotationX={selectedProduct.modelRotationX || 90}
+                rotationY={selectedProduct.modelRotationY || 75}
+                rotationZ={selectedProduct.modelRotationZ || 2.5}
+                autoRotate={true}
+                className="w-full h-full"
+              />
+            ) : selectedProduct.mainImage ? (
+              // Show large product image if no 3D model
+              <CachedImage
+                src={selectedProduct.mainImage}
+                alt={selectedProduct.name}
+                type="product"
+                fill
+                className="object-contain"
+                showLoading={true}
+              />
+            ) : null}
+          </div>
+
+          {/* Quantity Popup - Now Smaller Without Image */}
+          <div
+            className="bg-white shadow-2xl w-full transition-transform duration-300 ease-out relative z-10"
             style={{
               height: "fit-content",
               minHeight: "300px",
@@ -4079,23 +4152,6 @@ export default function MenuPage() {
                 </h3>
               </div>
             </div>
-
-            {/* Product Image & Name */}
-            {selectedProduct.mainImage && (
-              <div className="p-6 bg-white flex flex-col items-center">
-                <div className="w-96 h-96 relative mb-4">
-                  <Image
-                    src={selectedProduct.mainImage}
-                    alt={selectedProduct.name}
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <h4 className="text-xl font-bold text-gray-800 text-center">
-                  {selectedProduct.name}
-                </h4>
-              </div>
-            )}
 
             {/* Content */}
             <div className="flex flex-col justify-between flex-1 overflow-y-auto">

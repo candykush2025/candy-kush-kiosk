@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import i18n, { supportedLanguages } from "../i18n";
 import ReactCountryFlag from "react-country-flag";
 import KioskHeader from "../components/KioskHeader";
+import CachedVideo from "../components/CachedVideo";
 import { FaHandPointer } from "react-icons/fa";
 
 export default function Home() {
@@ -292,20 +293,17 @@ export default function Home() {
       <div className="h-full flex flex-col bg-gray-50 overflow-hidden">
         {/* Video Section with overlay header */}
         <div className="flex-1 relative bg-black overflow-hidden">
-          <video
+          <CachedVideo
+            src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
+            name="idle-video"
             className="w-full h-full object-fill"
             autoPlay
             loop
             muted
             playsInline
             onClick={handleOrderNow}
-          >
-            <source
-              src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
-              type="video/mp4"
-            />
-            Your browser does not support the video tag.
-          </video>
+            showLoading={true}
+          />
           <div className="absolute top-0 left-0 right-0 z-20 pointer-events-none">
             {/* Header overlay - allow internal buttons to be clickable */}
             <div className="pointer-events-auto">
@@ -388,19 +386,16 @@ export default function Home() {
         {/* Idle Overlay - Full screen when inactive */}
         {isIdle && (
           <div className="absolute inset-0 z-50 bg-black cursor-pointer">
-            <video
+            <CachedVideo
+              src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
+              name="idle-video"
               className="w-full h-full object-cover"
               autoPlay
               loop
               muted
               playsInline
-            >
-              <source
-                src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
-                type="video/mp4"
-              />
-              Your browser does not support the video tag.
-            </video>
+              showLoading={false}
+            />
 
             {/* Tap to continue overlay */}
             <div className="absolute inset-0 flex items-center justify-center">

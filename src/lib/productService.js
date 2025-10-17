@@ -598,7 +598,8 @@ export class ProductService {
   static async createProduct(
     productData,
     imageFiles = [],
-    backgroundImageFile = null
+    backgroundImageFile = null,
+    modelFile = null
   ) {
     try {
       console.log("ProductService.createProduct called with:", {
@@ -606,6 +607,7 @@ export class ProductService {
         imageFilesCount: imageFiles?.length || 0,
         imageFileNames: imageFiles?.map((f) => f.name) || [],
         hasBackgroundImage: !!backgroundImageFile,
+        hasModelFile: !!modelFile,
       });
 
       const productId = await this.generateProductId();
@@ -650,6 +652,14 @@ export class ProductService {
         );
       }
 
+      // Handle 3D model file upload if provided
+      let modelUrl = "";
+      if (modelFile) {
+        const modelPath = `products/${productId}/model_${modelFile.name}`;
+        modelUrl = await CategoryService.uploadImage(modelFile, modelPath);
+        console.log(`3D Model uploaded successfully: ${modelUrl}`);
+      }
+
       const documentData = {
         productId: productId,
         name: productData.name,
@@ -675,6 +685,10 @@ export class ProductService {
           backgroundImageUrl || productData.backgroundImage || "",
         backgroundFit: productData.backgroundFit || "contain",
         textColor: productData.textColor || "#000000",
+        modelUrl: modelUrl || productData.modelUrl || "",
+        modelRotationX: productData.modelRotationX || 90,
+        modelRotationY: productData.modelRotationY || 75,
+        modelRotationZ: productData.modelRotationZ || 2.5,
         isActive:
           productData.isActive !== undefined ? productData.isActive : true,
         isFeatured: productData.isFeatured || false,
@@ -834,7 +848,8 @@ export class ProductService {
     productData,
     imageFiles = [],
     backgroundImageFile = null,
-    removeMainImages = false
+    removeMainImages = false,
+    modelFile = null
   ) {
     try {
       console.log("ProductService.updateProduct called with:", {
@@ -844,6 +859,7 @@ export class ProductService {
         imageFileNames: imageFiles?.map((f) => f.name) || [],
         hasBackgroundImage: !!backgroundImageFile,
         removeMainImages: removeMainImages,
+        hasModelFile: !!modelFile,
       });
 
       const docRef = doc(db, PRODUCTS_COLLECTION, id);
@@ -962,11 +978,34 @@ export class ProductService {
         console.log("Background image uploaded:", backgroundImageUrl);
       }
 
+      // Handle 3D model file upload if provided
+      if (modelFile) {
+        console.log("Processing 3D model file...");
+        const modelPath = `products/${currentData.productId}/model_${modelFile.name}`;
+        const storageRef = ref(storage, modelPath);
+        await uploadBytes(storageRef, modelFile);
+        const modelUrl = await getDownloadURL(storageRef);
+        updateData.modelUrl = modelUrl;
+        console.log("3D model uploaded:", modelUrl);
+      }
+
+      // Handle model rotation data if provided
+      if (productData.modelRotationX !== undefined) {
+        updateData.modelRotationX = productData.modelRotationX;
+      }
+      if (productData.modelRotationY !== undefined) {
+        updateData.modelRotationY = productData.modelRotationY;
+      }
+      if (productData.modelRotationZ !== undefined) {
+        updateData.modelRotationZ = productData.modelRotationZ;
+      }
+
       console.log("Updating product in database:", {
         productId: id,
         mainImage: updateData.mainImage,
         imagesCount: updateData.images?.length || 0,
         hasBackgroundImage: !!updateData.backgroundImage,
+        hasModelUrl: !!updateData.modelUrl,
       });
 
       await updateDoc(docRef, updateData);
