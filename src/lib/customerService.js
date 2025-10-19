@@ -3,6 +3,7 @@ import {
   collection,
   doc,
   getDocs,
+  getDocsFromServer,
   getDoc,
   addDoc,
   updateDoc,
@@ -116,17 +117,22 @@ export class CustomerService {
   // Get customer by member ID (stored as customerId)
   static async getCustomerByMemberId(memberId) {
     try {
+      console.log(`🔄 Fetching fresh customer data from server for: ${memberId}`);
+      
       // Search by customerId field only (Member ID is stored as customerId)
       const q = query(
         collection(db, CUSTOMERS_COLLECTION),
         where("customerId", "==", memberId),
         limit(1)
       );
-      const querySnapshot = await getDocs(q);
+      
+      // Use getDocsFromServer to bypass cache and always fetch fresh data from server
+      const querySnapshot = await getDocsFromServer(q);
 
       if (!querySnapshot.empty) {
         const doc = querySnapshot.docs[0];
         const data = doc.data();
+        console.log(`✅ Fresh customer data retrieved from server:`, data.name);
         return {
           id: doc.id,
           ...data,
@@ -134,6 +140,7 @@ export class CustomerService {
           updatedAt: data.updatedAt?.toDate(),
         };
       }
+      console.log(`❌ Customer not found on server: ${memberId}`);
       return null;
     } catch (error) {
       console.error("Error getting customer by member ID:", error);

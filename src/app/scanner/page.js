@@ -45,13 +45,17 @@ export default function QRScanner() {
     setError("");
     setIsProcessing(true);
     try {
+      console.log("🔍 Scanner: Validating customer ID with fresh server data:", value);
+      
+      // This will fetch fresh data from server, not cache
       const customer = await CustomerService.getCustomerByMemberId(value);
+      
       if (customer) {
         // Save customer code and customer data to session storage
         sessionStorage.setItem("customerCode", value);
         sessionStorage.setItem("currentCustomer", JSON.stringify(customer));
         console.log(
-          "Scanner: Customer found and saved to session:",
+          "✅ Scanner: Customer found and saved to session:",
           customer.name
         );
 
