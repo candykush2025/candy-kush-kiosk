@@ -97,6 +97,17 @@ export default function AdminPage() {
     imageUrl: "",
   });
   const [editingCashback, setEditingCashback] = useState(null);
+
+  // Stock Overview filter states
+  const [stockOverviewFilters, setStockOverviewFilters] = useState({
+    searchTerm: "",
+    categoryId: "",
+    subcategoryId: "",
+    stockStatus: "all", // all, inStock, outOfStock, lowStock, critical
+    hideZeroStock: false,
+    sortBy: "name", // name, stock-asc, stock-desc, category
+  });
+
   // Category Order tab state
   const [orderList, setOrderList] = useState([]); // array of category ids
   const [orderDirty, setOrderDirty] = useState(false);
@@ -8703,6 +8714,218 @@ export default function AdminPage() {
                         )}
                       </div>
 
+                      {/* Advanced Filters Section */}
+                      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                            <svg
+                              className="w-5 h-5 mr-2 text-green-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                              />
+                            </svg>
+                            Filters
+                          </h4>
+                          <button
+                            onClick={() => {
+                              setStockOverviewFilters({
+                                searchTerm: "",
+                                categoryId: "",
+                                subcategoryId: "",
+                                stockStatus: "all",
+                                hideZeroStock: false,
+                                sortBy: "name",
+                              });
+                            }}
+                            className="text-sm text-gray-600 hover:text-gray-900 font-medium flex items-center"
+                          >
+                            <svg
+                              className="w-4 h-4 mr-1"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                              />
+                            </svg>
+                            Reset Filters
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {/* Search */}
+                          <div className="col-span-1 md:col-span-2 lg:col-span-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Search Products
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={stockOverviewFilters.searchTerm}
+                                onChange={(e) =>
+                                  setStockOverviewFilters((prev) => ({
+                                    ...prev,
+                                    searchTerm: e.target.value,
+                                  }))
+                                }
+                                placeholder="Search by name, SKU..."
+                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                              />
+                              <svg
+                                className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+
+                          {/* Category Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Category
+                            </label>
+                            <select
+                              value={stockOverviewFilters.categoryId}
+                              onChange={(e) => {
+                                setStockOverviewFilters((prev) => ({
+                                  ...prev,
+                                  categoryId: e.target.value,
+                                  subcategoryId: "", // Reset subcategory
+                                }));
+                              }}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                              <option value="">All Categories</option>
+                              {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                  {cat.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Subcategory Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Subcategory
+                            </label>
+                            <select
+                              value={stockOverviewFilters.subcategoryId}
+                              onChange={(e) =>
+                                setStockOverviewFilters((prev) => ({
+                                  ...prev,
+                                  subcategoryId: e.target.value,
+                                }))
+                              }
+                              disabled={!stockOverviewFilters.categoryId}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                            >
+                              <option value="">All Subcategories</option>
+                              {subcategories
+                                .filter(
+                                  (sub) =>
+                                    sub.categoryId ===
+                                    stockOverviewFilters.categoryId
+                                )
+                                .map((sub) => (
+                                  <option key={sub.id} value={sub.id}>
+                                    {sub.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+
+                          {/* Stock Status Filter */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Stock Status
+                            </label>
+                            <select
+                              value={stockOverviewFilters.stockStatus}
+                              onChange={(e) =>
+                                setStockOverviewFilters((prev) => ({
+                                  ...prev,
+                                  stockStatus: e.target.value,
+                                }))
+                              }
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                              <option value="all">All Status</option>
+                              <option value="inStock">In Stock</option>
+                              <option value="outOfStock">Out of Stock</option>
+                              <option value="lowStock">Low Stock</option>
+                              <option value="critical">Critical</option>
+                            </select>
+                          </div>
+
+                          {/* Sort By */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Sort By
+                            </label>
+                            <select
+                              value={stockOverviewFilters.sortBy}
+                              onChange={(e) =>
+                                setStockOverviewFilters((prev) => ({
+                                  ...prev,
+                                  sortBy: e.target.value,
+                                }))
+                              }
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            >
+                              <option value="name">Name (A-Z)</option>
+                              <option value="name-desc">Name (Z-A)</option>
+                              <option value="stock-asc">
+                                Stock (Low to High)
+                              </option>
+                              <option value="stock-desc">
+                                Stock (High to Low)
+                              </option>
+                              <option value="category">Category</option>
+                            </select>
+                          </div>
+
+                          {/* Hide Zero Stock Toggle */}
+                          <div className="flex items-end">
+                            <label className="flex items-center space-x-3 cursor-pointer bg-gray-50 hover:bg-gray-100 px-4 py-2 rounded-lg border border-gray-200 transition-colors w-full">
+                              <input
+                                type="checkbox"
+                                checked={stockOverviewFilters.hideZeroStock}
+                                onChange={(e) =>
+                                  setStockOverviewFilters((prev) => ({
+                                    ...prev,
+                                    hideZeroStock: e.target.checked,
+                                  }))
+                                }
+                                className="w-5 h-5 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                              />
+                              <span className="text-sm font-medium text-gray-700">
+                                Hide Zero Stock
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Loading State */}
                       {!stockCalculationsLoaded && (
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
@@ -8720,243 +8943,696 @@ export default function AdminPage() {
 
                       {/* Products Grid */}
                       {stockCalculationsLoaded && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                          {products.map((product) => {
-                            const totalStock = getCurrentStock(product);
-                            const hasVariants =
-                              product.variants &&
-                              Array.isArray(product.variants) &&
-                              product.variants.length > 0;
+                        <div>
+                          {/* Filtered Results Count */}
+                          <div className="mb-4 flex items-center justify-between">
+                            <p className="text-sm text-gray-600">
+                              Showing{" "}
+                              <span className="font-semibold text-gray-900">
+                                {(() => {
+                                  // Apply filters
+                                  let filtered = products.filter((product) => {
+                                    const totalStock = getCurrentStock(product);
+                                    const stockAlert = stockAlerts.find(
+                                      (alert) =>
+                                        alert.productId === product.id &&
+                                        alert.isActive
+                                    );
 
-                            // Find stock alert for this product (if exists)
-                            const stockAlert = stockAlerts.find(
-                              (alert) =>
-                                alert.productId === product.id && alert.isActive
-                            );
+                                    // Search filter
+                                    if (stockOverviewFilters.searchTerm) {
+                                      const searchLower =
+                                        stockOverviewFilters.searchTerm.toLowerCase();
+                                      const matchName = product.name
+                                        ?.toLowerCase()
+                                        .includes(searchLower);
+                                      const matchSKU = product.sku
+                                        ?.toLowerCase()
+                                        .includes(searchLower);
+                                      const matchBarcode = product.barcode
+                                        ?.toLowerCase()
+                                        .includes(searchLower);
+                                      if (
+                                        !matchName &&
+                                        !matchSKU &&
+                                        !matchBarcode
+                                      )
+                                        return false;
+                                    }
 
-                            // Determine stock status based on stock alert levels (if configured)
-                            let stockStatus = null;
-                            if (stockAlert) {
-                              if (totalStock <= stockAlert.alertAdminLevel) {
-                                stockStatus = "critical";
-                              } else if (
-                                totalStock <= stockAlert.alertKioskLevel
-                              ) {
-                                stockStatus = "warning";
-                              } else {
-                                stockStatus = "good";
-                              }
-                            }
+                                    // Category filter
+                                    if (
+                                      stockOverviewFilters.categoryId &&
+                                      product.categoryId !==
+                                        stockOverviewFilters.categoryId
+                                    ) {
+                                      return false;
+                                    }
 
-                            return (
-                              <div
-                                key={product.id}
-                                className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
-                              >
-                                {/* Product Card Header */}
-                                <div className="p-6 border-b border-gray-100">
-                                  <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                      <h4 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-2">
-                                        {product.name}
-                                      </h4>
-                                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                        <span className="px-2 py-1 bg-gray-100 rounded-full text-xs">
-                                          {product.categoryName ||
-                                            "Uncategorized"}
-                                        </span>
-                                        {product.subcategoryName && (
-                                          <span className="px-2 py-1 bg-green-50 text-green-600 rounded-full text-xs">
-                                            {product.subcategoryName}
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
+                                    // Subcategory filter
+                                    if (
+                                      stockOverviewFilters.subcategoryId &&
+                                      product.subcategoryId !==
+                                        stockOverviewFilters.subcategoryId
+                                    ) {
+                                      return false;
+                                    }
 
-                                    {/* Stock Status Indicator - Only show if stock alert is configured */}
-                                    <div className="text-right">
-                                      <div className="text-lg font-semibold text-gray-900 mb-1">
-                                        {totalStock} units
-                                      </div>
-                                      {stockStatus && (
-                                        <div
-                                          className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                            stockStatus === "good"
-                                              ? "bg-green-100 text-green-700"
-                                              : stockStatus === "warning"
-                                              ? "bg-yellow-100 text-yellow-700"
-                                              : "bg-red-100 text-red-700"
-                                          }`}
-                                        >
-                                          <div
-                                            className={`w-1.5 h-1.5 rounded-full ${
-                                              stockStatus === "good"
-                                                ? "bg-green-500"
-                                                : stockStatus === "warning"
-                                                ? "bg-yellow-500"
-                                                : "bg-red-500"
-                                            }`}
-                                          ></div>
-                                          <span>
-                                            {stockStatus === "good"
-                                              ? "Well Stocked"
-                                              : stockStatus === "warning"
-                                              ? "Low Stock"
-                                              : "Critical"}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
+                                    // Hide zero stock filter
+                                    if (
+                                      stockOverviewFilters.hideZeroStock &&
+                                      totalStock === 0
+                                    ) {
+                                      return false;
+                                    }
 
-                                {/* Product Details */}
-                                <div className="p-6">
-                                  {/* Product Info */}
-                                  {(hasVariants || stockAlert) && (
-                                    <div className="space-y-3 mb-4">
-                                      {hasVariants && (
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-gray-600">
-                                            Product Type:
-                                          </span>
-                                          <span className="font-medium">
-                                            {product.variants.length} Variant
-                                            {product.variants.length > 1
-                                              ? "s"
-                                              : ""}
-                                          </span>
-                                        </div>
-                                      )}
-                                      {stockAlert && (
-                                        <div className="flex justify-between text-sm">
-                                          <span className="text-gray-600">
-                                            Alert Levels:
-                                          </span>
-                                          <span className="text-xs text-gray-600">
-                                            Kiosk: {stockAlert.alertKioskLevel}{" "}
-                                            • Admin:{" "}
-                                            {stockAlert.alertAdminLevel}
-                                          </span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
+                                    // Stock status filter
+                                    if (
+                                      stockOverviewFilters.stockStatus !== "all"
+                                    ) {
+                                      if (
+                                        stockOverviewFilters.stockStatus ===
+                                          "outOfStock" &&
+                                        totalStock !== 0
+                                      ) {
+                                        return false;
+                                      }
+                                      if (
+                                        stockOverviewFilters.stockStatus ===
+                                          "inStock" &&
+                                        totalStock === 0
+                                      ) {
+                                        return false;
+                                      }
+                                      if (
+                                        stockOverviewFilters.stockStatus ===
+                                        "lowStock"
+                                      ) {
+                                        if (
+                                          !stockAlert ||
+                                          totalStock >
+                                            stockAlert.alertKioskLevel ||
+                                          totalStock <=
+                                            stockAlert.alertAdminLevel
+                                        ) {
+                                          return false;
+                                        }
+                                      }
+                                      if (
+                                        stockOverviewFilters.stockStatus ===
+                                        "critical"
+                                      ) {
+                                        if (
+                                          !stockAlert ||
+                                          totalStock >
+                                            stockAlert.alertAdminLevel
+                                        ) {
+                                          return false;
+                                        }
+                                      }
+                                    }
 
-                                  {/* Variants Preview (if any) */}
-                                  {hasVariants && (
-                                    <div className="mb-4">
-                                      <h5 className="text-sm font-medium text-gray-700 mb-2">
-                                        Variants:
-                                      </h5>
-                                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                                        {product.variants
-                                          .slice(0, 3)
-                                          .map((variant) => {
+                                    return true;
+                                  });
+
+                                  return filtered.length;
+                                })()}
+                              </span>{" "}
+                              of {products.length} products
+                            </p>
+                          </div>
+
+                          {/* Modern Professional Table */}
+                          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                                  <tr>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Product
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Category
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      SKU
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Stock
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Status
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Variants
+                                    </th>
+                                    <th
+                                      scope="col"
+                                      className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                                    >
+                                      Actions
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                  {(() => {
+                                    // Apply filters
+                                    let filtered = products.filter(
+                                      (product) => {
+                                        const totalStock =
+                                          getCurrentStock(product);
+                                        const stockAlert = stockAlerts.find(
+                                          (alert) =>
+                                            alert.productId === product.id &&
+                                            alert.isActive
+                                        );
+
+                                        // Search filter
+                                        if (stockOverviewFilters.searchTerm) {
+                                          const searchLower =
+                                            stockOverviewFilters.searchTerm.toLowerCase();
+                                          const matchName = product.name
+                                            ?.toLowerCase()
+                                            .includes(searchLower);
+                                          const matchSKU = product.sku
+                                            ?.toLowerCase()
+                                            .includes(searchLower);
+                                          const matchBarcode = product.barcode
+                                            ?.toLowerCase()
+                                            .includes(searchLower);
+                                          if (
+                                            !matchName &&
+                                            !matchSKU &&
+                                            !matchBarcode
+                                          )
+                                            return false;
+                                        }
+
+                                        // Category filter
+                                        if (
+                                          stockOverviewFilters.categoryId &&
+                                          product.categoryId !==
+                                            stockOverviewFilters.categoryId
+                                        ) {
+                                          return false;
+                                        }
+
+                                        // Subcategory filter
+                                        if (
+                                          stockOverviewFilters.subcategoryId &&
+                                          product.subcategoryId !==
+                                            stockOverviewFilters.subcategoryId
+                                        ) {
+                                          return false;
+                                        }
+
+                                        // Hide zero stock filter
+                                        if (
+                                          stockOverviewFilters.hideZeroStock &&
+                                          totalStock === 0
+                                        ) {
+                                          return false;
+                                        }
+
+                                        // Stock status filter
+                                        if (
+                                          stockOverviewFilters.stockStatus !==
+                                          "all"
+                                        ) {
+                                          if (
+                                            stockOverviewFilters.stockStatus ===
+                                              "outOfStock" &&
+                                            totalStock !== 0
+                                          ) {
+                                            return false;
+                                          }
+                                          if (
+                                            stockOverviewFilters.stockStatus ===
+                                              "inStock" &&
+                                            totalStock === 0
+                                          ) {
+                                            return false;
+                                          }
+                                          if (
+                                            stockOverviewFilters.stockStatus ===
+                                            "lowStock"
+                                          ) {
                                             if (
-                                              variant.options &&
-                                              Array.isArray(variant.options)
+                                              !stockAlert ||
+                                              totalStock >
+                                                stockAlert.alertKioskLevel ||
+                                              totalStock <=
+                                                stockAlert.alertAdminLevel
                                             ) {
-                                              return variant.options
-                                                .slice(0, 2)
-                                                .map((option) => {
-                                                  const variantId = `${variant.id}-${option.id}`;
-                                                  const variantStock =
-                                                    getCurrentStock(
-                                                      product,
-                                                      variantId
-                                                    );
-                                                  return (
-                                                    <div
-                                                      key={`${variant.id}-${option.id}`}
-                                                      className="flex justify-between items-center text-xs bg-gray-50 rounded p-2"
-                                                    >
-                                                      <span className="text-gray-700 truncate">
-                                                        {variant.variantName}:{" "}
-                                                        {option.name}
-                                                      </span>
-                                                      <span
-                                                        className={`font-medium ${
-                                                          variantStock > 0
-                                                            ? "text-green-600"
-                                                            : "text-red-600"
-                                                        }`}
-                                                      >
-                                                        {variantStock}
-                                                      </span>
-                                                    </div>
-                                                  );
-                                                });
+                                              return false;
                                             }
-                                            return (
-                                              <div
-                                                key={variant.id}
-                                                className="flex justify-between items-center text-xs bg-gray-50 rounded p-2"
-                                              >
-                                                <span className="text-gray-700 truncate">
-                                                  {variant.name ||
-                                                    `Variant ${variant.id}`}
-                                                </span>
-                                                <span
-                                                  className={`font-medium ${
-                                                    getCurrentStock(
-                                                      product,
-                                                      variant.id
-                                                    ) > 0
-                                                      ? "text-green-600"
-                                                      : "text-red-600"
-                                                  }`}
-                                                >
-                                                  {getCurrentStock(
-                                                    product,
-                                                    variant.id
-                                                  )}
-                                                </span>
-                                              </div>
-                                            );
-                                          })}
-                                        {product.variants.length > 3 && (
-                                          <div className="text-xs text-gray-500 text-center py-1">
-                                            +{product.variants.length - 3} more
-                                            variants
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )}
+                                          }
+                                          if (
+                                            stockOverviewFilters.stockStatus ===
+                                            "critical"
+                                          ) {
+                                            if (
+                                              !stockAlert ||
+                                              totalStock >
+                                                stockAlert.alertAdminLevel
+                                            ) {
+                                              return false;
+                                            }
+                                          }
+                                        }
 
-                                  {/* Action Button */}
+                                        return true;
+                                      }
+                                    );
+
+                                    // Apply sorting
+                                    filtered.sort((a, b) => {
+                                      const stockA = getCurrentStock(a);
+                                      const stockB = getCurrentStock(b);
+
+                                      switch (stockOverviewFilters.sortBy) {
+                                        case "name":
+                                          return (a.name || "").localeCompare(
+                                            b.name || ""
+                                          );
+                                        case "name-desc":
+                                          return (b.name || "").localeCompare(
+                                            a.name || ""
+                                          );
+                                        case "stock-asc":
+                                          return stockA - stockB;
+                                        case "stock-desc":
+                                          return stockB - stockA;
+                                        case "category":
+                                          const catCompare = (
+                                            a.categoryName || ""
+                                          ).localeCompare(b.categoryName || "");
+                                          if (catCompare !== 0)
+                                            return catCompare;
+                                          return (a.name || "").localeCompare(
+                                            b.name || ""
+                                          );
+                                        default:
+                                          return 0;
+                                      }
+                                    });
+
+                                    return filtered.map((product) => {
+                                      const totalStock =
+                                        getCurrentStock(product);
+                                      const hasVariants =
+                                        product.variants &&
+                                        Array.isArray(product.variants) &&
+                                        product.variants.length > 0;
+
+                                      // Find stock alert for this product (if exists)
+                                      const stockAlert = stockAlerts.find(
+                                        (alert) =>
+                                          alert.productId === product.id &&
+                                          alert.isActive
+                                      );
+
+                                      // Determine stock status based on stock alert levels (if configured)
+                                      let stockStatus = null;
+                                      if (stockAlert) {
+                                        if (
+                                          totalStock <=
+                                          stockAlert.alertAdminLevel
+                                        ) {
+                                          stockStatus = "critical";
+                                        } else if (
+                                          totalStock <=
+                                          stockAlert.alertKioskLevel
+                                        ) {
+                                          stockStatus = "warning";
+                                        } else {
+                                          stockStatus = "good";
+                                        }
+                                      }
+
+                                      return (
+                                        <tr
+                                          key={product.id}
+                                          className="hover:bg-gray-50 transition-colors duration-150"
+                                        >
+                                          {/* Product Name */}
+                                          <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex items-center">
+                                              <div>
+                                                <div className="text-sm font-semibold text-gray-900">
+                                                  {product.name}
+                                                </div>
+                                                {product.subcategoryName && (
+                                                  <div className="text-xs text-gray-500 mt-0.5">
+                                                    {product.subcategoryName}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </td>
+
+                                          {/* Category */}
+                                          <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                              {product.categoryName ||
+                                                "Uncategorized"}
+                                            </span>
+                                          </td>
+
+                                          {/* SKU */}
+                                          <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="text-sm text-gray-900 font-mono">
+                                              {product.sku || "-"}
+                                            </div>
+                                          </td>
+
+                                          {/* Stock */}
+                                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <div className="flex items-center justify-center">
+                                              <span
+                                                className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-lg font-bold min-w-[60px] ${
+                                                  totalStock === 0
+                                                    ? "bg-red-100 text-red-700"
+                                                    : stockStatus === "critical"
+                                                    ? "bg-red-100 text-red-700"
+                                                    : stockStatus === "warning"
+                                                    ? "bg-yellow-100 text-yellow-700"
+                                                    : "bg-green-100 text-green-700"
+                                                }`}
+                                              >
+                                                {totalStock}
+                                              </span>
+                                            </div>
+                                          </td>
+
+                                          {/* Status */}
+                                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            {stockStatus ? (
+                                              <span
+                                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                                  stockStatus === "good"
+                                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                                    : stockStatus === "warning"
+                                                    ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                                    : "bg-red-100 text-red-800 border border-red-200"
+                                                }`}
+                                              >
+                                                <div
+                                                  className={`w-2 h-2 rounded-full mr-1.5 ${
+                                                    stockStatus === "good"
+                                                      ? "bg-green-500"
+                                                      : stockStatus ===
+                                                        "warning"
+                                                      ? "bg-yellow-500"
+                                                      : "bg-red-500"
+                                                  }`}
+                                                />
+                                                {stockStatus === "good"
+                                                  ? "Well Stocked"
+                                                  : stockStatus === "warning"
+                                                  ? "Low Stock"
+                                                  : "Critical"}
+                                              </span>
+                                            ) : (
+                                              <span className="text-sm text-gray-400">
+                                                No Alert
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* Variants */}
+                                          <td className="px-6 py-4">
+                                            {hasVariants ? (
+                                              <div className="space-y-1">
+                                                <div className="text-xs font-medium text-gray-700 mb-1">
+                                                  {product.variants.length}{" "}
+                                                  Variant
+                                                  {product.variants.length > 1
+                                                    ? "s"
+                                                    : ""}
+                                                </div>
+                                                <div className="space-y-1 max-h-20 overflow-y-auto">
+                                                  {product.variants
+                                                    .slice(0, 2)
+                                                    .map((variant) => {
+                                                      if (
+                                                        variant.options &&
+                                                        Array.isArray(
+                                                          variant.options
+                                                        )
+                                                      ) {
+                                                        return variant.options
+                                                          .slice(0, 2)
+                                                          .map((option) => {
+                                                            const variantId = `${variant.id}-${option.id}`;
+                                                            const variantStock =
+                                                              getCurrentStock(
+                                                                product,
+                                                                variantId
+                                                              );
+                                                            return (
+                                                              <div
+                                                                key={`${variant.id}-${option.id}`}
+                                                                className="flex items-center justify-between text-xs bg-gray-50 rounded px-2 py-1"
+                                                              >
+                                                                <span className="text-gray-600 truncate max-w-[120px]">
+                                                                  {
+                                                                    variant.variantName
+                                                                  }
+                                                                  :{" "}
+                                                                  {option.name}
+                                                                </span>
+                                                                <span
+                                                                  className={`font-semibold ml-2 ${
+                                                                    variantStock >
+                                                                    0
+                                                                      ? "text-green-600"
+                                                                      : "text-red-600"
+                                                                  }`}
+                                                                >
+                                                                  {variantStock}
+                                                                </span>
+                                                              </div>
+                                                            );
+                                                          });
+                                                      }
+                                                      return null;
+                                                    })}
+                                                  {product.variants.length >
+                                                    2 && (
+                                                    <div className="text-xs text-gray-500 text-center py-0.5 italic">
+                                                      +
+                                                      {product.variants.length -
+                                                        2}{" "}
+                                                      more
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <span className="text-sm text-gray-400">
+                                                Simple Product
+                                              </span>
+                                            )}
+                                          </td>
+
+                                          {/* Actions */}
+                                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <button
+                                              onClick={() => {
+                                                setSelectedStockDetail({
+                                                  product,
+                                                  totalStock,
+                                                  stockStatus,
+                                                  hasVariants,
+                                                });
+                                                setShowStockDetailModal(true);
+                                              }}
+                                              className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-sm font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md"
+                                            >
+                                              <svg
+                                                className="w-4 h-4 mr-1.5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                              >
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                                />
+                                                <path
+                                                  strokeLinecap="round"
+                                                  strokeLinejoin="round"
+                                                  strokeWidth={2}
+                                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                                />
+                                              </svg>
+                                              View
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      );
+                                    });
+                                  })()}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+
+                          {/* No Results Message */}
+                          {(() => {
+                            const filtered = products.filter((product) => {
+                              const totalStock = getCurrentStock(product);
+                              const stockAlert = stockAlerts.find(
+                                (alert) =>
+                                  alert.productId === product.id &&
+                                  alert.isActive
+                              );
+
+                              if (stockOverviewFilters.searchTerm) {
+                                const searchLower =
+                                  stockOverviewFilters.searchTerm.toLowerCase();
+                                const matchName = product.name
+                                  ?.toLowerCase()
+                                  .includes(searchLower);
+                                const matchSKU = product.sku
+                                  ?.toLowerCase()
+                                  .includes(searchLower);
+                                const matchBarcode = product.barcode
+                                  ?.toLowerCase()
+                                  .includes(searchLower);
+                                if (!matchName && !matchSKU && !matchBarcode)
+                                  return false;
+                              }
+
+                              if (
+                                stockOverviewFilters.categoryId &&
+                                product.categoryId !==
+                                  stockOverviewFilters.categoryId
+                              ) {
+                                return false;
+                              }
+
+                              if (
+                                stockOverviewFilters.subcategoryId &&
+                                product.subcategoryId !==
+                                  stockOverviewFilters.subcategoryId
+                              ) {
+                                return false;
+                              }
+
+                              if (
+                                stockOverviewFilters.hideZeroStock &&
+                                totalStock === 0
+                              ) {
+                                return false;
+                              }
+
+                              if (stockOverviewFilters.stockStatus !== "all") {
+                                if (
+                                  stockOverviewFilters.stockStatus ===
+                                    "outOfStock" &&
+                                  totalStock !== 0
+                                ) {
+                                  return false;
+                                }
+                                if (
+                                  stockOverviewFilters.stockStatus ===
+                                    "inStock" &&
+                                  totalStock === 0
+                                ) {
+                                  return false;
+                                }
+                                if (
+                                  stockOverviewFilters.stockStatus ===
+                                  "lowStock"
+                                ) {
+                                  if (
+                                    !stockAlert ||
+                                    totalStock > stockAlert.alertKioskLevel ||
+                                    totalStock <= stockAlert.alertAdminLevel
+                                  ) {
+                                    return false;
+                                  }
+                                }
+                                if (
+                                  stockOverviewFilters.stockStatus ===
+                                  "critical"
+                                ) {
+                                  if (
+                                    !stockAlert ||
+                                    totalStock > stockAlert.alertAdminLevel
+                                  ) {
+                                    return false;
+                                  }
+                                }
+                              }
+
+                              return true;
+                            });
+
+                            return filtered.length === 0 ? (
+                              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 mt-4">
+                                <div className="text-center">
+                                  <svg
+                                    className="mx-auto h-16 w-16 text-gray-400 mb-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={1.5}
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                    />
+                                  </svg>
+                                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                                    No products found
+                                  </h3>
+                                  <p className="text-gray-600 mb-4">
+                                    Try adjusting your filters to see more
+                                    results
+                                  </p>
                                   <button
                                     onClick={() => {
-                                      setSelectedStockDetail({
-                                        product,
-                                        totalStock,
-                                        stockStatus,
-                                        hasVariants,
+                                      setStockOverviewFilters({
+                                        searchTerm: "",
+                                        categoryId: "",
+                                        subcategoryId: "",
+                                        stockStatus: "all",
+                                        hideZeroStock: false,
+                                        sortBy: "name",
                                       });
-                                      setShowStockDetailModal(true);
                                     }}
-                                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2"
+                                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200"
                                   >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                                      />
-                                    </svg>
-                                    <span>View Stock Details</span>
+                                    Clear All Filters
                                   </button>
                                 </div>
                               </div>
-                            );
-                          })}
+                            ) : null;
+                          })()}
                         </div>
                       )}
 

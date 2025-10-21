@@ -153,6 +153,19 @@ const [savingNonMemberCategories, setSavingNonMemberCategories] =
   useState(false);
 ```
 
+### Stock Overview Filters
+
+```javascript
+const [stockOverviewFilters, setStockOverviewFilters] = useState({
+  searchTerm: "", // Search by name, SKU, barcode
+  categoryId: "", // Filter by category
+  subcategoryId: "", // Filter by subcategory
+  stockStatus: "all", // all, inStock, outOfStock, lowStock, critical
+  hideZeroStock: false, // Hide products with 0 stock
+  sortBy: "name", // name, name-desc, stock-asc, stock-desc, category
+});
+```
+
 ### Tab System
 
 ```javascript
@@ -1227,7 +1240,7 @@ products/
 
 ### Stock Overview Module
 
-**Purpose:** View current inventory levels
+**Purpose:** View current inventory levels with advanced filtering
 
 **Calculation:**
 
@@ -1241,11 +1254,73 @@ Current Stock = Starting Stock + Purchases + Stock In + Adjustments - Sales
 - Groups by product/variant
 - Shows available quantity
 
+**Advanced Filters:**
+
+1. **Search Filter**
+
+   - Search by product name, SKU, or barcode
+   - Real-time filtering as you type
+
+2. **Category Filter**
+
+   - Filter by specific category
+   - Cascading subcategory filter
+
+3. **Subcategory Filter**
+
+   - Only shows subcategories from selected category
+   - Disabled if no category selected
+
+4. **Stock Status Filter**
+
+   - **All Status** - Show all products
+   - **In Stock** - Only products with stock > 0
+   - **Out of Stock** - Only products with stock = 0
+   - **Low Stock** - Products at or below kiosk alert level
+   - **Critical** - Products at or below admin alert level
+
+5. **Hide Zero Stock Toggle**
+
+   - Checkbox to hide all products with 0 stock
+   - Useful for focusing on available inventory
+
+6. **Sort Options**
+   - **Name (A-Z)** - Alphabetical ascending
+   - **Name (Z-A)** - Alphabetical descending
+   - **Stock (Low to High)** - Shows lowest stock first
+   - **Stock (High to Low)** - Shows highest stock first
+   - **Category** - Groups by category, then alphabetical
+
 **Display:**
 
-- Searchable product list
-- Shows current stock per variant
-- Color-coded (red if low, green if good)
+- **Professional Table Layout:** Modern data table with clean design
+- **Table Columns:**
+  1. **Product** - Name with subcategory
+  2. **Category** - Badge display
+  3. **SKU** - Monospaced font
+  4. **Stock** - Large color-coded badge
+  5. **Status** - Pill indicator (Well Stocked/Low Stock/Critical)
+  6. **Variants** - Expandable list showing first 2 variants with stock
+  7. **Actions** - View button with eye icon
+- **Visual Features:**
+  - Gradient table header (gray 50-100)
+  - Row hover effects
+  - Color-coded stock badges
+  - Status pills with indicator dots
+  - Scrollable variant lists
+- **Filtered Count:** Shows "X of Y products" above table
+
+**Modern Table Design:**
+
+- **Professional Layout:** Clean table with gradient header
+- **Sortable Columns:** Product, Category, SKU, Stock, Status, Variants, Actions
+- **Color-Coded Stock:** Large prominent badge (green/yellow/red based on stock level)
+- **Status Indicators:** Pills with colored dots showing stock health
+- **Variant Display:** Inline expandable variant list with individual stock counts
+- **Row Hover Effects:** Subtle background color change for better UX
+- **Sticky Header:** (Optional) Table header remains visible while scrolling
+- **Responsive:** Horizontal scroll on smaller screens maintains all columns
+- **Action Buttons:** Modern gradient buttons with icons for viewing details
 
 ---
 
@@ -1673,6 +1748,43 @@ cashbackMinPurchase: productData.cashbackMinPurchase !== undefined ? productData
 ```
 
 **Result:** Product edits now persist cashback settings to Firestore ✅
+
+---
+
+### Stock Overview Advanced Filtering & Improved Card Layout
+
+**Added:** Comprehensive filtering system for Stock Overview tab
+
+**New Features:**
+
+1. **Search Filter** - Search by product name, SKU, or barcode
+2. **Category & Subcategory Filters** - Cascading dropdowns
+3. **Stock Status Filter** - Filter by all/inStock/outOfStock/lowStock/critical
+4. **Hide Zero Stock Toggle** - Checkbox to hide products with no stock
+5. **Sort Options** - Sort by name (A-Z/Z-A), stock (low/high), or category
+6. **Reset Filters Button** - Clear all filters at once
+
+**Table Layout (Modern Professional Design):**
+
+- **Changed from card grid to data table** - Professional, scannable layout
+- **7 Organized Columns:** Product, Category, SKU, Stock, Status, Variants, Actions
+- **Gradient Header:** Gray gradient with uppercase bold labels
+- **Large Stock Badges:** Prominent color-coded badges (60px min-width)
+- **Status Indicators:** Pills with colored dots (green/yellow/red)
+- **Inline Variant Display:** Shows first 2 variants with individual stock counts
+- **Row Hover Effects:** Subtle gray-50 background on hover
+- **Horizontal Scroll:** Maintains all columns on smaller screens
+- **Better Data Density:** More information visible at once
+
+**State Management:**
+
+- Added `stockOverviewFilters` state with 6 filter options
+- Filter logic applied before rendering table rows
+- Sorting applied after filtering
+- Shows "X of Y products" filtered count above table
+- Empty state with "Clear All Filters" button when no results
+
+**Result:** Stock Overview now uses a modern professional table layout that's much easier to scan and manage large inventories ✅
 
 ---
 
