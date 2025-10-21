@@ -538,6 +538,28 @@ export default function AdminPage() {
   const [stockActiveSubTab, setStockActiveSubTab] = useState("overview");
   const [stockZeroAction, setStockZeroAction] = useState("disable"); // "disable" or "keepVisible"
 
+  // Stock Linking states (Loyverse Integration)
+  const [loyverseItems, setLoyverseItems] = useState([]); // Items fetched from Loyverse
+  const [loyverseCategories, setLoyverseCategories] = useState([]); // Categories from Loyverse
+  const [linkedItems, setLinkedItems] = useState([]); // Products linked to Loyverse
+  const [linkingProgress, setLinkingProgress] = useState({
+    total: 0,
+    linked: 0,
+    pending: 0,
+  });
+  const [batchTodos, setBatchTodos] = useState([]); // Todo list for batch linking
+  const [fetchingLoyverse, setFetchingLoyverse] = useState(false);
+  const [syncingStock, setSyncingStock] = useState(false);
+  const [linkingStep, setLinkingStep] = useState(1); // 1: Fetch, 2: Link, 3: Sync
+  const [selectedLoyverseItem, setSelectedLoyverseItem] = useState(null);
+  const [selectedLocalProduct, setSelectedLocalProduct] = useState(null);
+  const [linkSearchTerm, setLinkSearchTerm] = useState("");
+  const [loyverseSearchTerm, setLoyverseSearchTerm] = useState("");
+  const [linkingToast, setLinkingToast] = useState(null); // Toast notification for stock linking
+  const [productSearchTerms, setProductSearchTerms] = useState({}); // Search terms for each todo's product dropdown
+  const [showProductDropdown, setShowProductDropdown] = useState({}); // Show/hide dropdown for each todo
+  const [hideZeroStockLoyverse, setHideZeroStockLoyverse] = useState(true); // Hide 0 stock Loyverse items (default: true)
+
   // Stock Detail Modal states
   const [showStockDetailModal, setShowStockDetailModal] = useState(false);
   const [selectedStockDetail, setSelectedStockDetail] = useState(null);
@@ -2994,6 +3016,389 @@ export default function AdminPage() {
 
   // Stock Management handlers
 
+  // ============================================
+  // Stock Linking Handlers (Loyverse Integration)
+  // ============================================
+
+  /**
+   * Show animated toast notification for stock linking
+   */
+  const showLinkingToast = (message, type = "success", duration = 3000) => {
+    setLinkingToast({ message, type });
+    setTimeout(() => {
+      setLinkingToast(null);
+    }, duration);
+  };
+
+  /**
+   * Step 1: Fetch inventory from Loyverse
+   */
+  const fetchLoyverseStock = async () => {
+    if (!checkInputPermission()) return;
+
+    setFetchingLoyverse(true);
+    try {
+      // Dynamically import Loyverse service (client-side only)
+      const { default: loyverseService } = await import("../api/loyverse");
+
+      // Fetch all items, categories, and inventory from Loyverse
+      const [itemsResponse, categoriesResponse, inventoryResponse] =
+        await Promise.all([
+          loyverseService.getAllItems(),
+          loyverseService.getAllCategories(),
+          loyverseService.getAllInventory(),
+        ]);
+
+      // Extract arrays from response objects
+      const itemsData = itemsResponse.items || [];
+      const categoriesData = categoriesResponse.categories || [];
+      const inventoryData = inventoryResponse.inventory_levels || [];
+
+      console.log("[Stock Linking] Fetched from Loyverse:", {
+        items: itemsData.length,
+        categories: categoriesData.length,
+        inventoryLevels: inventoryData.length,
+      });
+
+      // Create a map of variant_id -> stock quantity from inventory data
+      const inventoryMap = new Map();
+      inventoryData.forEach((inv) => {
+        // Sum up stock across all stores for each variant
+        if (inventoryMap.has(inv.variant_id)) {
+          inventoryMap.set(
+            inv.variant_id,
+            inventoryMap.get(inv.variant_id) + inv.in_stock
+          );
+        } else {
+          inventoryMap.set(inv.variant_id, inv.in_stock);
+        }
+      });
+
+      console.log("[Stock Linking] Inventory map created:", {
+        uniqueVariants: inventoryMap.size,
+        totalStock: Array.from(inventoryMap.values()).reduce(
+          (sum, qty) => sum + qty,
+          0
+        ),
+      });
+
+      // Enrich items with actual inventory stock
+      const itemsWithStock = itemsData.map((item) => {
+        let totalStock = 0;
+
+        // If item has variants, sum their stock
+        if (item.variants && item.variants.length > 0) {
+          item.variants.forEach((variant) => {
+            const stock = inventoryMap.get(variant.variant_id) || 0;
+            totalStock += stock;
+          });
+        } else {
+          // For items without variants, use the item's default variant_id
+          totalStock = inventoryMap.get(item.variant_id) || 0;
+        }
+
+        return {
+          ...item,
+          stock_quantity: totalStock,
+        };
+      });
+
+      setLoyverseItems(itemsWithStock);
+      setLoyverseCategories(categoriesData);
+
+      // Filter items based on hideZeroStockLoyverse setting
+      const filteredItems = hideZeroStockLoyverse
+        ? itemsWithStock.filter((item) => (item.stock_quantity || 0) > 0)
+        : itemsWithStock;
+
+      console.log("[Stock Linking] After filtering:", {
+        original: itemsWithStock.length,
+        filtered: filteredItems.length,
+        hiddenZeroStock: itemsWithStock.length - filteredItems.length,
+      });
+
+      // Initialize batch todos for linking (only with filtered items)
+      const todos = filteredItems.map((item, index) => ({
+        id: index + 1,
+        loyverseId: item.id,
+        loyverseName: item.item_name,
+        loyverseCategory:
+          categoriesData.find((c) => c.id === item.category_id)?.name ||
+          "Uncategorized",
+        localProductId: null,
+        localProductName: null,
+        status: "pending", // pending, linked, skipped
+        stock: item.stock_quantity || 0,
+      }));
+
+      setBatchTodos(todos);
+      setLinkingProgress({
+        total: todos.length,
+        linked: 0,
+        pending: todos.length,
+      });
+
+      setLinkingStep(2); // Move to linking step
+
+      const hiddenCount = itemsWithStock.length - filteredItems.length;
+      const totalStock = filteredItems.reduce(
+        (sum, item) => sum + (item.stock_quantity || 0),
+        0
+      );
+      const message = hideZeroStockLoyverse
+        ? `✓ Successfully fetched ${itemsWithStock.length} items from Loyverse! Showing ${filteredItems.length} with stock (${totalStock} units total, ${hiddenCount} items with 0 stock hidden).`
+        : `✓ Successfully fetched ${itemsWithStock.length} items from Loyverse! Total stock: ${totalStock} units. Now link them to your local products.`;
+
+      showLinkingToast(message, "success", 5000);
+    } catch (error) {
+      console.error("[Stock Linking] Error fetching Loyverse data:", error);
+      showLinkingToast(
+        `✗ Failed to fetch from Loyverse: ${error.message}. Please check your API token.`,
+        "error",
+        5000
+      );
+    } finally {
+      setFetchingLoyverse(false);
+    }
+  };
+
+  /**
+   * Step 2: Link a single Loyverse item to local product
+   */
+  const linkProductToLoyverse = async (todoId, localProductId) => {
+    if (!checkInputPermission()) return;
+
+    try {
+      const todo = batchTodos.find((t) => t.id === todoId);
+      const localProduct = products.find((p) => p.id === localProductId);
+
+      if (!todo || !localProduct) {
+        alert("Invalid product selection");
+        return;
+      }
+
+      // Update todo with link
+      const updatedTodos = batchTodos.map((t) => {
+        if (t.id === todoId) {
+          return {
+            ...t,
+            localProductId: localProduct.id,
+            localProductName: localProduct.name,
+            status: "linked",
+          };
+        }
+        return t;
+      });
+
+      setBatchTodos(updatedTodos);
+
+      // Update progress
+      const linked = updatedTodos.filter((t) => t.status === "linked").length;
+      setLinkingProgress({
+        total: updatedTodos.length,
+        linked,
+        pending: updatedTodos.length - linked,
+      });
+
+      // Save link to Firebase (for future reference)
+      const linkData = {
+        loyverseId: todo.loyverseId,
+        loyverseName: todo.loyverseName,
+        localProductId: localProduct.id,
+        localProductName: localProduct.name,
+        linkedAt: new Date().toISOString(),
+        linkedBy: "admin",
+      };
+
+      await StockService.saveLoyverseLink(linkData);
+
+      console.log("[Stock Linking] Linked:", linkData);
+    } catch (error) {
+      console.error("[Stock Linking] Error linking product:", error);
+      alert(`Failed to link product: ${error.message}`);
+    }
+  };
+
+  /**
+   * Skip linking a Loyverse item
+   */
+  const skipLoyverseLink = (todoId) => {
+    const updatedTodos = batchTodos.map((t) => {
+      if (t.id === todoId) {
+        return {
+          ...t,
+          status: "skipped",
+        };
+      }
+      return t;
+    });
+
+    setBatchTodos(updatedTodos);
+
+    const linked = updatedTodos.filter((t) => t.status === "linked").length;
+    setLinkingProgress({
+      total: updatedTodos.length,
+      linked,
+      pending: updatedTodos.filter((t) => t.status === "pending").length,
+    });
+  };
+
+  /**
+   * Step 3: Sync stock from Loyverse to Firebase
+   */
+  const syncStockFromLoyverse = async () => {
+    if (!checkInputPermission()) return;
+
+    const linkedTodos = batchTodos.filter((t) => t.status === "linked");
+
+    if (linkedTodos.length === 0) {
+      showLinkingToast(
+        "⚠ No products linked yet. Please link products first.",
+        "warning",
+        3000
+      );
+      return;
+    }
+
+    // Show starting notification
+    showLinkingToast(
+      `🔄 Starting sync for ${linkedTodos.length} linked products...`,
+      "info",
+      2000
+    );
+
+    setSyncingStock(true);
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const todo of linkedTodos) {
+        try {
+          const loyverseItem = loyverseItems.find(
+            (item) => item.id === todo.loyverseId
+          );
+          const localProduct = products.find(
+            (p) => p.id === todo.localProductId
+          );
+
+          if (!loyverseItem || !localProduct) {
+            console.warn(
+              `[Stock Linking] Skipping ${todo.loyverseName}: Product not found`
+            );
+            errorCount++;
+            continue;
+          }
+
+          const stockQuantity = loyverseItem.stock_quantity || 0;
+
+          console.log(
+            `[Stock Linking] Processing ${todo.loyverseName}: Loyverse stock = ${stockQuantity}`
+          );
+
+          if (stockQuantity === 0) {
+            console.log(
+              `[Stock Linking] Skipping ${todo.loyverseName}: Zero stock in Loyverse`
+            );
+            continue;
+          }
+
+          // Create purchasing data (same format as Add Purchasing)
+          const purchasingData = {
+            supplier: "Loyverse Sync",
+            date: new Date().toISOString().split("T")[0],
+            time: new Date().toTimeString().split(" ")[0].substring(0, 5),
+            items: [
+              {
+                productId: todo.localProductId,
+                productName: todo.localProductName,
+                variantId: null,
+                variantName: null,
+                quantity: stockQuantity,
+                buyPrice: 0,
+              },
+            ],
+            notes: `Loyverse sync: ${loyverseItem.item_name} (Loyverse ID: ${todo.loyverseId}) - Syncing ${stockQuantity} units from Loyverse`,
+            createdBy: "admin",
+          };
+
+          console.log(
+            `[Stock Linking] ${todo.loyverseName} (${todo.localProductId}): Adding ${stockQuantity} units via StockMovementService`
+          );
+          console.log(
+            `[Stock Linking] Purchasing Data:`,
+            purchasingData
+          );
+
+          // Use StockMovementService.addPurchasing (creates StockPurchasing + StockMovement records)
+          const result = await StockMovementService.addPurchasing(purchasingData);
+
+          console.log(
+            `[Stock Linking] ✓ Successfully added ${stockQuantity} units to ${todo.loyverseName} (Purchase Order: ${result.purchaseOrderId})`
+          );
+
+          successCount++;
+        } catch (error) {
+          console.error(
+            `[Stock Linking] Error syncing ${todo.loyverseName}:`,
+            error
+          );
+          errorCount++;
+        }
+      }
+
+      // Show completion notification
+      if (errorCount === 0) {
+        showLinkingToast(
+          `🎉 Stock sync complete! ✓ ${successCount} products synced successfully`,
+          "success",
+          5000
+        );
+      } else {
+        showLinkingToast(
+          `⚠ Stock sync finished with warnings: ✓ ${successCount} synced, ✗ ${errorCount} errors`,
+          "warning",
+          6000
+        );
+      }
+
+      // Move to step 3 (complete)
+      setLinkingStep(3);
+
+      // Reload all stock data (same as Add Stock In flow)
+      console.log("[Stock Linking] Reloading stock data...");
+      await loadStockMovementsData();
+      await loadAllStockCalculations(); // Recalculate stock overview
+      await loadDashboardData(); // Refresh products with updated quantities
+      console.log("[Stock Linking] Stock data reloaded successfully");
+    } catch (error) {
+      console.error("[Stock Linking] Error syncing stock:", error);
+      showLinkingToast(
+        `✗ Failed to sync stock: ${error.message}`,
+        "error",
+        5000
+      );
+    } finally {
+      setSyncingStock(false);
+    }
+  };
+
+  /**
+   * Reset linking process
+   */
+  const resetLinking = () => {
+    setLoyverseItems([]);
+    setLoyverseCategories([]);
+    setBatchTodos([]);
+    setLinkingProgress({ total: 0, linked: 0, pending: 0 });
+    setLinkingStep(1);
+    setSelectedLoyverseItem(null);
+    setSelectedLocalProduct(null);
+  };
+
+  // ============================================
+  // End Stock Linking Handlers
+  // ============================================
+
   const handleAddStockIn = () => {
     if (!checkInputPermission()) return;
     setStockInForm({
@@ -3253,9 +3658,23 @@ export default function AdminPage() {
   // Purchasing Management Functions (New StockMovement-based system)
   const loadStockMovementsData = async () => {
     try {
-      // Load stock movements
-      const movements = await StockMovementService.getAllStockMovements();
-      setStockMovements(movements);
+      // Load stock movements from both services
+      // StockMovementService uses 'StockMovement' collection (old purchasing/sales)
+      const oldMovements = await StockMovementService.getAllStockMovements();
+
+      // StockService uses 'StockManagement' collection (new stock in/out + Loyverse sync)
+      const newMovements = await StockService.getAllStockMovements();
+
+      // Combine and sort by date (newest first)
+      const allMovements = [...oldMovements, ...newMovements].sort((a, b) => {
+        const dateA =
+          a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+        const dateB =
+          b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+        return dateB - dateA;
+      });
+
+      setStockMovements(allMovements);
 
       // Load stock purchases
       const purchases = await StockMovementService.getAllStockPurchasing();
@@ -3427,11 +3846,36 @@ export default function AdminPage() {
     if (
       stockActiveSubTab === "overview" ||
       stockActiveSubTab === "movements" ||
-      stockActiveSubTab === "purchasing"
+      stockActiveSubTab === "purchasing" ||
+      stockActiveSubTab === "linking"
     ) {
       loadStockMovementsData();
     }
   }, [stockActiveSubTab]);
+
+  // Close product dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside any dropdown
+      const dropdowns = document.querySelectorAll("[data-product-dropdown]");
+      let isOutside = true;
+
+      dropdowns.forEach((dropdown) => {
+        if (dropdown.contains(event.target)) {
+          isOutside = false;
+        }
+      });
+
+      if (isOutside) {
+        setShowProductDropdown({});
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Stock Alert Management Functions
   const loadStockAlerts = async () => {
@@ -4271,6 +4715,29 @@ export default function AdminPage() {
                         />
                       </svg>
                       Stock Movements
+                    </button>
+                    <button
+                      onClick={() => setStockActiveSubTab("linking")}
+                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
+                        stockActiveSubTab === "linking"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                        />
+                      </svg>
+                      Stock Linking
                     </button>
                     <button
                       onClick={() => setStockActiveSubTab("purchasing")}
@@ -10667,6 +11134,764 @@ export default function AdminPage() {
                           })()}
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Stock Linking Sub-tab (Loyverse Integration) */}
+                  {stockActiveSubTab === "linking" && (
+                    <div className="space-y-6 relative">
+                      {/* Animated Toast Notification */}
+                      {linkingToast && (
+                        <div
+                          className={`fixed top-4 right-4 z-50 max-w-md animate-slide-in-right shadow-2xl rounded-lg overflow-hidden ${
+                            linkingToast.type === "success"
+                              ? "bg-gradient-to-r from-green-500 to-emerald-600"
+                              : linkingToast.type === "error"
+                              ? "bg-gradient-to-r from-red-500 to-rose-600"
+                              : linkingToast.type === "warning"
+                              ? "bg-gradient-to-r from-yellow-500 to-orange-600"
+                              : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                          }`}
+                        >
+                          <div className="p-4 flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {linkingToast.type === "success" && (
+                                <svg
+                                  className="w-6 h-6 text-white animate-bounce-once"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                              )}
+                              {linkingToast.type === "error" && (
+                                <svg
+                                  className="w-6 h-6 text-white animate-shake"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                              )}
+                              {linkingToast.type === "warning" && (
+                                <svg
+                                  className="w-6 h-6 text-white animate-pulse"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                  />
+                                </svg>
+                              )}
+                              {linkingToast.type === "info" && (
+                                <svg
+                                  className="w-6 h-6 text-white animate-spin-slow"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                  />
+                                </svg>
+                              )}
+                            </div>
+                            <p className="text-white font-medium text-sm flex-1">
+                              {linkingToast.message}
+                            </p>
+                            <button
+                              onClick={() => setLinkingToast(null)}
+                              className="flex-shrink-0 text-white hover:text-gray-200 transition-colors"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                          {/* Progress bar for auto-dismiss */}
+                          <div className="h-1 bg-white/20">
+                            <div className="h-full bg-white/80 animate-progress-bar"></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Header */}
+                      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-2xl font-bold mb-2">
+                              Stock Linking - Loyverse Integration
+                            </h3>
+                            <p className="text-blue-100 opacity-90">
+                              Import and sync inventory from Loyverse POS
+                            </p>
+                          </div>
+                          <button
+                            onClick={resetLinking}
+                            disabled={fetchingLoyverse || syncingStock}
+                            className="bg-white/20 hover:bg-white/30 backdrop-blur rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors duration-200 disabled:opacity-50"
+                          >
+                            Reset Process
+                          </button>
+                        </div>
+
+                        {/* Progress Bar */}
+                        {linkingProgress.total > 0 && (
+                          <div className="mt-6">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm text-blue-100">
+                                Linking Progress
+                              </span>
+                              <span className="text-sm font-semibold">
+                                {linkingProgress.linked} /{" "}
+                                {linkingProgress.total} products linked
+                              </span>
+                            </div>
+                            <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+                              <div
+                                className="bg-white h-full rounded-full transition-all duration-500"
+                                style={{
+                                  width: `${
+                                    (linkingProgress.linked /
+                                      linkingProgress.total) *
+                                    100
+                                  }%`,
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Step Indicator */}
+                      <div className="flex items-center justify-center space-x-4">
+                        {[1, 2, 3].map((step) => (
+                          <div key={step} className="flex items-center">
+                            <div
+                              className={`flex items-center justify-center w-12 h-12 rounded-full border-2 font-semibold transition-all ${
+                                linkingStep >= step
+                                  ? "bg-blue-600 border-blue-600 text-white"
+                                  : "bg-white border-gray-300 text-gray-400"
+                              }`}
+                            >
+                              {step}
+                            </div>
+                            <div className="ml-3">
+                              <div
+                                className={`text-sm font-medium ${
+                                  linkingStep >= step
+                                    ? "text-blue-600"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {step === 1 && "Fetch from Loyverse"}
+                                {step === 2 && "Link Products"}
+                                {step === 3 && "Sync Stock"}
+                              </div>
+                            </div>
+                            {step < 3 && (
+                              <div className="w-16 h-0.5 bg-gray-300 mx-4"></div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Step 1: Fetch from Loyverse */}
+                      {linkingStep === 1 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+                          <div className="text-center max-w-2xl mx-auto">
+                            <div className="flex justify-center mb-4">
+                              <svg
+                                className="w-16 h-16 text-blue-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                />
+                              </svg>
+                            </div>
+                            <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                              Import Inventory from Loyverse
+                            </h4>
+                            <p className="text-gray-600 mb-6">
+                              Click the button below to fetch all products and
+                              their stock quantities from your Loyverse POS
+                              system. This will retrieve the latest inventory
+                              data for linking.
+                            </p>
+
+                            {/* Hide Zero Stock Checkbox for Fetch */}
+                            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                              <label className="flex items-center space-x-3 cursor-pointer group">
+                                <div className="relative">
+                                  <input
+                                    type="checkbox"
+                                    checked={hideZeroStockLoyverse}
+                                    onChange={(e) =>
+                                      setHideZeroStockLoyverse(e.target.checked)
+                                    }
+                                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                  />
+                                </div>
+                                <div className="flex items-center">
+                                  <span className="text-sm font-semibold text-gray-800 group-hover:text-gray-900">
+                                    Hide products with 0 stock from Loyverse
+                                  </span>
+                                  <span className="ml-2 text-xs font-medium text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                                    Recommended
+                                  </span>
+                                </div>
+                              </label>
+                              <p className="text-xs text-gray-600 mt-2 ml-8">
+                                Only import products that have stock available.
+                                Why link products with no inventory to sync?
+                              </p>
+                            </div>
+
+                            <button
+                              onClick={fetchLoyverseStock}
+                              disabled={
+                                fetchingLoyverse || !checkInputPermission()
+                              }
+                              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-lg font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {fetchingLoyverse ? (
+                                <>
+                                  <svg
+                                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle
+                                      className="opacity-25"
+                                      cx="12"
+                                      cy="12"
+                                      r="10"
+                                      stroke="currentColor"
+                                      strokeWidth="4"
+                                    ></circle>
+                                    <path
+                                      className="opacity-75"
+                                      fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                    ></path>
+                                  </svg>
+                                  Fetching Data...
+                                </>
+                              ) : (
+                                <>
+                                  <svg
+                                    className="w-6 h-6 mr-2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                                    />
+                                  </svg>
+                                  Fetch Inventory from Loyverse
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 2: Link Products (Batch Todos) */}
+                      {linkingStep === 2 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                          <div className="flex justify-between items-center mb-6">
+                            <div>
+                              <h4 className="text-xl font-bold text-gray-900">
+                                Link Loyverse Products to Local Inventory
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Match each Loyverse product with your local
+                                product. Linked products will sync stock
+                                automatically.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => setLinkingStep(3)}
+                              disabled={linkingProgress.linked === 0}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                              Continue to Sync →
+                            </button>
+                          </div>
+
+                          {/* Search and Filters */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Search Loyverse Products
+                              </label>
+                              <input
+                                type="text"
+                                value={loyverseSearchTerm}
+                                onChange={(e) =>
+                                  setLoyverseSearchTerm(e.target.value)
+                                }
+                                placeholder="Search by name or category..."
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Filter by Status
+                              </label>
+                              <select
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                defaultValue="all"
+                              >
+                                <option value="all">
+                                  All (
+                                  {
+                                    batchTodos.filter((t) =>
+                                      hideZeroStockLoyverse ? t.stock > 0 : true
+                                    ).length
+                                  }
+                                  )
+                                </option>
+                                <option value="pending">
+                                  Pending ({linkingProgress.pending})
+                                </option>
+                                <option value="linked">
+                                  Linked ({linkingProgress.linked})
+                                </option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Batch Todo List */}
+                          <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                            {batchTodos
+                              .filter((todo) => {
+                                // Filter by search term
+                                if (loyverseSearchTerm) {
+                                  const search =
+                                    loyverseSearchTerm.toLowerCase();
+                                  const matchesSearch =
+                                    todo.loyverseName
+                                      .toLowerCase()
+                                      .includes(search) ||
+                                    todo.loyverseCategory
+                                      .toLowerCase()
+                                      .includes(search);
+                                  if (!matchesSearch) return false;
+                                }
+
+                                return true;
+                              })
+                              .map((todo) => (
+                                <div
+                                  key={todo.id}
+                                  className={`border rounded-lg p-4 transition-all ${
+                                    todo.status === "linked"
+                                      ? "bg-green-50 border-green-300"
+                                      : todo.status === "skipped"
+                                      ? "bg-gray-50 border-gray-300 opacity-60"
+                                      : "bg-white border-gray-200 hover:border-blue-300"
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex-1">
+                                      <div className="flex items-center space-x-3 mb-2">
+                                        <span
+                                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                            todo.status === "linked"
+                                              ? "bg-green-100 text-green-800"
+                                              : todo.status === "skipped"
+                                              ? "bg-gray-100 text-gray-800"
+                                              : "bg-yellow-100 text-yellow-800"
+                                          }`}
+                                        >
+                                          {todo.status === "linked" &&
+                                            "✓ Linked"}
+                                          {todo.status === "pending" &&
+                                            "⏳ Pending"}
+                                          {todo.status === "skipped" &&
+                                            "⊘ Skipped"}
+                                        </span>
+                                        <h5 className="font-semibold text-gray-900">
+                                          {todo.loyverseName}
+                                        </h5>
+                                      </div>
+                                      <div className="text-sm text-gray-600 space-y-1">
+                                        <p>
+                                          <span className="font-medium">
+                                            Category:
+                                          </span>{" "}
+                                          {todo.loyverseCategory}
+                                        </p>
+                                        <p>
+                                          <span className="font-medium">
+                                            Stock:
+                                          </span>{" "}
+                                          <span className="font-semibold text-blue-600">
+                                            {todo.stock}
+                                          </span>
+                                        </p>
+                                        {todo.localProductName && (
+                                          <p>
+                                            <span className="font-medium">
+                                              Linked to:
+                                            </span>{" "}
+                                            <span className="text-green-700 font-semibold">
+                                              {todo.localProductName}
+                                            </span>
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      {/* Searchable Product Link */}
+                                      {todo.status === "pending" && (
+                                        <div
+                                          className="mt-3 relative"
+                                          data-product-dropdown
+                                        >
+                                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                                            Select Local Product to Link
+                                          </label>
+                                          <div className="relative">
+                                            <input
+                                              type="text"
+                                              value={
+                                                productSearchTerms[todo.id] ||
+                                                ""
+                                              }
+                                              onChange={(e) => {
+                                                setProductSearchTerms({
+                                                  ...productSearchTerms,
+                                                  [todo.id]: e.target.value,
+                                                });
+                                                setShowProductDropdown({
+                                                  ...showProductDropdown,
+                                                  [todo.id]: true,
+                                                });
+                                              }}
+                                              onFocus={() => {
+                                                setShowProductDropdown({
+                                                  ...showProductDropdown,
+                                                  [todo.id]: true,
+                                                });
+                                              }}
+                                              onKeyDown={(e) => {
+                                                if (e.key === "Escape") {
+                                                  setShowProductDropdown({
+                                                    ...showProductDropdown,
+                                                    [todo.id]: false,
+                                                  });
+                                                }
+                                              }}
+                                              placeholder="Search products..."
+                                              className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <svg
+                                              className="absolute right-2 top-2.5 w-4 h-4 text-gray-400 pointer-events-none"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              viewBox="0 0 24 24"
+                                            >
+                                              <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                              />
+                                            </svg>
+                                          </div>
+
+                                          {/* Dropdown List */}
+                                          {showProductDropdown[todo.id] && (
+                                            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                              {products
+                                                .filter((product) => {
+                                                  const searchTerm =
+                                                    productSearchTerms[
+                                                      todo.id
+                                                    ] || "";
+                                                  if (!searchTerm) return true;
+                                                  const search =
+                                                    searchTerm.toLowerCase();
+                                                  const categoryName =
+                                                    categories.find(
+                                                      (c) =>
+                                                        c.id ===
+                                                        product.categoryId
+                                                    )?.name || "Uncategorized";
+                                                  return (
+                                                    product.name
+                                                      .toLowerCase()
+                                                      .includes(search) ||
+                                                    categoryName
+                                                      .toLowerCase()
+                                                      .includes(search)
+                                                  );
+                                                })
+                                                .slice(0, 50)
+                                                .map((product) => {
+                                                  const categoryName =
+                                                    categories.find(
+                                                      (c) =>
+                                                        c.id ===
+                                                        product.categoryId
+                                                    )?.name || "Uncategorized";
+                                                  return (
+                                                    <button
+                                                      key={product.id}
+                                                      onClick={() => {
+                                                        linkProductToLoyverse(
+                                                          todo.id,
+                                                          product.id
+                                                        );
+                                                        setProductSearchTerms({
+                                                          ...productSearchTerms,
+                                                          [todo.id]:
+                                                            product.name,
+                                                        });
+                                                        setShowProductDropdown({
+                                                          ...showProductDropdown,
+                                                          [todo.id]: false,
+                                                        });
+                                                      }}
+                                                      className="w-full text-left px-3 py-2 hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0 transition-colors"
+                                                    >
+                                                      <div className="font-medium text-gray-900">
+                                                        {product.name}
+                                                      </div>
+                                                      <div className="text-xs text-gray-500">
+                                                        {categoryName}
+                                                      </div>
+                                                    </button>
+                                                  );
+                                                })}
+                                              {products.filter((product) => {
+                                                const searchTerm =
+                                                  productSearchTerms[todo.id] ||
+                                                  "";
+                                                if (!searchTerm) return true;
+                                                const search =
+                                                  searchTerm.toLowerCase();
+                                                const categoryName =
+                                                  categories.find(
+                                                    (c) =>
+                                                      c.id ===
+                                                      product.categoryId
+                                                  )?.name || "Uncategorized";
+                                                return (
+                                                  product.name
+                                                    .toLowerCase()
+                                                    .includes(search) ||
+                                                  categoryName
+                                                    .toLowerCase()
+                                                    .includes(search)
+                                                );
+                                              }).length === 0 && (
+                                                <div className="px-3 py-4 text-center text-sm text-gray-500">
+                                                  No products found
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="ml-4 flex flex-col space-y-2">
+                                      {todo.status === "pending" && (
+                                        <button
+                                          onClick={() =>
+                                            skipLoyverseLink(todo.id)
+                                          }
+                                          className="text-xs text-gray-500 hover:text-gray-700 underline"
+                                        >
+                                          Skip
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+
+                          {batchTodos.length === 0 && (
+                            <div className="text-center py-12 text-gray-500">
+                              No products to link. Please fetch data from
+                              Loyverse first.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Step 3: Sync Stock */}
+                      {linkingStep === 3 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+                          <div className="text-center max-w-2xl mx-auto">
+                            <div className="flex justify-center mb-4">
+                              <svg
+                                className="w-16 h-16 text-green-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                              Ready to Sync Stock
+                            </h4>
+                            <p className="text-gray-600 mb-6">
+                              You have linked{" "}
+                              <span className="font-bold text-blue-600">
+                                {linkingProgress.linked}
+                              </span>{" "}
+                              products. Click below to sync their stock
+                              quantities from Loyverse to your local inventory.
+                              This will create stock movement records.
+                            </p>
+
+                            {/* Summary Stats */}
+                            <div className="grid grid-cols-3 gap-4 mb-8">
+                              <div className="bg-blue-50 rounded-lg p-4">
+                                <div className="text-3xl font-bold text-blue-600">
+                                  {linkingProgress.total}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  Total Items
+                                </div>
+                              </div>
+                              <div className="bg-green-50 rounded-lg p-4">
+                                <div className="text-3xl font-bold text-green-600">
+                                  {linkingProgress.linked}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  Linked
+                                </div>
+                              </div>
+                              <div className="bg-gray-50 rounded-lg p-4">
+                                <div className="text-3xl font-bold text-gray-600">
+                                  {
+                                    batchTodos.filter(
+                                      (t) => t.status === "skipped"
+                                    ).length
+                                  }
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                  Skipped
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-center space-x-4">
+                              <button
+                                onClick={() => setLinkingStep(2)}
+                                className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                ← Back to Linking
+                              </button>
+                              <button
+                                onClick={syncStockFromLoyverse}
+                                disabled={
+                                  syncingStock ||
+                                  linkingProgress.linked === 0 ||
+                                  !checkInputPermission()
+                                }
+                                className="inline-flex items-center px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white text-lg font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {syncingStock ? (
+                                  <>
+                                    <svg
+                                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <circle
+                                        className="opacity-25"
+                                        cx="12"
+                                        cy="12"
+                                        r="10"
+                                        stroke="currentColor"
+                                        strokeWidth="4"
+                                      ></circle>
+                                      <path
+                                        className="opacity-75"
+                                        fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                      ></path>
+                                    </svg>
+                                    Syncing Stock...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg
+                                      className="w-6 h-6 mr-2"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      viewBox="0 0 24 24"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                      />
+                                    </svg>
+                                    Sync Stock Now
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
