@@ -117,15 +117,17 @@ export class CustomerService {
   // Get customer by member ID (stored as customerId)
   static async getCustomerByMemberId(memberId) {
     try {
-      console.log(`🔄 Fetching fresh customer data from server for: ${memberId}`);
-      
+      console.log(
+        `🔄 Fetching fresh customer data from server for: ${memberId}`
+      );
+
       // Search by customerId field only (Member ID is stored as customerId)
       const q = query(
         collection(db, CUSTOMERS_COLLECTION),
         where("customerId", "==", memberId),
         limit(1)
       );
-      
+
       // Use getDocsFromServer to bypass cache and always fetch fresh data from server
       const querySnapshot = await getDocsFromServer(q);
 

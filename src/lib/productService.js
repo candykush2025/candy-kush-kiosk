@@ -862,6 +862,13 @@ export class ProductService {
         hasModelFile: !!modelFile,
       });
 
+      console.log("💰 CASHBACK DATA in updateProduct:", {
+        cashbackEnabled: productData.cashbackEnabled,
+        cashbackType: productData.cashbackType,
+        cashbackValue: productData.cashbackValue,
+        cashbackMinPurchase: productData.cashbackMinPurchase,
+      });
+
       const docRef = doc(db, PRODUCTS_COLLECTION, id);
       const currentDoc = await getDoc(docRef);
 
@@ -887,8 +894,28 @@ export class ProductService {
           productData.isActive !== undefined ? productData.isActive : true,
         isFeatured: productData.isFeatured || false,
         notes: productData.notes || "",
+        cashbackEnabled:
+          productData.cashbackEnabled !== undefined
+            ? productData.cashbackEnabled
+            : false,
+        cashbackType: productData.cashbackType || "percentage",
+        cashbackValue:
+          productData.cashbackValue !== undefined
+            ? productData.cashbackValue
+            : 0,
+        cashbackMinPurchase:
+          productData.cashbackMinPurchase !== undefined
+            ? productData.cashbackMinPurchase
+            : 0,
         updatedAt: serverTimestamp(),
       };
+
+      console.log("💰 CASHBACK DATA in updateData object:", {
+        cashbackEnabled: updateData.cashbackEnabled,
+        cashbackType: updateData.cashbackType,
+        cashbackValue: updateData.cashbackValue,
+        cashbackMinPurchase: updateData.cashbackMinPurchase,
+      });
 
       if (imageFiles && imageFiles.length > 0) {
         // Delete old images before uploading new ones
@@ -1229,6 +1256,140 @@ export class CashbackService {
     } catch (error) {
       console.error("Error getting cashback percentage:", error);
       return 0;
+    }
+  }
+
+  // Calculate cashback for a product (prioritizes product-level cashback over category cashback)
+  static async calculateProductCashback(product, purchaseAmount, quantity = 1) {
+    try {
+      const totalAmount = purchaseAmount * quantity;
+
+      console.log("🔍 Calculating cashback for product:", {
+        productId: product.productId || product.id,
+        productName: product.name,
+        purchaseAmount,
+        quantity,
+        totalAmount,
+        hasCashbackEnabled: product.cashbackEnabled,
+      });
+
+      // Priority 1: Check product-level cashback
+      if (product.cashbackEnabled && product.cashbackValue > 0) {
+        // Check minimum purchase requirement
+        if (
+          product.cashbackMinPurchase &&
+          totalAmount < product.cashbackMinPurchase
+        ) {
+          console.log("❌ Product cashback: minimum purchase not met", {
+            minPurchase: product.cashbackMinPurchase,
+            totalAmount,
+          });
+          return {
+            cashback: 0,
+            appliedRule: "none",
+            reason: "minimum_not_met",
+          };
+        }
+
+        let cashback = 0;
+        if (product.cashbackType === "percentage") {
+          cashback = (totalAmount * product.cashbackValue) / 100;
+        } else if (product.cashbackType === "fixed") {
+          cashback = product.cashbackValue * quantity;
+        }
+
+        console.log("✅ Product-level cashback applied:", {
+          type: product.cashbackType,
+          value: product.cashbackValue,
+          cashback,
+        });
+
+        return {
+          cashback,
+          appliedRule: "product",
+          ruleType: product.cashbackType,
+          ruleValue: product.cashbackValue,
+        };
+      }
+
+      // Priority 2: Check category-level cashback
+      if (product.categoryId) {
+        const rule = await this.getCashbackRuleByCategory(product.categoryId);
+        if (rule && rule.isActive) {
+          const cashback = (totalAmount * rule.percentage) / 100;
+          console.log("✅ Category-level cashback applied:", {
+            categoryId: product.categoryId,
+            percentage: rule.percentage,
+            cashback,
+          });
+
+          return {
+            cashback,
+            appliedRule: "category",
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            percentage: rule.percentage,
+          };
+        }
+      }
+
+      console.log("❌ No cashback rule applied");
+      return {
+        cashback: 0,
+        appliedRule: "none",
+      };
+    } catch (error) {
+      console.error("Error calculating product cashback:", error);
+      return {
+        cashback: 0,
+        appliedRule: "error",
+        error: error.message,
+      };
+    }
+  }
+
+  // Calculate total cashback for cart items
+  static async calculateCartCashback(cartItems) {
+    try {
+      let totalCashback = 0;
+      const itemsWithCashback = [];
+
+      for (const item of cartItems) {
+        const result = await this.calculateProductCashback(
+          item,
+          item.price || item.finalPrice || 0,
+          item.quantity || 1
+        );
+
+        if (result.cashback > 0) {
+          itemsWithCashback.push({
+            productId: item.productId || item.id,
+            productName: item.name,
+            cashback: result.cashback,
+            appliedRule: result.appliedRule,
+            ...result,
+          });
+          totalCashback += result.cashback;
+        }
+      }
+
+      console.log("💰 Total cart cashback calculated:", {
+        totalCashback,
+        itemsWithCashback: itemsWithCashback.length,
+        details: itemsWithCashback,
+      });
+
+      return {
+        totalCashback,
+        itemsWithCashback,
+      };
+    } catch (error) {
+      console.error("Error calculating cart cashback:", error);
+      return {
+        totalCashback: 0,
+        itemsWithCashback: [],
+        error: error.message,
+      };
     }
   }
 }

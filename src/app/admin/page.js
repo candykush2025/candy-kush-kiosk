@@ -681,6 +681,10 @@ export default function AdminPage() {
     isFeatured: false,
     tags: [],
     notes: "",
+    cashbackEnabled: false,
+    cashbackType: "percentage",
+    cashbackValue: 0,
+    cashbackMinPurchase: 0,
   });
 
   // Category and subcategory editing states
@@ -1101,6 +1105,19 @@ export default function AdminPage() {
         categoryName: editingProduct.categoryName || "",
         subcategoryName: editingProduct.subcategoryName || "",
         textColor: editingProduct.textColor || "#000000",
+        cashbackEnabled:
+          editingProduct.cashbackEnabled !== undefined
+            ? editingProduct.cashbackEnabled
+            : false,
+        cashbackType: editingProduct.cashbackType || "percentage",
+        cashbackValue:
+          editingProduct.cashbackValue !== undefined
+            ? editingProduct.cashbackValue
+            : 0,
+        cashbackMinPurchase:
+          editingProduct.cashbackMinPurchase !== undefined
+            ? editingProduct.cashbackMinPurchase
+            : 0,
       });
       // Reset image file when starting to edit a different product
       setProductImageFile(null);
@@ -1954,7 +1971,25 @@ export default function AdminPage() {
           modelRotationX: productForm.modelRotationX,
           modelRotationY: productForm.modelRotationY,
           modelRotationZ: productForm.modelRotationZ,
+          cashbackEnabled: productForm.cashbackEnabled || false,
+          cashbackType: productForm.cashbackType || "percentage",
+          cashbackValue: productForm.cashbackValue || 0,
+          cashbackMinPurchase: productForm.cashbackMinPurchase || 0,
         };
+
+        console.log("💰 CASHBACK DATA from productForm:", {
+          cashbackEnabled: productForm.cashbackEnabled,
+          cashbackType: productForm.cashbackType,
+          cashbackValue: productForm.cashbackValue,
+          cashbackMinPurchase: productForm.cashbackMinPurchase,
+        });
+
+        console.log("💰 CASHBACK DATA in cleanProductData:", {
+          cashbackEnabled: cleanProductData.cashbackEnabled,
+          cashbackType: cleanProductData.cashbackType,
+          cashbackValue: cleanProductData.cashbackValue,
+          cashbackMinPurchase: cleanProductData.cashbackMinPurchase,
+        });
 
         // Debug: Check file state for edit mode
         console.log("🔍 EDIT MODE FILE DEBUG - State before saving:", {
@@ -7009,54 +7044,11 @@ export default function AdminPage() {
                                       onClick={() => {
                                         if (!checkEditPermission()) return;
                                         setEditingProduct(product);
-                                        setShouldRemoveMainImages(false); // Reset removal flag when starting edit
+                                        setShouldRemoveMainImages(false);
                                         setVariants(product.variants || []);
                                         setHasVariants(
                                           product.hasVariants || false
                                         );
-                                        setProductForm({
-                                          name: product.name || "",
-                                          description:
-                                            product.description || "",
-                                          categoryId: product.categoryId || "",
-                                          categoryName:
-                                            product.categoryName || "",
-                                          subcategoryId:
-                                            product.subcategoryId || "",
-                                          subcategoryName:
-                                            product.subcategoryName || "",
-                                          hasVariants:
-                                            product.hasVariants || false,
-                                          price: product.price || 0,
-                                          memberPrice: product.memberPrice || 0,
-                                          variants: product.variants || [],
-                                          sku: product.sku || "",
-                                          barcode: product.barcode || "",
-                                          supplier: product.supplier || "",
-                                          mainImage: product.mainImage || "",
-                                          images: product.images || [],
-                                          isActive:
-                                            product.isActive !== undefined
-                                              ? product.isActive
-                                              : true,
-                                          isFeatured:
-                                            product.isFeatured || false,
-                                          tags: product.tags || [],
-                                          notes: product.notes || "",
-                                          backgroundImage:
-                                            product.backgroundImage || "",
-                                          backgroundFit:
-                                            product.backgroundFit || "cover",
-                                          textColor:
-                                            product.textColor || "#000000",
-                                          modelUrl: product.modelUrl || "",
-                                          modelRotationX:
-                                            product.modelRotationX || 90,
-                                          modelRotationY:
-                                            product.modelRotationY || 75,
-                                          modelRotationZ:
-                                            product.modelRotationZ || 2.5,
-                                        });
                                       }}
                                       className="text-green-600 hover:text-green-900"
                                     >
@@ -14515,6 +14507,159 @@ export default function AdminPage() {
                     </p>
                   </div>
 
+                  {/* Product Cashback Section */}
+                  <div className="border-t border-gray-200 pt-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Product-Specific Cashback
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setNewProduct({
+                            ...newProduct,
+                            cashbackEnabled: !newProduct.cashbackEnabled,
+                          })
+                        }
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          newProduct.cashbackEnabled
+                            ? "bg-green-600"
+                            : "bg-gray-200"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            newProduct.cashbackEnabled
+                              ? "translate-x-6"
+                              : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Enable custom cashback for this product. If disabled,
+                      category cashback rules will apply.
+                    </p>
+
+                    {newProduct.cashbackEnabled && (
+                      <div className="space-y-3 pl-4 border-l-2 border-green-200">
+                        {/* Cashback Type */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Cashback Type
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setNewProduct({
+                                  ...newProduct,
+                                  cashbackType: "percentage",
+                                })
+                              }
+                              className={`flex-1 px-3 py-2 text-sm rounded border ${
+                                newProduct.cashbackType === "percentage"
+                                  ? "bg-green-600 text-white border-green-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-green-400"
+                              }`}
+                            >
+                              Percentage (%)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setNewProduct({
+                                  ...newProduct,
+                                  cashbackType: "fixed",
+                                })
+                              }
+                              className={`flex-1 px-3 py-2 text-sm rounded border ${
+                                newProduct.cashbackType === "fixed"
+                                  ? "bg-green-600 text-white border-green-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-green-400"
+                              }`}
+                            >
+                              Fixed Amount
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Cashback Value */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            {newProduct.cashbackType === "percentage"
+                              ? "Cashback Percentage (%)"
+                              : "Cashback Amount per Item"}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step={
+                              newProduct.cashbackType === "percentage"
+                                ? "0.1"
+                                : "1"
+                            }
+                            value={newProduct.cashbackValue || 0}
+                            onChange={(e) =>
+                              setNewProduct({
+                                ...newProduct,
+                                cashbackValue: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder={
+                              newProduct.cashbackType === "percentage"
+                                ? "e.g., 5.0 for 5%"
+                                : "e.g., 10 for ฿10"
+                            }
+                          />
+                        </div>
+
+                        {/* Minimum Purchase */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Minimum Purchase Amount (Optional)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={newProduct.cashbackMinPurchase || 0}
+                            onChange={(e) =>
+                              setNewProduct({
+                                ...newProduct,
+                                cashbackMinPurchase:
+                                  parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="Leave 0 for no minimum"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Cashback will only apply if total purchase meets
+                            this amount
+                          </p>
+                        </div>
+
+                        {/* Preview */}
+                        {newProduct.cashbackValue > 0 && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-green-800 mb-1">
+                              Cashback Preview:
+                            </p>
+                            <p className="text-sm text-green-700">
+                              {newProduct.cashbackType === "percentage"
+                                ? `${newProduct.cashbackValue}% cashback on purchase`
+                                : `฿${newProduct.cashbackValue} cashback per item`}
+                              {newProduct.cashbackMinPurchase > 0 &&
+                                ` (min. purchase ฿${newProduct.cashbackMinPurchase})`}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   {/* 3D Model Upload Section */}
                   <div className="border-t border-gray-200 pt-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -15507,6 +15652,165 @@ export default function AdminPage() {
                     <p className="mt-1 text-xs text-gray-500">
                       Choose the text color for this product.
                     </p>
+                  </div>
+
+                  {/* Product Cashback Section */}
+                  <div className="border-t border-gray-200 pt-4">
+                    {console.log("🎨 Rendering Edit Form Cashback UI:", {
+                      cashbackEnabled: productForm.cashbackEnabled,
+                      cashbackType: productForm.cashbackType,
+                      cashbackValue: productForm.cashbackValue,
+                      cashbackMinPurchase: productForm.cashbackMinPurchase,
+                    })}
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Product-Specific Cashback
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setProductForm({
+                            ...productForm,
+                            cashbackEnabled: !productForm.cashbackEnabled,
+                          })
+                        }
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          productForm.cashbackEnabled
+                            ? "bg-green-600"
+                            : "bg-gray-200"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            productForm.cashbackEnabled
+                              ? "translate-x-6"
+                              : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Enable custom cashback for this product. If disabled,
+                      category cashback rules will apply.
+                    </p>
+
+                    {productForm.cashbackEnabled && (
+                      <div className="space-y-3 pl-4 border-l-2 border-green-200">
+                        {/* Cashback Type */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Cashback Type
+                          </label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProductForm({
+                                  ...productForm,
+                                  cashbackType: "percentage",
+                                })
+                              }
+                              className={`flex-1 px-3 py-2 text-sm rounded border ${
+                                productForm.cashbackType === "percentage"
+                                  ? "bg-green-600 text-white border-green-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-green-400"
+                              }`}
+                            >
+                              Percentage (%)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProductForm({
+                                  ...productForm,
+                                  cashbackType: "fixed",
+                                })
+                              }
+                              className={`flex-1 px-3 py-2 text-sm rounded border ${
+                                productForm.cashbackType === "fixed"
+                                  ? "bg-green-600 text-white border-green-600"
+                                  : "bg-white text-gray-700 border-gray-300 hover:border-green-400"
+                              }`}
+                            >
+                              Fixed Amount
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Cashback Value */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            {productForm.cashbackType === "percentage"
+                              ? "Cashback Percentage (%)"
+                              : "Cashback Amount per Item"}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step={
+                              productForm.cashbackType === "percentage"
+                                ? "0.1"
+                                : "1"
+                            }
+                            value={productForm.cashbackValue || 0}
+                            onChange={(e) =>
+                              setProductForm({
+                                ...productForm,
+                                cashbackValue: parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder={
+                              productForm.cashbackType === "percentage"
+                                ? "e.g., 5.0 for 5%"
+                                : "e.g., 10 for ฿10"
+                            }
+                          />
+                        </div>
+
+                        {/* Minimum Purchase */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Minimum Purchase Amount (Optional)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={productForm.cashbackMinPurchase || 0}
+                            onChange={(e) =>
+                              setProductForm({
+                                ...productForm,
+                                cashbackMinPurchase:
+                                  parseFloat(e.target.value) || 0,
+                              })
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                            placeholder="Leave 0 for no minimum"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Cashback will only apply if total purchase meets
+                            this amount
+                          </p>
+                        </div>
+
+                        {/* Preview */}
+                        {productForm.cashbackValue > 0 && (
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <p className="text-xs font-semibold text-green-800 mb-1">
+                              Cashback Preview:
+                            </p>
+                            <p className="text-sm text-green-700">
+                              {productForm.cashbackType === "percentage"
+                                ? `${productForm.cashbackValue}% cashback on purchase`
+                                : `฿${productForm.cashbackValue} cashback per item`}
+                              {productForm.cashbackMinPurchase > 0 &&
+                                ` (min. purchase ฿${productForm.cashbackMinPurchase})`}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* 3D Model Upload Section */}
