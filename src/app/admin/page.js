@@ -3324,13 +3324,12 @@ export default function AdminPage() {
           console.log(
             `[Stock Linking] ${todo.loyverseName} (${todo.localProductId}): Adding ${stockQuantity} units via StockMovementService`
           );
-          console.log(
-            `[Stock Linking] Purchasing Data:`,
-            purchasingData
-          );
+          console.log(`[Stock Linking] Purchasing Data:`, purchasingData);
 
           // Use StockMovementService.addPurchasing (creates StockPurchasing + StockMovement records)
-          const result = await StockMovementService.addPurchasing(purchasingData);
+          const result = await StockMovementService.addPurchasing(
+            purchasingData
+          );
 
           console.log(
             `[Stock Linking] ✓ Successfully added ${stockQuantity} units to ${todo.loyverseName} (Purchase Order: ${result.purchaseOrderId})`

@@ -1006,10 +1006,10 @@ export default function MenuPage() {
 
     // Check if this is a Custom Joint Builder category
     if (category.specialPage === "Custom Joint Builder") {
-      console.log("✅ Opening Custom Joint Builder");
-      setShowCustomJointBuilder(true);
-      setShowPersonalizedJoints(false); // Close prerolled page
-      setSelectedCategory(null);
+      console.log(
+        "✅ Opening Custom Joint Builder - Navigating to full screen"
+      );
+      router.push("/menu/personalizedJoint");
       return;
     }
 
@@ -1193,7 +1193,7 @@ export default function MenuPage() {
       product.productId === "customjoint" ||
       product.name?.toLowerCase().includes("custom joint")
     ) {
-      setShowCustomJointBuilder(true);
+      router.push("/menu/personalizedJoint");
       return;
     }
 
@@ -2984,14 +2984,14 @@ export default function MenuPage() {
               </h1>
             </div>
 
-            {/* 4x4 Grid - header row 150px, image cells 220px */}
-            <div className="flex-1 w-full flex justify-center">
+            {/* 4x4 Grid - header row 180px, image cells 270px */}
+            <div className="flex-1 w-full flex justify-center items-center p-4">
               <div
                 className="mx-auto"
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(4, 220px)",
-                  gridTemplateRows: "150px repeat(3, 220px)",
+                  gridTemplateColumns: "repeat(4, 270px)",
+                  gridTemplateRows: "180px repeat(3, 270px)",
                   gap: "0px",
                 }}
               >
@@ -3000,19 +3000,19 @@ export default function MenuPage() {
 
                 {/* Header: Sativa, Hybrid, Indica */}
                 <div
-                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
+                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
                   style={{ backgroundColor: "#FDE047" }}
                 >
                   Sativa
                 </div>
                 <div
-                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center"
+                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center"
                   style={{ backgroundColor: "#22C55E" }}
                 >
                   Hybrid
                 </div>
                 <div
-                  className="w-[220px] h-[150px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
+                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
                   style={{ backgroundColor: "#3B82F6" }}
                 >
                   Indica
@@ -3020,7 +3020,7 @@ export default function MenuPage() {
 
                 {/* Outdoor Row */}
                 <div
-                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
+                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
                   style={{ backgroundColor: "#06B6D4" }}
                 >
                   Outdoor
@@ -3032,7 +3032,7 @@ export default function MenuPage() {
                   return (
                     <div
                       key={itemKey}
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
                         isSelected || isZoomed
                           ? "ring-4 ring-green-500 shadow-2xl z-10"
                           : ""
@@ -3044,8 +3044,8 @@ export default function MenuPage() {
                         alt={`Outdoor ${
                           strain.charAt(0).toUpperCase() + strain.slice(1)
                         }`}
-                        width={196}
-                        height={196}
+                        width={245}
+                        height={245}
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -3054,7 +3054,7 @@ export default function MenuPage() {
 
                 {/* Indoor Row */}
                 <div
-                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center"
+                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center"
                   style={{ backgroundColor: "#6B7280" }}
                 >
                   Indoor
@@ -3066,7 +3066,7 @@ export default function MenuPage() {
                   return (
                     <div
                       key={itemKey}
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
                         isSelected || isZoomed
                           ? "ring-4 ring-green-500 shadow-2xl z-10"
                           : ""
@@ -3078,8 +3078,8 @@ export default function MenuPage() {
                         alt={`Indoor ${
                           strain.charAt(0).toUpperCase() + strain.slice(1)
                         }`}
-                        width={196}
-                        height={196}
+                        width={245}
+                        height={245}
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -3088,7 +3088,7 @@ export default function MenuPage() {
 
                 {/* Top Quality Row */}
                 <div
-                  className="w-[220px] h-[220px] text-2xl font-bold text-white flex items-center justify-center rounded-bl-[3rem]"
+                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center rounded-bl-[3rem]"
                   style={{ backgroundColor: "#000000" }}
                 >
                   Top Quality
@@ -3100,7 +3100,7 @@ export default function MenuPage() {
                   return (
                     <div
                       key={itemKey}
-                      className={`w-[220px] h-[220px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-2 ${
+                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
                         isSelected || isZoomed
                           ? "ring-4 ring-green-500 shadow-2xl z-10"
                           : ""
@@ -3112,8 +3112,8 @@ export default function MenuPage() {
                         alt={`Top Quality ${
                           strain.charAt(0).toUpperCase() + strain.slice(1)
                         }`}
-                        width={196}
-                        height={196}
+                        width={245}
+                        height={245}
                         className="w-full h-full object-contain"
                       />
                     </div>
@@ -3761,7 +3761,7 @@ export default function MenuPage() {
                           return (
                             <div
                               key={subcategory.id}
-                              className={`pb-2 rounded-2xl overflow-hidden transition-all duration-300 ${
+                              className={`rounded-2xl overflow-hidden transition-all duration-300 ${
                                 isExpanded ? "shadow-lg" : "shadow-sm"
                               }`}
                               style={{
@@ -3777,6 +3777,19 @@ export default function MenuPage() {
                                   : "white",
                               }}
                             >
+                              {/* Green Header with Title */}
+                              <div
+                                className="bg-green-600 px-8 py-6"
+                                style={{
+                                  borderTopLeftRadius: "1rem",
+                                  borderTopRightRadius: "1rem",
+                                }}
+                              >
+                                <h5 className="font-bold text-4xl text-white text-center">
+                                  {subcategory.name}
+                                </h5>
+                              </div>
+
                               {/* Clickable Subcategory Header */}
                               <button
                                 onClick={() =>
@@ -3784,68 +3797,43 @@ export default function MenuPage() {
                                 }
                                 className="flex items-center mb-2 w-full text-left hover:bg-black/10 p-8 transition-all duration-200"
                               >
-                                {subcategory.image && (
-                                  <div className="w-16 h-16 mr-3 relative flex-shrink-0 rounded-lg overflow-hidden">
-                                    <CachedImage
-                                      src={subcategory.image}
-                                      alt={subcategory.name}
-                                      type="category"
-                                      fill
-                                      className="object-contain rounded p-1"
-                                      sizes="64px"
-                                      showLoading={false}
-                                    />
-                                  </div>
-                                )}
-                                <div className="flex-1 flex items-center justify-between">
-                                  <h5
-                                    className="font-bold text-2xl"
+                                <div className="flex-1 flex items-center justify-end">
+                                  <span
+                                    className="text-xs px-2 py-1 rounded-full font-medium mr-2"
                                     style={{
-                                      color: subcategory.textColor || "#959595",
+                                      color: subcategory.textColor || "#6b7280",
+                                      backgroundColor:
+                                        subcategory.backgroundImage
+                                          ? "rgba(255,255,255,0.8)"
+                                          : "#f3f4f6",
+                                      textShadow: subcategory.backgroundImage
+                                        ? "1px 1px 2px rgba(0,0,0,0.5)"
+                                        : "none",
                                     }}
                                   >
-                                    {subcategory.name}
-                                  </h5>
-                                  <div className="flex items-center space-x-2">
-                                    <span
-                                      className="text-xs px-2 py-1 rounded-full font-medium"
-                                      style={{
-                                        color:
-                                          subcategory.textColor || "#6b7280",
-                                        backgroundColor:
-                                          subcategory.backgroundImage
-                                            ? "rgba(255,255,255,0.8)"
-                                            : "#f3f4f6",
-                                        textShadow: subcategory.backgroundImage
-                                          ? "1px 1px 2px rgba(0,0,0,0.5)"
-                                          : "none",
-                                      }}
-                                    >
-                                      {subcategoryProducts.length} products
-                                    </span>
-                                    <svg
-                                      className={`w-5 h-5 transform transition-transform duration-200 ${
-                                        isExpanded ? "rotate-180" : "rotate-0"
-                                      }`}
-                                      style={{
-                                        color:
-                                          subcategory.textColor || "#6b7280",
-                                        filter: subcategory.backgroundImage
-                                          ? "drop-shadow(1px 1px 2px rgba(0,0,0,0.7))"
-                                          : "none",
-                                      }}
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth="2"
-                                        d="M19 9l-7 7-7-7"
-                                      />
-                                    </svg>
-                                  </div>
+                                    {subcategoryProducts.length} products
+                                  </span>
+                                  <svg
+                                    className={`w-5 h-5 transform transition-transform duration-200 ${
+                                      isExpanded ? "rotate-180" : "rotate-0"
+                                    }`}
+                                    style={{
+                                      color: subcategory.textColor || "#6b7280",
+                                      filter: subcategory.backgroundImage
+                                        ? "drop-shadow(1px 1px 2px rgba(0,0,0,0.7))"
+                                        : "none",
+                                    }}
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth="2"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  </svg>
                                 </div>
                               </button>
 

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import Image from "next/image";
+import SmokeEffect from "./SmokeEffect";
 
 export default function JointVisualizer({ config }) {
   const [rotate, setRotate] = useState(false);
@@ -62,12 +64,12 @@ export default function JointVisualizer({ config }) {
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
-      <h3 className="text-2xl font-bold mb-6 text-center">Live Preview</h3>
+    <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
+      <h3 className="text-xl font-bold mb-4 text-center">Live Preview</h3>
 
-      <div className="grid grid-cols-2 gap-8 items-stretch">
+      <div className="grid grid-cols-2 gap-6 items-stretch">
         {/* Left - Visual Preview */}
-        <div className="relative w-full min-h-[400px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
+        <div className="relative w-full h-[360px] flex items-center justify-center overflow-hidden bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl">
           {/* Background ambient effect */}
           {config.paper && (flowerCount > 0 || hashCount > 0) && (
             <div className="absolute inset-0 flex items-center justify-center opacity-20">
@@ -76,297 +78,36 @@ export default function JointVisualizer({ config }) {
           )}
 
           {config.paper ? (
-            <div
-              className={`transition-all duration-600 ${
-                rotate ? "rotate-y-180" : ""
-              }`}
-              style={{
-                transformStyle: "preserve-3d",
-                perspective: "1000px",
-                filter: "drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4))",
-              }}
-            >
-              {/* Joint Body */}
-              <div className="relative">
-                {/* Filter */}
-                <div
-                  className="absolute -left-8 top-1/2 transform -translate-y-1/2 z-10"
-                  style={{
-                    width: filterType === "wide-glass" ? "40px" : "30px",
-                    height: "80px",
-                  }}
-                >
-                  <div
-                    className="w-full h-full rounded-lg shadow-xl relative overflow-hidden"
-                    style={{
-                      background:
-                        filterType === "paper-filter"
-                          ? "linear-gradient(180deg, #d4a574 0%, #c19a6b 50%, #a0826d 100%)"
-                          : filterType === "slim-glass"
-                          ? "linear-gradient(180deg, rgba(96, 165, 250, 0.9) 0%, rgba(147, 197, 253, 0.95) 50%, rgba(191, 219, 254, 0.9) 100%)"
-                          : "linear-gradient(180deg, rgba(129, 140, 248, 0.9) 0%, rgba(165, 180, 252, 0.95) 50%, rgba(199, 210, 254, 0.9) 100%)",
-                      boxShadow:
-                        filterType !== "paper-filter"
-                          ? "0 0 30px rgba(96, 165, 250, 0.6), inset 0 2px 8px rgba(255, 255, 255, 0.3)"
-                          : "inset 0 2px 6px rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.3)",
-                      border:
-                        filterType !== "paper-filter"
-                          ? "2px solid rgba(147, 197, 253, 0.5)"
-                          : "none",
-                    }}
-                  >
-                    {/* Glass shine effect */}
-                    {filterType !== "paper-filter" && (
-                      <div
-                        className="absolute inset-0 opacity-40"
-                        style={{
-                          background:
-                            "linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.6) 50%, transparent 100%)",
-                          transform: "translateX(-100%)",
-                        }}
-                      ></div>
-                    )}
+            <div className="relative flex items-center justify-center">
+              {(() => {
+                // Select image based on paper type
+                let src = "/CustomJoint/preroll1.png"; // default
+                if (paperType.includes("hemp")) src = "/CustomJoint/hemp1.png";
+                else if (
+                  paperType.includes("gold") ||
+                  paperType.includes("golden")
+                )
+                  src = encodeURI("/CustomJoint/gold foil.png");
+                else if (paperType.includes("custom"))
+                  src = encodeURI("/CustomJoint/custom paperfinal.png");
 
-                    {/* Spiral pattern for paper filter */}
-                    {filterType === "paper-filter" && (
-                      <div className="absolute inset-2 opacity-20">
-                        {[...Array(5)].map((_, i) => (
-                          <div
-                            key={i}
-                            className="absolute inset-x-0 h-px bg-black"
-                            style={{ top: `${i * 25}%` }}
-                          ></div>
-                        ))}
-                      </div>
-                    )}
+                return (
+                  <div className="relative">
+                    {/* Real Joint Image */}
+                    <Image
+                      src={src}
+                      alt="joint preview"
+                      width={350}
+                      height={200}
+                      style={{ objectFit: "contain" }}
+                      priority
+                    />
+
+                    {/* Professional smoke effect using tsparticles library */}
+                    <SmokeEffect />
                   </div>
-                </div>
-
-                {/* Main Joint Body */}
-                <div
-                  className="relative rounded-r-full shadow-2xl overflow-hidden"
-                  style={{
-                    width: `${baseLength}px`,
-                    height: `${width}px`,
-                    background: getPaperColor(),
-                    boxShadow:
-                      "0 10px 40px rgba(0, 0, 0, 0.3), inset 0 2px 10px rgba(255, 255, 255, 0.1), inset 0 -2px 10px rgba(0, 0, 0, 0.2)",
-                  }}
-                >
-                  {/* 3D highlight effect */}
-                  <div
-                    className="absolute inset-0 opacity-30"
-                    style={{
-                      background:
-                        "linear-gradient(to bottom, rgba(255, 255, 255, 0.3) 0%, transparent 30%, transparent 70%, rgba(0, 0, 0, 0.2) 100%)",
-                    }}
-                  ></div>
-                  {/* Worm visualization (center line) */}
-                  {hasWorm && (
-                    <div
-                      className="absolute top-1/2 left-0 right-0 transform -translate-y-1/2"
-                      style={{
-                        height: "8px",
-                        background:
-                          "linear-gradient(90deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%)",
-                        boxShadow: "0 0 10px rgba(245, 158, 11, 0.6)",
-                      }}
-                    ></div>
-                  )}
-
-                  {/* Filling layers visualization */}
-                  <div className="absolute inset-2 flex">
-                    {/* Show filling composition as color layers */}
-                    {config.filling?.flower?.map((flower, index) => {
-                      const startPercent = config.filling.flower
-                        .slice(0, index)
-                        .reduce((sum, f) => sum + f.percentage, 0);
-                      return (
-                        <div
-                          key={flower.id}
-                          className="absolute inset-y-0"
-                          style={{
-                            left: `${startPercent}%`,
-                            width: `${flower.percentage}%`,
-                            background:
-                              flower.type === "sativa"
-                                ? "linear-gradient(180deg, #10b981 0%, #34d399 100%)"
-                                : flower.type === "indica"
-                                ? "linear-gradient(180deg, #8b5cf6 0%, #a78bfa 100%)"
-                                : "linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)",
-                            opacity: 0.6,
-                            filter: "blur(2px)",
-                          }}
-                        ></div>
-                      );
-                    })}
-                    {config.filling?.hash?.map((hash, index) => {
-                      const flowerPercent = config.filling.flower.reduce(
-                        (sum, f) => sum + f.percentage,
-                        0
-                      );
-                      const startPercent =
-                        flowerPercent +
-                        config.filling.hash
-                          .slice(0, index)
-                          .reduce((sum, h) => sum + h.percentage, 0);
-                      return (
-                        <div
-                          key={hash.id}
-                          className="absolute inset-y-0"
-                          style={{
-                            left: `${startPercent}%`,
-                            width: `${hash.percentage}%`,
-                            background:
-                              "linear-gradient(180deg, #78350f 0%, #92400e 100%)",
-                            opacity: 0.8,
-                            filter: "blur(1px)",
-                          }}
-                        ></div>
-                      );
-                    })}
-                  </div>
-
-                  {/* External coating overlay */}
-                  {hasCoating &&
-                    config.external?.coating?.id !== "rosin-spiral" && (
-                      <div
-                        className="absolute inset-0 opacity-70 animate-shimmer"
-                        style={{
-                          background: getExternalColor(),
-                          mixBlendMode: "overlay",
-                        }}
-                      ></div>
-                    )}
-
-                  {/* Spiral wrap effect */}
-                  {config.external?.wrap?.id === "rosin-spiral" && (
-                    <div className="absolute inset-0">
-                      {[...Array(8)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="absolute h-2 opacity-70"
-                          style={{
-                            left: `${i * 12}%`,
-                            top: `${20 + i * 5}%`,
-                            width: "15%",
-                            background: getExternalColor(),
-                            transform: `rotate(${-30 + i * 5}deg)`,
-                            boxShadow: "0 0 10px rgba(245, 158, 11, 0.6)",
-                          }}
-                        ></div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Sparkle effects for special coatings */}
-                  {(config.external?.coating?.id === "kief-coating" ||
-                    config.external?.coating?.id === "rosin-kief-combo") && (
-                    <div className="absolute inset-0">
-                      {[...Array(15)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="absolute w-1 h-1 bg-white rounded-full animate-sparkle"
-                          style={{
-                            left: `${Math.random() * 90 + 5}%`,
-                            top: `${Math.random() * 90 + 5}%`,
-                            animationDelay: `${Math.random() * 2}s`,
-                          }}
-                        ></div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Twist lines for realism */}
-                  <div className="absolute inset-0 opacity-20">
-                    {[...Array(5)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute h-px bg-black/30"
-                        style={{
-                          left: "0",
-                          right: "0",
-                          top: `${20 + i * 15}%`,
-                          transform: `rotate(${-2 + i * 0.5}deg)`,
-                        }}
-                      ></div>
-                    ))}
-                  </div>
-
-                  {/* Burning tip (if filled) */}
-                  {(flowerCount > 0 || hashCount > 0) && (
-                    <div className="absolute -right-2 top-1/2 transform -translate-y-1/2">
-                      <div className="relative">
-                        {/* Cherry (burning tip) */}
-                        <div className="w-8 h-8 bg-gradient-to-r from-red-600 via-orange-500 to-yellow-400 rounded-full animate-pulse shadow-2xl shadow-orange-500/50">
-                          <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-400 rounded-full animate-ping opacity-75"></div>
-                          <div className="absolute inset-1 bg-gradient-to-r from-yellow-300 to-orange-300 rounded-full blur-sm"></div>
-                        </div>
-
-                        {/* Multiple smoke streams - ENHANCED VISIBILITY */}
-                        {[...Array(7)].map((_, i) => {
-                          const xOffset = (i - 3) * 8;
-                          return (
-                            <div
-                              key={i}
-                              className="absolute animate-smoke"
-                              style={{
-                                bottom: "100%",
-                                left: `calc(50% + ${xOffset}px)`,
-                                width: `${6 + i * 3}px`,
-                                height: `${60 + i * 25}px`,
-                                background: `linear-gradient(to top, 
-                                  rgba(220, 220, 230, ${0.95 - i * 0.1}), 
-                                  rgba(200, 210, 220, ${0.7 - i * 0.08}), 
-                                  rgba(180, 190, 200, ${0.4 - i * 0.05}), 
-                                  transparent)`,
-                                filter: `blur(${4 + i * 2}px)`,
-                                animationDelay: `${i * 0.15}s`,
-                                animationDuration: `${2.5 + i * 0.4}s`,
-                                transform: "translateX(-50%)",
-                                boxShadow: `0 0 ${
-                                  8 + i * 2
-                                }px rgba(255, 255, 255, 0.3)`,
-                              }}
-                            ></div>
-                          );
-                        })}
-
-                        {/* Wispy smoke particles - ENHANCED VISIBILITY */}
-                        {[...Array(12)].map((_, i) => {
-                          const xOffset = ((i % 3) - 1) * 15 + Math.sin(i) * 10;
-                          const particleSize = 5 + (i % 3) * 2;
-                          return (
-                            <div
-                              key={`particle-${i}`}
-                              className="absolute animate-smokeParticle"
-                              style={{
-                                width: `${particleSize}px`,
-                                height: `${particleSize}px`,
-                                borderRadius: "50%",
-                                background: `radial-gradient(circle, rgba(240, 240, 250, ${
-                                  0.85 - i * 0.04
-                                }), rgba(200, 210, 220, ${0.5 - i * 0.03}))`,
-                                bottom: "100%",
-                                left: `calc(50% + ${xOffset}px)`,
-                                filter: `blur(${2 + (i % 3)}px)`,
-                                animationDelay: `${i * 0.25}s`,
-                                animationDuration: `${3.5 + (i % 4) * 0.5}s`,
-                                boxShadow: `0 0 ${
-                                  4 + (i % 2) * 2
-                                }px rgba(255, 255, 255, 0.4)`,
-                              }}
-                            ></div>
-                          );
-                        })}
-
-                        {/* Glow effect */}
-                        <div className="absolute inset-0 bg-orange-400 rounded-full blur-md opacity-50 animate-glow"></div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="text-center text-green-200">
@@ -484,54 +225,50 @@ export default function JointVisualizer({ config }) {
           }
           @keyframes smoke {
             0% {
-              opacity: 1;
-              transform: translateY(0) scale(0.7) rotate(0deg);
+              opacity: 0.5;
+              transform: translateY(0) translateX(0) scale(0.8);
             }
             20% {
-              opacity: 0.85;
-              transform: translateY(-25px) scale(1.1) rotate(10deg);
+              opacity: 0.55;
+              transform: translateY(-40px) translateX(-30px) scale(1.2);
             }
             40% {
-              opacity: 0.65;
-              transform: translateY(-50px) scale(1.5) rotate(-5deg);
+              opacity: 0.5;
+              transform: translateY(-85px) translateX(35px) scale(1.6);
             }
             60% {
-              opacity: 0.45;
-              transform: translateY(-80px) scale(2) rotate(15deg);
+              opacity: 0.4;
+              transform: translateY(-135px) translateX(-25px) scale(2.1);
             }
             80% {
               opacity: 0.2;
-              transform: translateY(-110px) scale(2.5) rotate(-10deg);
+              transform: translateY(-190px) translateX(20px) scale(2.6);
             }
             100% {
               opacity: 0;
-              transform: translateY(-140px) scale(3) rotate(5deg);
+              transform: translateY(-250px) translateX(-15px) scale(3.2);
             }
           }
           @keyframes smokeParticle {
             0% {
-              opacity: 0.9;
-              transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+              opacity: 0.6;
+              transform: translateY(0) translateX(0) scale(1);
             }
             25% {
-              opacity: 0.7;
-              transform: translateY(-30px) translateX(var(--drift, 10px))
-                scale(1.4) rotate(120deg);
+              opacity: 0.65;
+              transform: translateY(-50px) translateX(-40px) scale(1.4);
             }
             50% {
               opacity: 0.5;
-              transform: translateY(-65px) translateX(var(--drift, 20px))
-                scale(1.7) rotate(240deg);
+              transform: translateY(-105px) translateX(45px) scale(1.7);
             }
             75% {
-              opacity: 0.25;
-              transform: translateY(-100px) translateX(var(--drift, 30px))
-                scale(1.3) rotate(360deg);
+              opacity: 0.3;
+              transform: translateY(-165px) translateX(-35px) scale(1.5);
             }
             100% {
               opacity: 0;
-              transform: translateY(-130px) translateX(var(--drift, 35px))
-                scale(0.8) rotate(480deg);
+              transform: translateY(-225px) translateX(30px) scale(1.2);
             }
           }
           @keyframes glow {
@@ -553,13 +290,6 @@ export default function JointVisualizer({ config }) {
           }
           .animate-sparkle {
             animation: sparkle 1.5s ease-in-out infinite;
-          }
-          .animate-smoke {
-            animation: smoke ease-out infinite;
-          }
-          .animate-smokeParticle {
-            animation: smokeParticle ease-out infinite;
-            --drift: ${Math.random() * 30 - 15}px;
           }
           .animate-glow {
             animation: glow 1s ease-in-out infinite;

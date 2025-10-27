@@ -115,11 +115,6 @@ export default function PaperStep({ config, updateConfig, onNext }) {
               }
             `}
           >
-            <div className="text-4xl mb-3">
-              <div className="w-12 h-12 mx-auto flex items-center justify-center bg-white/10 rounded-lg text-xs font-bold text-center">
-                {paper.icon}
-              </div>
-            </div>
             <h3 className="text-xl font-bold mb-1">{paper.name}</h3>
             <p className="text-sm text-green-200">{paper.description}</p>
 
