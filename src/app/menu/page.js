@@ -5,6 +5,7 @@ import Image from "next/image";
 import CachedImage from "../../components/CachedImage";
 import CustomJointBuilder from "../../components/CustomJointBuilder";
 import ModelViewer from "../../components/ModelViewer";
+import MenuPreloader from "./preloader";
 import {
   CustomerService,
   getTierColor,
@@ -116,6 +117,10 @@ export default function MenuPage() {
   const [stockAlerts, setStockAlerts] = useState([]);
   const [stockCalculations, setStockCalculations] = useState({});
   const [stockCalculationsLoaded, setStockCalculationsLoaded] = useState(false);
+
+  // Real-time POS stock
+  const [posStock, setPosStock] = useState({}); // {productId: stockLevel}
+  const [posStockLoading, setPosStockLoading] = useState(false);
 
   // Crypto payment states
   const [showCryptoModal, setShowCryptoModal] = useState(false);
@@ -705,6 +710,74 @@ export default function MenuPage() {
     }
   };
 
+  // Fetch real-time stock from POS API for linked products
+  const fetchPOSStock = async (productsToFetch) => {
+    const POS_API_URL = "https://pos-candy-kush.vercel.app/api";
+    setPosStockLoading(true);
+
+    try {
+      const stockData = {};
+
+      // Get products that have posItemId linked
+      const linkedProducts = productsToFetch.filter((p) => p.posItemId);
+
+      console.log(
+        `📊 Fetching POS stock for ${linkedProducts.length} linked products`
+      );
+
+      // Fetch stock for each linked product
+      const stockPromises = linkedProducts.map(async (product) => {
+        try {
+          const response = await fetch(
+            `${POS_API_URL}/stock/check?itemId=${product.posItemId}`
+          );
+
+          if (!response.ok) {
+            console.warn(`Failed to fetch stock for ${product.name}`);
+            return null;
+          }
+
+          const data = await response.json();
+
+          if (data.success && data.data) {
+            return {
+              productId: product.id,
+              stock: data.data.stock || 0,
+              isLowStock: data.data.isLowStock || false,
+              isOutOfStock: data.data.isOutOfStock || false,
+            };
+          }
+
+          return null;
+        } catch (err) {
+          console.warn(
+            `Error fetching stock for ${product.name}:`,
+            err.message
+          );
+          return null;
+        }
+      });
+
+      const results = await Promise.all(stockPromises);
+
+      // Build stock map
+      results.forEach((result) => {
+        if (result) {
+          stockData[result.productId] = result.stock;
+        }
+      });
+
+      setPosStock(stockData);
+      console.log(
+        `✅ POS stock loaded for ${Object.keys(stockData).length} products`
+      );
+    } catch (error) {
+      console.error("Error fetching POS stock:", error);
+    } finally {
+      setPosStockLoading(false);
+    }
+  };
+
   // Load stock calculations from StockMovement collection (same as admin panel)
   const loadStockCalculations = async () => {
     try {
@@ -802,6 +875,18 @@ export default function MenuPage() {
 
     recordPageVisit();
   }, [visitRecorded]);
+
+  // Refresh POS stock periodically (every 30 seconds)
+  useEffect(() => {
+    if (products.length === 0) return;
+
+    const interval = setInterval(() => {
+      console.log("🔄 Refreshing POS stock...");
+      fetchPOSStock(products);
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [products]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -950,6 +1035,9 @@ export default function MenuPage() {
         // Load stock alerts and stock calculations
         await loadStockAlerts();
         await loadStockCalculations();
+
+        // Fetch real-time POS stock for linked products
+        await fetchPOSStock(productsWithCategoryId);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -2563,7 +2651,12 @@ export default function MenuPage() {
   const getCurrentStock = (product, variantId = null) => {
     if (!product) return 0;
 
-    // If stock calculations are loaded, use them (same logic as admin panel)
+    // PRIORITY 1: Check POS stock if product is linked
+    if (product.posItemId && posStock[product.id] !== undefined) {
+      return posStock[product.id];
+    }
+
+    // PRIORITY 2: If stock calculations are loaded, use them (old system)
     if (
       stockCalculationsLoaded &&
       stockCalculations &&
@@ -2627,15 +2720,22 @@ export default function MenuPage() {
   };
 
   const getStockWarningText = (product) => {
-    const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
+    // Check if product has alertKioskLevel set (new system)
+    const alertLevel = product.alertKioskLevel;
 
-    if (!stockAlert) {
+    // Fallback to old StockAlert collection
+    const stockAlert = getProductStockAlert(product.id);
+
+    // If no alert level defined in either system, no warning
+    if (alertLevel === undefined && !stockAlert) {
       return null;
     }
 
     const currentStock = getCurrentStock(product);
+    const threshold =
+      alertLevel !== undefined ? alertLevel : stockAlert?.alertKioskLevel || 0;
 
-    if (currentStock <= stockAlert.alertKioskLevel && currentStock > 0) {
+    if (currentStock <= threshold && currentStock > 0) {
       console.log(`  ✅ Showing warning: Stock ${currentStock} left!`);
       return `Stock ${currentStock} left!`;
     }
@@ -2644,10 +2744,14 @@ export default function MenuPage() {
   };
 
   const canAddToCart = (product, requestedQuantity = 1, variantId = null) => {
-    const stockAlert = getProductStockAlert(product.id); // Use document ID instead of productId
+    // Check if product has alertKioskLevel set (new system)
+    const alertLevel = product.alertKioskLevel;
 
-    // If no stock alert, allow unlimited
-    if (!stockAlert) {
+    // Fallback to old StockAlert collection
+    const stockAlert = getProductStockAlert(product.id);
+
+    // If no stock alert in either system, allow unlimited
+    if (alertLevel === undefined && !stockAlert) {
       return { canAdd: true, reason: null };
     }
 
@@ -3273,6 +3377,9 @@ export default function MenuPage() {
 
   return (
     <>
+      {/* Preload all images and assets for offline use */}
+      <MenuPreloader categories={categories} products={products} />
+
       <div
         className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
         style={{

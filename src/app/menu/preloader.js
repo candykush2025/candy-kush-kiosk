@@ -36,21 +36,19 @@ export default function MenuPreloader({ categories, products }) {
       });
 
       // Add static assets
-      const staticAssets = [
-        "/background.jpg",
-        "/logo.png",
-        "/qrlogo.png",
-      ];
+      const staticAssets = ["/background.jpg", "/logo.png", "/qrlogo.png"];
 
       const allAssets = [...new Set([...imageUrls, ...staticAssets])]; // Remove duplicates
 
-      console.log(`🚀 Preloading ${allAssets.length} assets for offline use...`);
+      console.log(
+        `🚀 Preloading ${allAssets.length} assets for offline use...`
+      );
 
       // Use browser cache API to store images
       if ("caches" in window) {
         try {
           const cache = await caches.open("menu-assets-v1");
-          
+
           // Preload images in batches to avoid overwhelming the browser
           const batchSize = 5;
           for (let i = 0; i < allAssets.length; i += batchSize) {
@@ -74,7 +72,7 @@ export default function MenuPreloader({ categories, products }) {
               })
             );
           }
-          
+
           console.log("✅ All assets cached for offline use!");
         } catch (error) {
           console.error("❌ Error caching assets:", error);

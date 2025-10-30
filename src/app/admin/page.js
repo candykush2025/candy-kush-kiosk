@@ -21,6 +21,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AdminAuthGuard from "../../components/AdminAuthGuard";
 import ModelViewer from "../../components/ModelViewer";
+import StockLinking from "../../components/admin/StockLinking";
+import StockOverview from "../../components/admin/StockOverview";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
@@ -33,9 +35,6 @@ import {
   NonMemberCategoriesService,
 } from "../../lib/productService";
 import { VisitService } from "../../lib/visitService";
-import { StockService } from "../../lib/stockService";
-import StockMovementService from "../../lib/stockMovementService";
-import { countries } from "../../lib/countries";
 import {
   Users,
   ShoppingBag,
@@ -3644,670 +3643,6 @@ export default function AdminPage() {
     });
   };
 
-  // Load stock movements when tab is accessed
-  useEffect(() => {
-    if (activeTab === "stockManagement") {
-      setStockCalculationsLoaded(false); // Reset loading state
-      loadStockMovementsData(); // Use the new service for consistency
-      loadStockAlerts();
-      loadAllStockCalculations(); // Load proper stock calculations
-    }
-  }, [activeTab]);
-
-  // Purchasing Management Functions (New StockMovement-based system)
-  const loadStockMovementsData = async () => {
-    try {
-      // Load stock movements from both services
-      // StockMovementService uses 'StockMovement' collection (old purchasing/sales)
-      const oldMovements = await StockMovementService.getAllStockMovements();
-
-      // StockService uses 'StockManagement' collection (new stock in/out + Loyverse sync)
-      const newMovements = await StockService.getAllStockMovements();
-
-      // Combine and sort by date (newest first)
-      const allMovements = [...oldMovements, ...newMovements].sort((a, b) => {
-        const dateA =
-          a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
-        const dateB =
-          b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
-        return dateB - dateA;
-      });
-
-      setStockMovements(allMovements);
-
-      // Load stock purchases
-      const purchases = await StockMovementService.getAllStockPurchasing();
-      setStockPurchases(purchases);
-
-      // Calculate current stock summary for all products
-      const stockSummary = await StockMovementService.getStockSummary();
-      setStockCalculations(stockSummary);
-    } catch (error) {
-      console.error("Error loading stock movements data:", error);
-    }
-  };
-
-  const handleAddPurchasing = () => {
-    if (!checkInputPermission()) return;
-    setShowPurchasingForm(true);
-    setPurchasingProducts([
-      {
-        productId: "",
-        productName: "",
-        variantId: "",
-        variantName: "",
-        productSearch: "",
-        quantity: 0,
-        buyPrice: 0,
-        showProductDropdown: false,
-      },
-    ]);
-    setPurchasingSupplier("");
-    setPurchasingNotes("");
-    setPurchasingDate(new Date().toISOString().split("T")[0]);
-    setPurchasingTime(new Date().toTimeString().slice(0, 5));
-  };
-
-  const handleCancelPurchasing = () => {
-    setShowPurchasingForm(false);
-    setPurchasingProducts([
-      {
-        productId: "",
-        productName: "",
-        variantId: "",
-        variantName: "",
-        productSearch: "",
-        quantity: 0,
-        buyPrice: 0,
-        showProductDropdown: false,
-      },
-    ]);
-    setPurchasingSupplier("");
-    setPurchasingNotes("");
-    setPurchasingDate(new Date().toISOString().split("T")[0]);
-    setPurchasingTime(new Date().toTimeString().slice(0, 5));
-  };
-
-  const handleSavePurchasing = async (e) => {
-    e.preventDefault();
-
-    if (!checkInputPermission()) return;
-
-    // Prevent double submission
-    if (isPurchasingSaving) return;
-
-    try {
-      setIsPurchasingSaving(true);
-
-      // Validate that all products have required fields
-      const validProducts = purchasingProducts.filter(
-        (p) => p.productId && p.quantity > 0 && p.buyPrice > 0
-      );
-
-      if (validProducts.length === 0) {
-        alert("Please add at least one valid product with quantity and price.");
-        return;
-      }
-
-      if (!purchasingSupplier.trim()) {
-        alert("Please enter a supplier name.");
-        return;
-      }
-
-      // Create purchasing data
-      const purchasingData = {
-        items: validProducts,
-        supplier: purchasingSupplier,
-        notes: purchasingNotes,
-        date: purchasingDate,
-        time: purchasingTime,
-        createdBy: "admin",
-      };
-
-      // Add to StockPurchasing and StockMovement databases
-      const result = await StockMovementService.addPurchasing(purchasingData);
-
-      // Reload data
-      await loadStockMovementsData();
-      await loadAllStockCalculations(); // Recalculate stock after purchase
-      await loadDashboardData(); // Refresh products if needed
-
-      // Reset form
-      handleCancelPurchasing();
-
-      alert(
-        `✅ Purchase Order created successfully!\n\nPO ID: ${
-          result.purchaseOrderId
-        }\nTotal Items: ${
-          result.totalItems
-        }\nTotal Amount: ฿${result.totalAmount.toFixed(2)}`
-      );
-    } catch (error) {
-      console.error("Error saving purchasing:", error);
-      alert("❌ Failed to save purchasing. Please try again.");
-    } finally {
-      setIsPurchasingSaving(false);
-    }
-  };
-
-  const addProductToPurchasing = () => {
-    setPurchasingProducts([
-      ...purchasingProducts,
-      {
-        productId: "",
-        productName: "",
-        variantId: "",
-        variantName: "",
-        productSearch: "",
-        quantity: 0,
-        buyPrice: 0,
-        showProductDropdown: false,
-      },
-    ]);
-  };
-
-  const removeProductFromPurchasing = (index) => {
-    const newProducts = purchasingProducts.filter((_, i) => i !== index);
-    setPurchasingProducts(
-      newProducts.length > 0
-        ? newProducts
-        : [
-            {
-              productId: "",
-              productName: "",
-              variantId: "",
-              variantName: "",
-              productSearch: "",
-              quantity: 0,
-              buyPrice: 0,
-              showProductDropdown: false,
-            },
-          ]
-    );
-  };
-
-  const updatePurchasingProduct = (index, field, value) => {
-    const newProducts = [...purchasingProducts];
-    newProducts[index] = { ...newProducts[index], [field]: value };
-    setPurchasingProducts(newProducts);
-  };
-
-  const updatePurchasingProductMultiple = (index, updates) => {
-    console.log("updatePurchasingProductMultiple called:", { index, updates });
-    const newProducts = [...purchasingProducts];
-    newProducts[index] = { ...newProducts[index], ...updates };
-    console.log("Purchasing products after update:", newProducts);
-    setPurchasingProducts(newProducts);
-  };
-
-  // Load stock movements data when stockActiveSubTab changes
-  useEffect(() => {
-    if (
-      stockActiveSubTab === "overview" ||
-      stockActiveSubTab === "movements" ||
-      stockActiveSubTab === "purchasing" ||
-      stockActiveSubTab === "linking"
-    ) {
-      loadStockMovementsData();
-    }
-  }, [stockActiveSubTab]);
-
-  // Close product dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Check if click is outside any dropdown
-      const dropdowns = document.querySelectorAll("[data-product-dropdown]");
-      let isOutside = true;
-
-      dropdowns.forEach((dropdown) => {
-        if (dropdown.contains(event.target)) {
-          isOutside = false;
-        }
-      });
-
-      if (isOutside) {
-        setShowProductDropdown({});
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Stock Alert Management Functions
-  const loadStockAlerts = async () => {
-    try {
-      const { collection, getDocs, query, orderBy } = await import(
-        "firebase/firestore"
-      );
-      const { db } = await import("../../lib/firebase");
-
-      const alertsRef = collection(db, "StockAlert");
-      const q = query(alertsRef, orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-
-      const alerts = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data() || {};
-        alerts.push({
-          id: doc.id,
-          ...data,
-          createdAt:
-            data.createdAt && data.createdAt.toDate
-              ? data.createdAt.toDate()
-              : data.createdAt || null,
-          updatedAt:
-            data.updatedAt && data.updatedAt.toDate
-              ? data.updatedAt.toDate()
-              : data.updatedAt || null,
-        });
-      });
-
-      setStockAlerts(alerts);
-    } catch (error) {
-      console.error("Error loading stock alerts:", error);
-    }
-  };
-
-  const createStockAlert = async () => {
-    try {
-      if (!selectedProductForAlert || !alertKioskLevel || !alertAdminLevel) {
-        alert("Please select a product and set both alert levels");
-        return;
-      }
-
-      const { collection, addDoc, serverTimestamp } = await import(
-        "firebase/firestore"
-      );
-      const { db } = await import("../../lib/firebase");
-
-      const alertData = {
-        productId: selectedProductForAlert.id,
-        productName: selectedProductForAlert.name,
-        variantId: selectedProductForAlert.variantId || "",
-        variantName: selectedProductForAlert.variantName || "",
-        alertKioskLevel: parseInt(alertKioskLevel),
-        alertAdminLevel: parseInt(alertAdminLevel),
-        stockZeroAction: stockZeroAction, // "disable" or "keepVisible"
-        isActive: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      await addDoc(collection(db, "StockAlert"), alertData);
-
-      // Refresh data
-      await loadStockAlerts();
-
-      // Reset form
-      setSelectedProductForAlert(null);
-      setAlertKioskLevel("");
-      setAlertAdminLevel("");
-      setStockZeroAction("disable");
-      setAlertProductSearch("");
-      setShowAlertProductDropdown(false);
-
-      alert("Stock alert created successfully!");
-    } catch (error) {
-      console.error("Error creating stock alert:", error);
-      alert("Failed to create stock alert: " + error.message);
-    }
-  };
-
-  const deleteStockAlert = async (alertId) => {
-    try {
-      if (!confirm("Are you sure you want to delete this stock alert?")) {
-        return;
-      }
-
-      const { doc, deleteDoc } = await import("firebase/firestore");
-      const { db } = await import("../../lib/firebase");
-
-      await deleteDoc(doc(db, "StockAlert", alertId));
-      await loadStockAlerts();
-      alert("Stock alert deleted successfully!");
-    } catch (error) {
-      console.error("Error deleting stock alert:", error);
-      alert("Failed to delete stock alert: " + error.message);
-    }
-  };
-
-  // Edit Stock Alert Functions
-  const startEditAlert = (alert) => {
-    setEditingAlert(alert);
-    setShowEditAlertForm(true);
-
-    // Pre-populate edit form with current values
-    const product = products.find((p) => p.id === alert.productId);
-    if (product) {
-      setEditSelectedProductForAlert({
-        ...product,
-        selectedVariantId: alert.variantId || null,
-        selectedVariantName: alert.variantName || "",
-      });
-
-      // Set search text
-      let searchText = `${product.categoryName || "Uncategorized"} - ${
-        product.subcategoryName || "No Subcategory"
-      } - ${product.name}`;
-      if (alert.variantName) {
-        searchText += ` - ${alert.variantName}`;
-      }
-      setEditAlertProductSearch(searchText);
-    }
-
-    setEditAlertKioskLevel(alert.alertKioskLevel.toString());
-    setEditAlertAdminLevel(alert.alertAdminLevel.toString());
-    setEditStockZeroAction(alert.stockZeroAction);
-  };
-
-  const cancelEditAlert = () => {
-    setEditingAlert(null);
-    setShowEditAlertForm(false);
-    setEditAlertProductSearch("");
-    setEditSelectedProductForAlert(null);
-    setEditAlertKioskLevel("");
-    setEditAlertAdminLevel("");
-    setEditStockZeroAction("disable");
-    setShowEditAlertProductDropdown(false);
-  };
-
-  const saveEditAlert = async () => {
-    try {
-      if (!editSelectedProductForAlert) {
-        alert("Please select a product");
-        return;
-      }
-
-      if (!editAlertKioskLevel || !editAlertAdminLevel) {
-        alert("Please enter both kiosk and admin alert levels");
-        return;
-      }
-
-      const kioskLevel = parseInt(editAlertKioskLevel);
-      const adminLevel = parseInt(editAlertAdminLevel);
-
-      if (
-        isNaN(kioskLevel) ||
-        isNaN(adminLevel) ||
-        kioskLevel < 0 ||
-        adminLevel < 0
-      ) {
-        alert("Alert levels must be valid numbers (0 or greater)");
-        return;
-      }
-
-      const { doc, updateDoc } = await import("firebase/firestore");
-      const { db } = await import("../../lib/firebase");
-
-      const alertData = {
-        productId: editSelectedProductForAlert.id,
-        productName: editSelectedProductForAlert.name,
-        variantId: editSelectedProductForAlert.selectedVariantId || "",
-        variantName: editSelectedProductForAlert.selectedVariantName || "",
-        alertKioskLevel: kioskLevel,
-        alertAdminLevel: adminLevel,
-        stockZeroAction: editStockZeroAction,
-        isActive: true,
-        updatedAt: new Date(),
-        updatedBy: "admin",
-      };
-
-      await updateDoc(doc(db, "StockAlert", editingAlert.id), alertData);
-      await loadStockAlerts();
-      cancelEditAlert();
-      alert("Stock alert updated successfully!");
-    } catch (error) {
-      console.error("Error updating stock alert:", error);
-      alert("Failed to update stock alert: " + error.message);
-    }
-  };
-
-  // Get stock alert for a product
-  const getProductStockAlert = (productId) => {
-    return stockAlerts.find(
-      (alert) => alert.productId === productId && alert.isActive
-    );
-  };
-
-  // Calculate stock directly from StockMovement collection
-  const calculateStock = async (productId, variantId = null) => {
-    try {
-      const { collection, query, where, getDocs } = await import(
-        "firebase/firestore"
-      );
-      const { db } = await import("../../lib/firebase");
-
-      // Create query to get all stock movements for this product
-      let stockQuery = query(
-        collection(db, "StockMovement"),
-        where("productId", "==", productId)
-      );
-
-      // If variantId is provided, also filter by variantId
-      if (variantId) {
-        stockQuery = query(
-          collection(db, "StockMovement"),
-          where("productId", "==", productId),
-          where("variantId", "==", variantId)
-        );
-      }
-
-      const querySnapshot = await getDocs(stockQuery);
-      let totalStock = 0;
-
-      // Calculate stock: add "purchasing", subtract "sales"
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const quantity = data.quantity || 0;
-
-        if (data.status === "purchasing") {
-          totalStock += quantity;
-        } else if (data.status === "sales") {
-          totalStock -= quantity;
-        }
-      });
-
-      return totalStock;
-    } catch (error) {
-      console.error("Error calculating stock:", error);
-      return 0;
-    }
-  };
-
-  // Load all stock calculations from StockMovement collection
-  const loadAllStockCalculations = async () => {
-    try {
-      console.log("🔍 Starting stock calculation...");
-      const { collection, getDocs } = await import("firebase/firestore");
-      const { db } = await import("../../lib/firebase");
-
-      // Get all stock movements
-      const querySnapshot = await getDocs(collection(db, "StockMovement"));
-      const stockSummary = {};
-
-      console.log(
-        "📊 Total StockMovement documents found:",
-        querySnapshot.size
-      );
-
-      // Process each stock movement
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const productId = data.productId;
-        const variantId = data.variantId || "";
-        const quantity = data.quantity || 0;
-        const status = data.status;
-
-        // Create key for this product/variant combination
-        const key = variantId ? `${productId}-${variantId}` : productId;
-
-        // Initialize if not exists
-        if (!stockSummary[key]) {
-          stockSummary[key] = { stock: 0 };
-        }
-
-        // Calculate stock: add "purchasing", subtract "sales"
-        if (status === "purchasing") {
-          stockSummary[key].stock += quantity;
-          console.log(
-            `➕ PURCHASING: ${key} +${quantity} = ${stockSummary[key].stock}`
-          );
-        } else if (status === "sales") {
-          stockSummary[key].stock -= quantity;
-          console.log(
-            `➖ SALES: ${key} -${quantity} = ${stockSummary[key].stock}`
-          );
-        }
-      });
-
-      console.log("✅ Final stock calculations:", stockSummary);
-      console.log("📈 Stock summary keys:", Object.keys(stockSummary));
-
-      // Update state with calculated stock
-      setStockCalculations(stockSummary);
-      setStockCalculationsLoaded(true);
-      console.log("Stock calculations loaded:", stockSummary);
-    } catch (error) {
-      console.error("❌ Error loading stock calculations:", error);
-      setStockCalculationsLoaded(false);
-    }
-  };
-
-  // Get current stock level for a product - Updated to use StockMovement system
-  const getCurrentStock = (product, variantId = null) => {
-    if (!product) {
-      console.log("🚫 getCurrentStock: No product provided");
-      return 0;
-    }
-
-    // Removed excessive logging
-
-    // If stock calculations are not loaded yet, return 0
-    if (!stockCalculationsLoaded) {
-      return 0;
-    }
-
-    // First check if we have stock calculations from StockMovement system
-    if (
-      stockCalculations &&
-      ((typeof stockCalculations === "object" &&
-        Object.keys(stockCalculations).length > 0) ||
-        Array.isArray(stockCalculations))
-    ) {
-      // Handle case where stockCalculations might be an array (should be fixed now)
-      let calculations = stockCalculations;
-      if (Array.isArray(stockCalculations)) {
-        console.log(
-          "⚠️ WARNING: stockCalculations is an array, converting to object format"
-        );
-        calculations = {};
-        stockCalculations.forEach((item) => {
-          const key = item.variantId
-            ? `${item.productId}-${item.variantId}`
-            : item.productId;
-          calculations[key] = { stock: item.totalStock };
-        });
-      }
-
-      // If variantId is provided, get stock for specific variant
-      if (variantId) {
-        const key = `${product.id}-${variantId}`;
-        const stockData = calculations[key];
-        const stock = stockData
-          ? stockData.totalStock || stockData.stock || 0
-          : 0;
-        console.log(
-          `🎯 VARIANT LOOKUP - ProductId: "${product.id}" | VariantId: "${variantId}" | Key: "${key}"`
-        );
-        console.log(`📋 Available keys:`, Object.keys(calculations));
-        console.log(`💰 Found stock:`, stock);
-        if (stockData) {
-          console.log(`✅ Key found! Stock data:`, stockData);
-        } else {
-          console.log(`❌ Key NOT found! Checking if similar keys exist...`);
-          const similarKeys = Object.keys(calculations).filter((k) =>
-            k.includes(product.id)
-          );
-          console.log(
-            `🔍 Keys containing productId "${product.id}":`,
-            similarKeys
-          );
-        }
-        return stock;
-      }
-
-      // Check if product has variants
-      if (
-        product.variants &&
-        Array.isArray(product.variants) &&
-        product.variants.length > 0
-      ) {
-        let totalStock = 0;
-        product.variants.forEach((variant) => {
-          if (variant.options && Array.isArray(variant.options)) {
-            variant.options.forEach((option) => {
-              const key = `${product.id}-${variant.id}-${option.id}`;
-              const stockData = calculations[key];
-              const variantStock = stockData
-                ? stockData.totalStock || stockData.stock || 0
-                : 0;
-              totalStock += variantStock;
-            });
-          }
-        });
-        return totalStock;
-      } else {
-        // Product without variants (or empty variants array)
-        const key = product.id;
-        const stockData = calculations[key];
-        const stock = stockData
-          ? stockData.totalStock || stockData.stock || 0
-          : 0;
-        console.log(
-          `📦 SIMPLE PRODUCT - Product: "${product.name}" | Key: "${key}" | Stock: ${stock}`
-        );
-        return stock;
-      }
-    }
-
-    // Fallback to old system for backwards compatibility
-    if (variantId && product.variants && Array.isArray(product.variants)) {
-      // Look for specific variant
-      for (const variant of product.variants) {
-        if (variant.options && Array.isArray(variant.options)) {
-          for (const option of variant.options) {
-            if (`${variant.id}-${option.id}` === variantId) {
-              return option.quantity || 0;
-            }
-          }
-        }
-        if (variant.id === variantId) {
-          return variant.quantity || 0;
-        }
-      }
-      return 0;
-    }
-
-    // Check if product has variants with stock
-    if (product.variants && Array.isArray(product.variants)) {
-      let totalStock = 0;
-      product.variants.forEach((variant) => {
-        if (variant.options && Array.isArray(variant.options)) {
-          variant.options.forEach((option) => {
-            totalStock += option.quantity || 0;
-          });
-        }
-      });
-      return totalStock;
-    }
-
-    // Return product quantity or 0
-    return product.quantity || 0;
-  };
-
   // Load crypto payments from Firebase
   const loadCryptoPayments = async () => {
     setLoadingCryptoPayments(true);
@@ -4613,6 +3948,30 @@ export default function AdminPage() {
               </button>
 
               <button
+                onClick={() => setActiveTab("stockLinking")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "stockLinking"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <Package className="w-5 h-5 mr-3" />
+                Stock Linking
+              </button>
+
+              <button
+                onClick={() => setActiveTab("stockOverview")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "stockOverview"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <BarChart className="w-5 h-5 mr-3" />
+                Stock Overview
+              </button>
+
+              <button
                 onClick={() => setActiveTab("categoryOrder")}
                 className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
                   activeTab === "categoryOrder"
@@ -4637,156 +3996,6 @@ export default function AdminPage() {
                   Admin Management
                 </button>
               )}
-
-              <div>
-                <button
-                  onClick={() => setActiveTab("stockManagement")}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                    activeTab === "stockManagement"
-                      ? "bg-green-100 text-green-700 border-r-4 border-green-500"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                  }`}
-                >
-                  <Package className="w-5 h-5 mr-3" />
-                  Stock Management
-                  <svg
-                    className={`w-4 h-4 ml-auto transition-transform ${
-                      activeTab === "stockManagement" ? "rotate-90" : ""
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-
-                {/* Stock Management Submenu */}
-                {activeTab === "stockManagement" && (
-                  <div className="ml-8 mt-2 space-y-1">
-                    <button
-                      onClick={() => setStockActiveSubTab("overview")}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                        stockActiveSubTab === "overview"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                        />
-                      </svg>
-                      Stock Overview
-                    </button>
-                    <button
-                      onClick={() => setStockActiveSubTab("movements")}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                        stockActiveSubTab === "movements"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                        />
-                      </svg>
-                      Stock Movements
-                    </button>
-                    <button
-                      onClick={() => setStockActiveSubTab("linking")}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                        stockActiveSubTab === "linking"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                        />
-                      </svg>
-                      Stock Linking
-                    </button>
-                    <button
-                      onClick={() => setStockActiveSubTab("purchasing")}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                        stockActiveSubTab === "purchasing"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-                        />
-                      </svg>
-                      Purchasing
-                    </button>
-                    <button
-                      onClick={() => setStockActiveSubTab("alerts")}
-                      className={`w-full flex items-center px-3 py-2 text-sm rounded-md transition-colors ${
-                        stockActiveSubTab === "alerts"
-                          ? "bg-green-50 text-green-700"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      }`}
-                    >
-                      <svg
-                        className="w-4 h-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 16.5c-.77.833.192 2.5 1.732 2.5z"
-                        />
-                      </svg>
-                      Stock Alerts
-                    </button>
-                  </div>
-                )}
-              </div>
 
               <button
                 onClick={() => setActiveTab("settings")}
@@ -4846,6 +4055,10 @@ export default function AdminPage() {
                       ? "Cashback Management"
                       : activeTab === "pendingPoints"
                       ? "Pending Points"
+                      : activeTab === "stockLinking"
+                      ? "Stock Linking"
+                      : activeTab === "stockOverview"
+                      ? "Stock Overview"
                       : activeTab === "categoryOrder"
                       ? "Category Order"
                       : activeTab === "adminManagement"
@@ -4869,6 +4082,10 @@ export default function AdminPage() {
                       ? "Configure cashback rules and percentages"
                       : activeTab === "pendingPoints"
                       ? "Review and approve customer point requests"
+                      : activeTab === "stockLinking"
+                      ? "Link kiosk products with POS inventory system"
+                      : activeTab === "stockOverview"
+                      ? "Real-time stock levels from POS system"
                       : activeTab === "categoryOrder"
                       ? "Organize and reorder product categories"
                       : activeTab === "adminManagement"
@@ -8822,6 +8039,83 @@ export default function AdminPage() {
                       </p>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Stock Linking Tab */}
+              {activeTab === "stockLinking" && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <StockLinking
+                    products={products}
+                    onSaveLinks={async (links, alertLevels) => {
+                      // Import updateDoc and doc from firebase/firestore
+                      const {
+                        updateDoc,
+                        doc,
+                        setDoc,
+                        serverTimestamp,
+                        collection,
+                      } = await import("firebase/firestore");
+                      const { db } = await import("../../lib/firebase");
+
+                      // Save the links and alert levels to products
+                      for (const [productId, posItemId] of Object.entries(
+                        links
+                      )) {
+                        try {
+                          const productRef = doc(db, "products", productId);
+                          const alertLevel = alertLevels[productId];
+
+                          // Update product with posItemId and alertKioskLevel
+                          const updateData = {};
+                          if (posItemId) {
+                            updateData.posItemId = posItemId;
+                          } else {
+                            updateData.posItemId = null;
+                          }
+
+                          if (alertLevel !== undefined && alertLevel !== "") {
+                            updateData.alertKioskLevel = alertLevel;
+                          }
+
+                          await updateDoc(productRef, updateData);
+
+                          // Also save to StockAlert collection for compatibility with existing system
+                          if (alertLevel !== undefined && alertLevel !== "") {
+                            const stockAlertRef = doc(
+                              db,
+                              "StockAlert",
+                              productId
+                            );
+                            await setDoc(
+                              stockAlertRef,
+                              {
+                                productId: productId,
+                                alertKioskLevel: alertLevel,
+                                updatedAt: serverTimestamp(),
+                              },
+                              { merge: true }
+                            );
+                          }
+                        } catch (err) {
+                          console.error(
+                            `Failed to update product ${productId}:`,
+                            err
+                          );
+                          throw err; // Re-throw to show error message
+                        }
+                      }
+                      // Reload products
+                      await loadDashboardData();
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Stock Overview Tab */}
+              {activeTab === "stockOverview" && (
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                  <StockOverview products={products} />
                 </div>
               )}
 
