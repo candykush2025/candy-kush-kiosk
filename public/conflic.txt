@@ -1,0 +1,327 @@
+SECTION 1 – CONFLICTS
+
+🔹 General Rules
+
+Certain options cannot be selected together.
+When a conflict occurs, the system must automatically disable or hide incompatible options.
+Users should never be able to manually select invalid combinations.
+
+
+---
+
+🔹 Conflict List
+
+1. Pre-Rolled CK (0.4g / 0.8g / 1.2g Cones)
+
+Ready-made cones with a built-in filter and fixed internal shape.
+→ When selected:
+
+Filter selection disabled (already included)
+
+Internal worm or rosin donut disabled (not compatible with pre-filled cones)
+
+
+External top-ups allowed, but only one can be selected at a time.
+
+
+
+
+
+---
+
+2. Hemp Wrap
+
+Available filters:
+
+✅ Large glass filter (12 mm)
+
+✅ Paper filter
+
+❌ Small glass filter (10 mm) not allowed
+
+
+Internal and external options allowed.
+
+Only one external top-up.
+
+
+
+
+
+---
+
+3. Golden Paper
+
+Available filters:
+
+✅ Paper filter
+
+✅ Small glass filter (10 mm)
+
+❌ Large glass filter (12 mm) not allowed
+
+
+Internal and external options allowed.
+
+Only one external top-up.
+
+
+
+
+
+---
+
+4. Custom Pre-Rolled (Custom Paper Joint)
+
+Not a cone — a flat rolling paper customizable in length (5–23 cm).
+
+Filter availability by length:
+
+Up to 12 cm → paper filter or glass filter (10 mm)
+
+12–16 cm → medium paper filter (3.5 cm)
+
+16–23 cm → large paper filter (5 cm)
+
+
+Internal options (weed, hash, worm, rosin) allowed.
+
+Only one external top-up at a time.
+
+Internal + external combinations are allowed.
+
+
+
+
+
+---
+
+5. External Top-Ups
+
+Only one external option per joint can be selected.
+
+Internal + external combinations are allowed, but no multiple external wraps.
+
+
+
+
+
+---
+
+6. Hash-Only Joints
+
+Mandatory tobacco addition:
+
+> “To create a pure hash joint, you must add tobacco.”
+
+
+
+Checkout is blocked until the required tobacco amount is added.
+
+
+
+
+
+---
+
+7. Tobacco Option
+
+Visible at all times (icon/button) for manual adjustment.
+
+Mandatory for hash-only joints, optional for mixed joints.
+
+Dosage: 1 cigarette per 0.5 g of hash (≈ 1 g tobacco per 0.5 g hash).
+
+
+
+
+
+---
+
+SECTION 2 – DOSAGES
+
+🔹 General Rules
+
+Dosages depend on joint type, length, and filter size.
+
+System auto-calculates proportions of:
+
+Weed
+
+Hash / extracts (rosin, worm)
+
+Tobacco (if applicable)
+
+
+Step size: 0.1 g
+
+Tolerance: ±5–10%
+
+
+
+---
+
+🔹 Pre-Rolled CK (Cones)
+
+Predefined weights (0.4 g, 0.8 g, 1.2 g)
+
+Internal worm/donut not allowed
+
+External top-up minimum: 0.3 g
+
+Only one external top-up
+
+
+
+---
+
+🔹 Hemp Wrap
+
+Standard internal weights: 1.5 g or 2.0 g
+
+Minimum top-up: 0.3 g
+
+Internal/external options allowed
+
+Only one external top-up
+
+
+
+---
+
+🔹 Golden Paper
+
+Fixed total base weight: 1.0 g
+
+Minimum top-up: 0.3 g
+
+Internal/external options allowed
+
+Only one external top-up
+
+
+
+---
+
+🔹 Custom Pre-Rolled (Custom Paper)
+
+Filter Rules (invisible to user)
+
+Joint Total Length	Filter Length	Effective Filling Space
+
+≤12 cm	2.0 cm	Total − 2 cm
+12–16 cm	3.5 cm	Total − 3.5 cm
+16–23 cm	5.0 cm	Total − 5 cm
+
+
+Filter size is calculated automatically, not visible to user.
+
+
+
+---
+
+Dosage Formula for Internal Materials
+
+Reference test: 23 cm joint (5 cm filter, 18 cm fill) → 7.0 g total
+
+Formula for any length:
+
+
+Effective Fill (g) = (Effective Filling Space / 18) × 7
+
+Where:
+
+Effective Filling Space = Total Length − Filter Length
+
+System must scale proportionally for smaller joints.
+
+
+Suggested proportional examples (approximate realistic weights):
+
+23 cm total → 7.0 g
+
+20 cm total → 6.0 g
+
+18 cm total → 5.2 g
+
+15 cm total → 4.0 g
+
+10 cm total → 2.5 g
+
+5 cm total → 1.0 g
+
+Scaling affects both weed and hash portions.
+
+Internal worm/donut counts within total capacity.
+
+
+
+---
+
+Top-Up and Spiral Dosages
+
+Standard top-ups:
+
+Minimum: 0.3 g
+
+Maximum: 1.2 g
+
+Scales with joint length
+
+
+Spirals (rosin/hash):
+
+Minimum: 0.5 g
+
+Max: 1.2 g
+
+Scales proportionally with joint length
+
+
+
+
+---
+
+Hash-Only Joints
+
+Mandatory tobacco:
+
+0.5 g hash → 1 cigarette (~1 g tobacco)
+
+
+Alert displayed if not added
+
+Checkout blocked until requirement met
+
+
+
+---
+
+Tobacco Option
+
+Always visible for manual adjustment
+
+Adjusts total joint weight and price automatically
+
+
+
+---
+
+🔹 System Summary
+
+1. Detect total joint length
+
+
+2. Subtract invisible filter length based on size range
+
+
+3. Use 18 cm = 7 g as reference to scale fill proportionally
+
+
+4. Apply scaling to internal fill and top-ups automatically
+
+
+5. Ensure internal + external options follow conflict rules
+
+
+6. Automatic recalculation when joint length or type changes

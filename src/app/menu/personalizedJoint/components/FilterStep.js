@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 const filterOptions = [
   {
@@ -10,22 +10,25 @@ const filterOptions = [
     price: 5,
     icon: "PAPER",
     color: "from-amber-50 to-amber-100",
+    glassSize: null, // Not a glass filter
   },
   {
     id: "slim-glass",
-    name: "Slim Glass Filter",
+    name: "Slim Glass Filter (10mm)",
     description: "Elegant glass tip, cooler smoke",
     price: 25,
     icon: "SLIM",
     color: "from-blue-200 to-cyan-200",
+    glassSize: "10mm", // Small glass
   },
   {
     id: "wide-glass",
-    name: "Wide Glass Filter",
+    name: "Wide Glass Filter (12mm)",
     description: "Premium wide glass, maximum airflow",
     price: 35,
     icon: "WIDE",
     color: "from-indigo-200 to-green-200",
+    glassSize: "12mm", // Large glass
   },
 ];
 
@@ -33,6 +36,63 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
   const [selectedFilter, setSelectedFilter] = useState(
     config.filter?.id || null
   );
+
+  // Check if paper type is pre-rolled (built-in filter)
+  const isPreRolled = config.paper?.type === "pre-rolled-ck";
+  const paperType = config.paper?.type;
+  const customLength = config.paper?.customLength || 0;
+
+  console.log(
+    "FilterStep - paperType:",
+    paperType,
+    "isPreRolled:",
+    isPreRolled
+  );
+
+  // Filter available options based on paper type and conflic.txt rules
+  const availableFilters = useMemo(() => {
+    if (!paperType) return filterOptions;
+
+    switch (paperType) {
+      case "pre-rolled-ck":
+        // Pre-rolled has built-in filter
+        return [];
+
+      case "hemp-wrap":
+        // Hemp Wrap: ✅ Large glass (12mm) OR Paper filter
+        // ❌ Small glass (10mm) NOT allowed
+        return filterOptions.filter(
+          (f) => f.id === "paper-filter" || f.glassSize === "12mm"
+        );
+
+      case "golden-paper":
+        // Golden Paper: ✅ Paper filter OR Small glass (10mm)
+        // ❌ Large glass (12mm) NOT allowed
+        return filterOptions.filter(
+          (f) => f.id === "paper-filter" || f.glassSize === "10mm"
+        );
+
+      case "rolling-paper-custom":
+        // Custom Paper: Filter depends on length
+        if (customLength <= 12) {
+          // Up to 12 cm → paper filter or small glass (10mm)
+          return filterOptions.filter(
+            (f) => f.id === "paper-filter" || f.glassSize === "10mm"
+          );
+        } else if (customLength <= 16) {
+          // 12-16 cm → medium paper filter (3.5 cm)
+          // For now, show paper filter option
+          return filterOptions.filter((f) => f.id === "paper-filter");
+        } else {
+          // 16-23 cm → large paper filter (5 cm)
+          // For now, show paper filter option
+          return filterOptions.filter((f) => f.id === "paper-filter");
+        }
+
+      default:
+        return filterOptions;
+    }
+  }, [paperType, customLength]);
 
   const handleFilterSelect = (filter) => {
     setSelectedFilter(filter.id);
@@ -43,6 +103,21 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
       price: filter.price,
     });
   };
+
+  // If pre-rolled, show message and skip this step
+  if (isPreRolled) {
+    return (
+      <div className="space-y-6">
+        <div className="p-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl border border-green-400/30 text-center">
+          <div className="text-6xl mb-4">✓</div>
+          <h2 className="text-3xl font-bold mb-2">Filter Already Included</h2>
+          <p className="text-green-200 text-lg">
+            Pre-rolled cones come with a built-in filter. No need to select one!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -55,7 +130,7 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
 
       {/* Filter Options Grid */}
       <div className="grid grid-cols-1 gap-4">
-        {filterOptions.map((filter) => (
+        {availableFilters.map((filter) => (
           <div
             key={filter.id}
             onClick={() => handleFilterSelect(filter)}
@@ -71,9 +146,6 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 flex items-center justify-center bg-white/10 rounded-lg text-sm font-bold">
-                  {filter.icon}
-                </div>
                 <div>
                   <h3 className="text-2xl font-bold mb-1">{filter.name}</h3>
                   <p className="text-green-200">{filter.description}</p>
@@ -83,29 +155,6 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
                 <div className="text-3xl font-bold text-green-400">
                   ฿{filter.price}
                 </div>
-              </div>
-            </div>
-
-            {selectedFilter === filter.id && (
-              <div className="absolute top-6 right-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full flex items-center justify-center shadow-lg animate-scaleIn">
-                  <span className="text-lg">✓</span>
-                </div>
-              </div>
-            )}
-
-            {/* Visual Representation */}
-            <div className="mt-4 flex justify-center">
-              <div className="relative">
-                {filter.id === "paper-filter" && (
-                  <div className="w-12 h-32 bg-gradient-to-b from-amber-100 to-amber-200 rounded-lg shadow-inner"></div>
-                )}
-                {filter.id === "slim-glass" && (
-                  <div className="w-8 h-32 bg-gradient-to-b from-blue-200 to-cyan-300 rounded-lg shadow-lg opacity-80"></div>
-                )}
-                {filter.id === "wide-glass" && (
-                  <div className="w-16 h-32 bg-gradient-to-b from-indigo-200 to-green-300 rounded-lg shadow-lg opacity-80"></div>
-                )}
               </div>
             </div>
           </div>

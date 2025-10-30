@@ -91,6 +91,22 @@ export default function JointVisualizer({ config }) {
                 else if (paperType.includes("custom"))
                   src = encodeURI("/CustomJoint/custom paperfinal.png");
 
+                // Select tip image based on filter type
+                let tipSrc = null;
+                if (
+                  filterType.includes("glass") &&
+                  filterType.includes("slim")
+                ) {
+                  tipSrc = "/CustomJoint/tip-slim-glass.png";
+                } else if (filterType.includes("glass")) {
+                  tipSrc = "/CustomJoint/tip-glass.png";
+                } else if (
+                  filterType.includes("paper") ||
+                  filterType !== "none"
+                ) {
+                  tipSrc = "/CustomJoint/tip-paper.png";
+                }
+
                 return (
                   <div className="relative">
                     {/* Real Joint Image */}
@@ -102,6 +118,29 @@ export default function JointVisualizer({ config }) {
                       style={{ objectFit: "contain" }}
                       priority
                     />
+
+                    {/* Filter Tip Image - Rotated and styled */}
+                    {tipSrc && (
+                      <div className="absolute right-[50px] top-[30%] -translate-y-1/2">
+                        <div className="relative">
+                          {/* Green gradient glow - smaller and more subtle */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-transparent blur-lg rounded-full scale-75"></div>
+                          {/* Tip image rotated horizontal */}
+                          <Image
+                            src={tipSrc}
+                            alt="filter tip"
+                            width={60}
+                            height={60}
+                            style={{
+                              objectFit: "contain",
+                              transform: "rotate(-90deg)",
+                            }}
+                            className="relative z-10"
+                            priority
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     {/* Professional smoke effect using tsparticles library */}
                     <SmokeEffect />

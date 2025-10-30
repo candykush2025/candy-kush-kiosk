@@ -4,7 +4,7 @@ import { useState } from "react";
 
 const paperOptions = [
   {
-    id: "prerolled-cone",
+    id: "pre-rolled-ck",
     name: "Pre-Rolled Cone",
     description: "Classic cone shape, ready to fill",
     variants: [
