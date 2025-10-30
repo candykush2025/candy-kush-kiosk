@@ -20,6 +20,7 @@ export default function CachedVideo({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef(null);
   const blobUrlRef = useRef(null); // Keep track of blob URL for cleanup
 
@@ -33,39 +34,52 @@ export default function CachedVideo({
       }
 
       try {
-        setLoading(true);
         setError(null);
         setLoadingProgress(0);
 
         console.log("🎬 Loading video:", src);
 
-        // Get cached video or download with progress
-        const url = await videoCache.getCachedVideo(src, name, (progress) => {
+        // Check if video is already cached
+        const cachedUrl = await videoCache.getVideo(src);
+
+        if (cachedUrl) {
+          // Video is cached, use it immediately
+          console.log("✅ Using cached video");
           if (isMounted) {
-            setLoadingProgress(progress);
+            if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
+              URL.revokeObjectURL(blobUrlRef.current);
+            }
+            blobUrlRef.current = cachedUrl;
+            setCachedSrc(cachedUrl);
+            setLoadingProgress(100);
           }
-        });
-
-        if (isMounted) {
-          // Revoke old blob URL if exists
-          if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
-            URL.revokeObjectURL(blobUrlRef.current);
+        } else {
+          // Not cached - use original URL immediately for streaming while downloading in background
+          console.log("📡 Streaming video from URL while caching...");
+          if (isMounted) {
+            setCachedSrc(src); // Use original URL for immediate streaming
+            setLoadingProgress(0);
           }
 
-          blobUrlRef.current = url;
-          setCachedSrc(url);
-          setLoadingProgress(100);
-
-          // Small delay to show 100% before hiding loader
-          setTimeout(() => {
-            setLoading(false);
-          }, 300);
+          // Download and cache in background (don't await)
+          videoCache
+            .downloadAndCache(src, name, (progress) => {
+              if (isMounted) {
+                setLoadingProgress(progress);
+                console.log(`📥 Caching progress: ${progress}%`);
+              }
+            })
+            .then(() => {
+              console.log("✅ Video cached for next time");
+            })
+            .catch((err) => {
+              console.warn("⚠️ Background caching failed:", err);
+            });
         }
       } catch (err) {
         console.error("Error loading cached video:", err);
         if (isMounted) {
           setError("Failed to load video");
-          setLoading(false);
           // Fallback to original URL
           setCachedSrc(src);
         }
@@ -89,7 +103,7 @@ export default function CachedVideo({
   }
 
   return (
-    <div className={`relative ${className}`} style={style}>
+    <div className={`relative w-full h-full ${className}`} style={style}>
       {/* Loading Overlay with Blur Background */}
       {loading && showLoading && (
         <div
@@ -164,17 +178,108 @@ export default function CachedVideo({
         <video
           ref={videoRef}
           src={cachedSrc}
-          autoPlay={autoPlay}
+          autoPlay={false}
           loop={loop}
           muted={muted}
           playsInline={playsInline}
+          preload="auto"
           onClick={onClick}
-          className={className}
-          style={style}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            backgroundColor: "#000",
+            ...style,
+          }}
+          onLoadedMetadata={() => {
+            console.log("📹 Video metadata loaded - can start buffering");
+          }}
+          onCanPlay={() => {
+            console.log("✅ Video can play - enough buffered");
+
+            // Video has enough data to start playing
+            if (!videoReady) {
+              setVideoReady(true);
+              setLoading(false);
+
+              // Try to play as soon as we can
+              if (autoPlay && videoRef.current) {
+                const playPromise = videoRef.current.play();
+
+                if (playPromise !== undefined) {
+                  playPromise
+                    .then(() => {
+                      console.log(
+                        "✅ Autoplay successful - playing while buffering"
+                      );
+                    })
+                    .catch((err) => {
+                      console.error("❌ Autoplay failed:", err);
+                      // Try playing muted on iOS
+                      if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play().catch((e) => {
+                          console.error("❌ Muted autoplay also failed:", e);
+                        });
+                      }
+                    });
+                }
+              }
+            }
+          }}
+          onLoadedData={() => {
+            console.log("✅ Video data loaded - first frame ready");
+          }}
+          onError={(e) => {
+            console.error("❌ Video error:", e);
+            console.error("Video src:", cachedSrc);
+            setError("Video playback error - check console for details");
+            setLoading(false);
+          }}
+          onCanPlayThrough={() => {
+            console.log("✅ Video can play through without buffering");
+          }}
+          onPlay={() => {
+            console.log("▶️ Video started playing");
+          }}
+          onPause={() => {
+            console.log("⏸️ Video paused");
+          }}
+          onWaiting={() => {
+            console.log("⏳ Video waiting/buffering");
+          }}
+          onPlaying={() => {
+            console.log("▶️ Video is now playing");
+          }}
+          onProgress={() => {
+            // Track buffering progress
+            if (videoRef.current && videoRef.current.buffered.length > 0) {
+              const bufferedEnd = videoRef.current.buffered.end(
+                videoRef.current.buffered.length - 1
+              );
+              const duration = videoRef.current.duration;
+              if (duration > 0) {
+                const bufferedPercent = (bufferedEnd / duration) * 100;
+                console.log(
+                  `📊 Video buffered: ${bufferedPercent.toFixed(0)}%`
+                );
+              }
+            }
+          }}
           {...props}
         >
           Your browser does not support the video tag.
         </video>
+      )}
+
+      {/* Show loading until video is ready */}
+      {!videoReady && cachedSrc && showLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black">
+          <div className="text-center text-white">
+            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-lg">Preparing video...</p>
+          </div>
+        </div>
       )}
     </div>
   );

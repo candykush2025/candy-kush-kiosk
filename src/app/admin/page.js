@@ -49,6 +49,7 @@ import {
   Plus,
   X,
   Clock,
+  Link2,
 } from "lucide-react";
 
 export default function AdminPage() {
@@ -3947,29 +3948,71 @@ export default function AdminPage() {
                 Pending Points
               </button>
 
-              <button
-                onClick={() => setActiveTab("stockLinking")}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === "stockLinking"
-                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <Package className="w-5 h-5 mr-3" />
-                Stock Linking
-              </button>
+              {/* Stock Management with Submenu */}
+              <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    if (activeTab === "stock") {
+                      setActiveTab("dashboard");
+                    } else {
+                      setActiveTab("stock");
+                    }
+                  }}
+                  className={`w-full flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                    activeTab === "stock"
+                      ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <Package className="w-5 h-5 mr-3" />
+                    Stock
+                  </div>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${
+                      activeTab === "stock" ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
 
-              <button
-                onClick={() => setActiveTab("stockOverview")}
-                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                  activeTab === "stockOverview"
-                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                }`}
-              >
-                <BarChart className="w-5 h-5 mr-3" />
-                Stock Overview
-              </button>
+                {/* Stock Submenu */}
+                {activeTab === "stock" && (
+                  <div className="ml-4 space-y-1">
+                    <button
+                      onClick={() => setStockActiveSubTab("overview")}
+                      className={`w-full flex items-center px-4 py-2 text-sm rounded-lg transition-colors ${
+                        stockActiveSubTab === "overview"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <BarChart className="w-4 h-4 mr-2" />
+                      Stock Overview
+                    </button>
+                    <button
+                      onClick={() => setStockActiveSubTab("linking")}
+                      className={`w-full flex items-center px-4 py-2 text-sm rounded-lg transition-colors ${
+                        stockActiveSubTab === "linking"
+                          ? "bg-green-50 text-green-700"
+                          : "text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <Link2 className="w-4 h-4 mr-2" />
+                      Stock Linking
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => setActiveTab("categoryOrder")}
@@ -4055,10 +4098,10 @@ export default function AdminPage() {
                       ? "Cashback Management"
                       : activeTab === "pendingPoints"
                       ? "Pending Points"
-                      : activeTab === "stockLinking"
-                      ? "Stock Linking"
-                      : activeTab === "stockOverview"
-                      ? "Stock Overview"
+                      : activeTab === "stock"
+                      ? stockActiveSubTab === "overview"
+                        ? "Stock Overview"
+                        : "Stock Linking"
                       : activeTab === "categoryOrder"
                       ? "Category Order"
                       : activeTab === "adminManagement"
@@ -4082,10 +4125,10 @@ export default function AdminPage() {
                       ? "Configure cashback rules and percentages"
                       : activeTab === "pendingPoints"
                       ? "Review and approve customer point requests"
-                      : activeTab === "stockLinking"
-                      ? "Link kiosk products with POS inventory system"
-                      : activeTab === "stockOverview"
-                      ? "Real-time stock levels from POS system"
+                      : activeTab === "stock"
+                      ? stockActiveSubTab === "overview"
+                        ? "Real-time stock levels from POS system"
+                        : "Link kiosk products with POS inventory system"
                       : activeTab === "categoryOrder"
                       ? "Organize and reorder product categories"
                       : activeTab === "adminManagement"
@@ -8042,80 +8085,81 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Stock Linking Tab */}
-              {activeTab === "stockLinking" && (
+              {/* Stock Tab with Submenus */}
+              {activeTab === "stock" && (
                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <StockLinking
-                    products={products}
-                    onSaveLinks={async (links, alertLevels) => {
-                      // Import updateDoc and doc from firebase/firestore
-                      const {
-                        updateDoc,
-                        doc,
-                        setDoc,
-                        serverTimestamp,
-                        collection,
-                      } = await import("firebase/firestore");
-                      const { db } = await import("../../lib/firebase");
+                  {/* Stock Overview SubTab */}
+                  {stockActiveSubTab === "overview" && (
+                    <StockOverview products={products} />
+                  )}
 
-                      // Save the links and alert levels to products
-                      for (const [productId, posItemId] of Object.entries(
-                        links
-                      )) {
-                        try {
-                          const productRef = doc(db, "products", productId);
-                          const alertLevel = alertLevels[productId];
+                  {/* Stock Linking SubTab */}
+                  {stockActiveSubTab === "linking" && (
+                    <StockLinking
+                      products={products}
+                      onSaveLinks={async (links, alertLevels) => {
+                        // Import updateDoc and doc from firebase/firestore
+                        const {
+                          updateDoc,
+                          doc,
+                          setDoc,
+                          serverTimestamp,
+                          collection,
+                        } = await import("firebase/firestore");
+                        const { db } = await import("../../lib/firebase");
 
-                          // Update product with posItemId and alertKioskLevel
-                          const updateData = {};
-                          if (posItemId) {
-                            updateData.posItemId = posItemId;
-                          } else {
-                            updateData.posItemId = null;
-                          }
+                        // Save the links and alert levels to products
+                        for (const [productId, posItemId] of Object.entries(
+                          links
+                        )) {
+                          try {
+                            const productRef = doc(db, "products", productId);
+                            const alertLevel = alertLevels[productId];
 
-                          if (alertLevel !== undefined && alertLevel !== "") {
-                            updateData.alertKioskLevel = alertLevel;
-                          }
+                            // Update product with posItemId and alertKioskLevel
+                            const updateData = {};
+                            if (posItemId) {
+                              updateData.posItemId = posItemId;
+                            } else {
+                              updateData.posItemId = null;
+                            }
 
-                          await updateDoc(productRef, updateData);
+                            if (alertLevel !== undefined && alertLevel !== "") {
+                              updateData.alertKioskLevel = alertLevel;
+                            }
 
-                          // Also save to StockAlert collection for compatibility with existing system
-                          if (alertLevel !== undefined && alertLevel !== "") {
-                            const stockAlertRef = doc(
-                              db,
-                              "StockAlert",
-                              productId
+                            await updateDoc(productRef, updateData);
+
+                            // Also save to StockAlert collection for compatibility with existing system
+                            if (alertLevel !== undefined && alertLevel !== "") {
+                              const stockAlertRef = doc(
+                                db,
+                                "StockAlert",
+                                productId
+                              );
+                              await setDoc(
+                                stockAlertRef,
+                                {
+                                  productId: productId,
+                                  alertKioskLevel: alertLevel,
+                                  updatedAt: serverTimestamp(),
+                                },
+                                { merge: true }
+                              );
+                            }
+                          } catch (err) {
+                            console.error(
+                              `Failed to update product ${productId}:`,
+                              err
                             );
-                            await setDoc(
-                              stockAlertRef,
-                              {
-                                productId: productId,
-                                alertKioskLevel: alertLevel,
-                                updatedAt: serverTimestamp(),
-                              },
-                              { merge: true }
-                            );
+                            throw err; // Re-throw to show error message
                           }
-                        } catch (err) {
-                          console.error(
-                            `Failed to update product ${productId}:`,
-                            err
-                          );
-                          throw err; // Re-throw to show error message
                         }
-                      }
-                      // Reload products
-                      await loadDashboardData();
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Stock Overview Tab */}
-              {activeTab === "stockOverview" && (
-                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                  <StockOverview products={products} />
+                        // Reload products
+                        await loadDashboardData();
+                      }}
+                    />
+                  )}
                 </div>
               )}
 

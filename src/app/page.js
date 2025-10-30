@@ -296,7 +296,6 @@ export default function Home() {
           <CachedVideo
             src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
             name="idle-video"
-            className="w-full h-full object-fill"
             autoPlay
             loop
             muted
@@ -389,7 +388,6 @@ export default function Home() {
             <CachedVideo
               src="https://firebasestorage.googleapis.com/v0/b/candy-kush.firebasestorage.app/o/video%2Fidle.MOV?alt=media&token=cd8923fa-fb9c-4793-aa81-ccac28a5ce27"
               name="idle-video"
-              className="w-full h-full object-cover"
               autoPlay
               loop
               muted
