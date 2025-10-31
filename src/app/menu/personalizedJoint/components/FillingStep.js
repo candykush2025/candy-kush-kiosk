@@ -221,7 +221,7 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
         <h3 className="text-xl font-bold mb-4">Add Worm (Optional)</h3>
         <p className="text-sm text-green-200 mb-4">
           Worm runs through the center for enhanced potency (added on top of
-          capacity, doesn't reduce space)
+          capacity, does not reduce space)
         </p>
 
         <div className="grid grid-cols-1 gap-3">
