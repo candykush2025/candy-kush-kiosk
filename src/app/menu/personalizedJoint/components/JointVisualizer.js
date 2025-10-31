@@ -77,6 +77,55 @@ export default function JointVisualizer({ config }) {
             </div>
           )}
 
+          {/* Spiral Tip Image - Absolute Top Right Corner */}
+          {config.external?.wrap?.id === "rosin-spiral" && (
+            <div className="absolute right-[10px] top-[10px] z-30">
+              <div className="relative">
+                {/* Gold/orange glow for spiral */}
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/30 to-transparent blur-md rounded-full scale-90"></div>
+                <Image
+                  src="/CustomJoint/tip-spiral.png"
+                  alt="spiral rosin wrap"
+                  width={50}
+                  height={50}
+                  style={{
+                    objectFit: "contain",
+                  }}
+                  className="relative z-10"
+                  priority
+                />
+              </div>
+            </div>
+          )}
+
+          {/* M Tip Image - Absolute Top Right Corner (slightly lower if spiral exists) */}
+          {(config.external?.wrap?.id === "hash-M" ||
+            config.external?.wrap?.id === "rosin-M") && (
+            <div
+              className={`absolute right-[10px] z-30 ${
+                config.external?.wrap?.id === "rosin-spiral"
+                  ? "top-[70px]"
+                  : "top-[10px]"
+              }`}
+            >
+              <div className="relative">
+                {/* Purple glow for M wrap */}
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-transparent blur-md rounded-full scale-90"></div>
+                <Image
+                  src="/CustomJoint/tip-M.png"
+                  alt="M wrap"
+                  width={50}
+                  height={50}
+                  style={{
+                    objectFit: "contain",
+                  }}
+                  className="relative z-10"
+                  priority
+                />
+              </div>
+            </div>
+          )}
+
           {config.paper ? (
             <div className="relative flex items-center justify-center">
               {(() => {

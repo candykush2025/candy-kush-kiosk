@@ -64,8 +64,13 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
   const [showAddHash, setShowAddHash] = useState(false);
 
   const totalCapacity = config.paper?.capacity || 0;
-  const wormWeight = wormEnabled && selectedWorm ? totalCapacity * 0.15 : 0; // Worm takes 15% of total
-  const availableCapacity = totalCapacity - wormWeight;
+
+  // Worm weight is calculated separately and does NOT take space from capacity
+  // It's an addition on top of the capacity
+  const wormWeight = wormEnabled && selectedWorm ? totalCapacity * 0.15 : 0;
+
+  // Available capacity is the FULL capacity (worm doesn't reduce it)
+  const availableCapacity = totalCapacity;
 
   const usedCapacity = [...flowerItems, ...hashItems].reduce(
     (sum, item) => sum + (item.weight || 0),
@@ -165,23 +170,18 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
           <div className="text-right">
             <div className="text-sm text-green-200">Remaining</div>
             <div className="text-3xl font-bold text-green-400">
-              {remainingCapacity.toFixed(2)}g
+              {remainingCapacity.toFixed(1)}g
             </div>
           </div>
         </div>
 
         {/* Visual Capacity Bar */}
         <div className="relative h-8 bg-white/10 rounded-full overflow-hidden">
-          {wormEnabled && wormWeight > 0 && (
-            <div
-              className="absolute top-1/2 -translate-y-1/2 h-full bg-gradient-to-r from-amber-500 to-orange-500"
-              style={{ width: `${(wormWeight / totalCapacity) * 100}%` }}
-            ></div>
-          )}
+          {/* Worm is NOT shown in capacity bar as it doesn't take space */}
           {flowerItems.map((item, index) => {
-            const prevWeight =
-              wormWeight +
-              flowerItems.slice(0, index).reduce((sum, f) => sum + f.weight, 0);
+            const prevWeight = flowerItems
+              .slice(0, index)
+              .reduce((sum, f) => sum + f.weight, 0);
             return (
               <div
                 key={item.id}
@@ -195,7 +195,6 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
           })}
           {hashItems.map((item, index) => {
             const prevWeight =
-              wormWeight +
               flowerItems.reduce((sum, f) => sum + f.weight, 0) +
               hashItems.slice(0, index).reduce((sum, h) => sum + h.weight, 0);
             return (
@@ -221,7 +220,8 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
         <h3 className="text-xl font-bold mb-4">Add Worm (Optional)</h3>
         <p className="text-sm text-green-200 mb-4">
-          Worm runs through the center for enhanced potency (uses 15% capacity)
+          Worm runs through the center for enhanced potency (added on top of
+          capacity, doesn't reduce space)
         </p>
 
         <div className="grid grid-cols-1 gap-3">
@@ -310,34 +310,77 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>Weight:</span>
-                    <span className="font-bold">
+                    <span className="text-green-200">Weight:</span>
+                    <span className="font-bold text-white">
                       {item.weight.toFixed(2)}g ({item.percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={Math.min(
-                      availableCapacity,
-                      item.weight + remainingCapacity
-                    )}
-                    step="0.01"
-                    value={item.weight}
-                    onChange={(e) =>
-                      updateItemWeight(
-                        flowerItems,
-                        setFlowerItems,
-                        item.id,
-                        Number(e.target.value)
-                      )
-                    }
-                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="text-right text-sm text-green-400">
-                    ฿{(item.weight * item.pricePerGram).toFixed(0)}
+
+                  {/* Modern Slider */}
+                  <div className="relative pt-1">
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.min(
+                        availableCapacity,
+                        item.weight + remainingCapacity
+                      )}
+                      step="0.01"
+                      value={item.weight}
+                      onChange={(e) =>
+                        updateItemWeight(
+                          flowerItems,
+                          setFlowerItems,
+                          item.id,
+                          Number(e.target.value)
+                        )
+                      }
+                      className="modern-slider w-full h-3 bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-full appearance-none cursor-pointer border border-green-500/20"
+                      style={{
+                        background: `linear-gradient(to right, 
+                          rgb(34 197 94) 0%, 
+                          rgb(16 185 129) ${
+                            (item.weight /
+                              Math.min(
+                                availableCapacity,
+                                item.weight + remainingCapacity
+                              )) *
+                            100
+                          }%, 
+                          rgba(255 255 255 / 0.1) ${
+                            (item.weight /
+                              Math.min(
+                                availableCapacity,
+                                item.weight + remainingCapacity
+                              )) *
+                            100
+                          }%, 
+                          rgba(255 255 255 / 0.1) 100%)`,
+                      }}
+                    />
+                    {/* Slider Track Labels */}
+                    <div className="flex justify-between text-xs text-green-300 mt-1 px-1">
+                      <span>0g</span>
+                      <span className="text-green-400 font-medium">
+                        {item.weight.toFixed(2)}g
+                      </span>
+                      <span>
+                        {Math.min(
+                          availableCapacity,
+                          item.weight + remainingCapacity
+                        ).toFixed(1)}
+                        g
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right text-sm font-medium">
+                    <span className="text-green-200">Price: </span>
+                    <span className="text-green-400 text-lg">
+                      ฿{(item.weight * item.pricePerGram).toFixed(0)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -397,34 +440,77 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="flex justify-between text-sm">
-                    <span>Weight:</span>
-                    <span className="font-bold">
+                    <span className="text-green-200">Weight:</span>
+                    <span className="font-bold text-white">
                       {item.weight.toFixed(2)}g ({item.percentage.toFixed(1)}%)
                     </span>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={Math.min(
-                      availableCapacity,
-                      item.weight + remainingCapacity
-                    )}
-                    step="0.01"
-                    value={item.weight}
-                    onChange={(e) =>
-                      updateItemWeight(
-                        hashItems,
-                        setHashItems,
-                        item.id,
-                        Number(e.target.value)
-                      )
-                    }
-                    className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="text-right text-sm text-green-400">
-                    ฿{(item.weight * item.pricePerGram).toFixed(0)}
+
+                  {/* Modern Slider */}
+                  <div className="relative pt-1">
+                    <input
+                      type="range"
+                      min="0"
+                      max={Math.min(
+                        availableCapacity,
+                        item.weight + remainingCapacity
+                      )}
+                      step="0.01"
+                      value={item.weight}
+                      onChange={(e) =>
+                        updateItemWeight(
+                          hashItems,
+                          setHashItems,
+                          item.id,
+                          Number(e.target.value)
+                        )
+                      }
+                      className="modern-slider w-full h-3 bg-gradient-to-r from-amber-900/30 to-yellow-900/30 rounded-full appearance-none cursor-pointer border border-amber-500/20"
+                      style={{
+                        background: `linear-gradient(to right, 
+                          rgb(245 158 11) 0%, 
+                          rgb(251 191 36) ${
+                            (item.weight /
+                              Math.min(
+                                availableCapacity,
+                                item.weight + remainingCapacity
+                              )) *
+                            100
+                          }%, 
+                          rgba(255 255 255 / 0.1) ${
+                            (item.weight /
+                              Math.min(
+                                availableCapacity,
+                                item.weight + remainingCapacity
+                              )) *
+                            100
+                          }%, 
+                          rgba(255 255 255 / 0.1) 100%)`,
+                      }}
+                    />
+                    {/* Slider Track Labels */}
+                    <div className="flex justify-between text-xs text-amber-300 mt-1 px-1">
+                      <span>0g</span>
+                      <span className="text-amber-400 font-medium">
+                        {item.weight.toFixed(2)}g
+                      </span>
+                      <span>
+                        {Math.min(
+                          availableCapacity,
+                          item.weight + remainingCapacity
+                        ).toFixed(1)}
+                        g
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right text-sm font-medium">
+                    <span className="text-green-200">Price: </span>
+                    <span className="text-amber-400 text-lg">
+                      ฿{(item.weight * item.pricePerGram).toFixed(0)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -434,6 +520,64 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
       </div>
 
       <style jsx>{`
+        /* Modern Slider Styles */
+        .modern-slider {
+          -webkit-appearance: none;
+          appearance: none;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+
+        .modern-slider::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
+          cursor: pointer;
+          border: 3px solid rgba(34, 197, 94, 0.8);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2),
+            0 4px 8px rgba(0, 0, 0, 0.3);
+          transition: all 0.2s ease;
+        }
+
+        .modern-slider::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.3),
+            0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .modern-slider::-webkit-slider-thumb:active {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.4),
+            0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .modern-slider::-moz-range-thumb {
+          width: 24px;
+          height: 24px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
+          cursor: pointer;
+          border: 3px solid rgba(34, 197, 94, 0.8);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2),
+            0 4px 8px rgba(0, 0, 0, 0.3);
+          transition: all 0.2s ease;
+        }
+
+        .modern-slider::-moz-range-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.3),
+            0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .modern-slider::-moz-range-thumb:active {
+          transform: scale(1.05);
+          box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.4),
+            0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
         @keyframes slideDown {
           from {
             opacity: 0;

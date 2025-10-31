@@ -29,6 +29,10 @@ export default function CustomJointBuilder() {
   const [sessionModalCountdown, setSessionModalCountdown] = useState(60);
   const sessionTimerRef = useRef(null);
   const sessionCountdownRef = useRef(null);
+
+  // Back confirmation modal state
+  const [showBackConfirmation, setShowBackConfirmation] = useState(false);
+
   const [jointConfig, setJointConfig] = useState({
     // Paper Configuration
     paper: null, // { type, capacity, customLength, name, price }
@@ -327,7 +331,17 @@ export default function CustomJointBuilder() {
 
   const handleBack = () => {
     resetSessionTimer(); // Reset timer on interaction
+    // Show confirmation modal instead of going back directly
+    setShowBackConfirmation(true);
+  };
+
+  const confirmBack = () => {
+    setShowBackConfirmation(false);
     router.push("/menu");
+  };
+
+  const cancelBack = () => {
+    setShowBackConfirmation(false);
   };
 
   const handleComplete = () => {
@@ -667,6 +681,52 @@ export default function CustomJointBuilder() {
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg"
                 >
                   Continue ({sessionModalCountdown}s)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Back Confirmation Modal */}
+      {showBackConfirmation && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <svg
+                  className="h-8 w-8 text-red-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                Discard Custom Joint?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to go back? All your customization
+                progress will be lost.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={cancelBack}
+                  className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-medium hover:bg-gray-300 transition-all"
+                >
+                  Stay Here
+                </button>
+                <button
+                  onClick={confirmBack}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-xl font-medium hover:from-red-700 hover:to-red-800 transition-all shadow-lg"
+                >
+                  Discard & Exit
                 </button>
               </div>
             </div>

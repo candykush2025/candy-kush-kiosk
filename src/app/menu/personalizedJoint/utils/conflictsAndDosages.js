@@ -226,31 +226,42 @@ export const getTopUpDosage = (jointLength = null) => {
 export const validateFillingCapacity = (
   paperType,
   filling,
-  jointLength = null
+  jointLength = null,
+  paperCapacity = null
 ) => {
   let maxCapacity = 0;
 
-  switch (paperType) {
-    case PAPER_TYPES.PRE_ROLLED_CK:
-      // Get selected cone size
-      const coneWeight = filling.totalCapacity || 0.4;
-      maxCapacity = coneWeight;
-      break;
+  // Normalize paper type check (handle both "custom-paper" and "rolling-paper-custom")
+  const isCustomPaper =
+    paperType === PAPER_TYPES.CUSTOM_PAPER ||
+    paperType === "rolling-paper-custom" ||
+    (paperType && paperType.includes("custom"));
+  const isPreRolled =
+    paperType === PAPER_TYPES.PRE_ROLLED_CK ||
+    (paperType && paperType.includes("pre-rolled"));
+  const isHempWrap =
+    paperType === PAPER_TYPES.HEMP_WRAP ||
+    (paperType && paperType.includes("hemp"));
+  const isGoldenPaper =
+    paperType === PAPER_TYPES.GOLDEN_PAPER ||
+    (paperType && paperType.includes("golden"));
 
-    case PAPER_TYPES.HEMP_WRAP:
-      maxCapacity = filling.totalCapacity || 2.0;
-      break;
-
-    case PAPER_TYPES.GOLDEN_PAPER:
-      maxCapacity = 1.0;
-      break;
-
-    case PAPER_TYPES.CUSTOM_PAPER:
-      if (jointLength) {
-        const dosage = getCustomPaperDosage(jointLength);
-        maxCapacity = dosage.internalCapacity;
-      }
-      break;
+  if (isPreRolled) {
+    // Get selected cone size
+    const coneWeight = filling.totalCapacity || paperCapacity || 0.4;
+    maxCapacity = coneWeight;
+  } else if (isHempWrap) {
+    maxCapacity = filling.totalCapacity || paperCapacity || 2.0;
+  } else if (isGoldenPaper) {
+    maxCapacity = paperCapacity || 1.0;
+  } else if (isCustomPaper) {
+    if (paperCapacity) {
+      // Use the actual capacity from config.paper
+      maxCapacity = paperCapacity;
+    } else if (jointLength) {
+      const dosage = getCustomPaperDosage(jointLength);
+      maxCapacity = dosage.internalCapacity;
+    }
   }
 
   const totalFill = calculateTotalFilling(filling);
@@ -266,6 +277,8 @@ export const validateFillingCapacity = (
 
 /**
  * Calculate total filling weight
+ * Note: Worm is NOT included in capacity calculations as it sits in the center
+ * and doesn't take space from the flower/hash capacity
  */
 export const calculateTotalFilling = (filling) => {
   let total = 0;
@@ -280,10 +293,11 @@ export const calculateTotalFilling = (filling) => {
     total += filling.hash.reduce((sum, h) => sum + (h.weight || 0), 0);
   }
 
-  // Worm/Rosin
-  if (filling.worm && filling.worm.weight) {
-    total += filling.worm.weight;
-  }
+  // Worm/Rosin - NOT included in capacity calculation
+  // The worm sits in the center and doesn't take space from capacity
+  // if (filling.worm && filling.worm.weight) {
+  //   total += filling.worm.weight;
+  // }
 
   return Math.round(total * 10) / 10; // Round to 0.1g
 };
@@ -386,7 +400,8 @@ export const validateConfiguration = (config) => {
     const validation = validateFillingCapacity(
       config.paper.type,
       config.filling,
-      config.paper.customLength
+      config.paper.customLength,
+      config.paper.capacity
     );
 
     if (!validation.isValid) {

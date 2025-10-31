@@ -22,10 +22,7 @@ export default function ReviewStep({ config, onPrev, onComplete }) {
 
       {/* Paper Section */}
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
-        <h3 className="text-xl font-bold mb-4 flex items-center">
-          <span className="text-2xl mr-2">📜</span>
-          Rolling Paper
-        </h3>
+        <h3 className="text-xl font-bold mb-4">Rolling Paper</h3>
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-green-200">Type:</span>
@@ -54,12 +51,7 @@ export default function ReviewStep({ config, onPrev, onComplete }) {
 
       {/* Filter Section */}
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
-        <h3 className="text-xl font-bold mb-4 flex items-center">
-          <span className="text-sm mr-2 px-2 py-1 bg-blue-400/20 rounded">
-            FILTER
-          </span>
-          Filter
-        </h3>
+        <h3 className="text-xl font-bold mb-4">Filter</h3>
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-green-200">Type:</span>
@@ -76,12 +68,7 @@ export default function ReviewStep({ config, onPrev, onComplete }) {
 
       {/* Filling Section */}
       <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
-        <h3 className="text-xl font-bold mb-4 flex items-center">
-          <span className="text-sm mr-2 px-2 py-1 bg-green-400/20 rounded">
-            FILL
-          </span>
-          Filling Composition
-        </h3>
+        <h3 className="text-xl font-bold mb-4">Filling Composition</h3>
 
         {/* Worm */}
         {config.filling?.worm && (
@@ -154,12 +141,7 @@ export default function ReviewStep({ config, onPrev, onComplete }) {
       {/* External Section */}
       {(config.external?.coating || config.external?.wrap) && (
         <div className="p-6 bg-white/5 backdrop-blur-sm rounded-2xl border border-white/20">
-          <h3 className="text-xl font-bold mb-4 flex items-center">
-            <span className="text-sm mr-2 px-2 py-1 bg-yellow-400/20 rounded">
-              EXTRA
-            </span>
-            External Enhancements
-          </h3>
+          <h3 className="text-xl font-bold mb-4">External Enhancements</h3>
           <div className="space-y-2">
             {config.external.coating && (
               <div className="flex justify-between items-center">
@@ -202,18 +184,12 @@ export default function ReviewStep({ config, onPrev, onComplete }) {
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6">
+      <div className="flex justify-start pt-6">
         <button
           onClick={onPrev}
           className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-medium transition-all duration-300 border border-white/20"
         >
           ← Back to External
-        </button>
-        <button
-          onClick={handleAddToCart}
-          className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
-        >
-          Confirm & Add to Cart
         </button>
       </div>
     </div>
