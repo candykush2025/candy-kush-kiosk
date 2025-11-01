@@ -245,6 +245,8 @@ export const validateFillingCapacity = (
   const isGoldenPaper =
     paperType === PAPER_TYPES.GOLDEN_PAPER ||
     (paperType && paperType.includes("golden"));
+  const isStandardPaper = paperType && paperType.includes("standard");
+  const isGlassCone = paperType && paperType.includes("glass");
 
   if (isPreRolled) {
     // Get selected cone size
@@ -254,6 +256,10 @@ export const validateFillingCapacity = (
     maxCapacity = filling.totalCapacity || paperCapacity || 2.0;
   } else if (isGoldenPaper) {
     maxCapacity = paperCapacity || 1.0;
+  } else if (isStandardPaper) {
+    maxCapacity = paperCapacity || 1.0;
+  } else if (isGlassCone) {
+    maxCapacity = paperCapacity || 1.0;
   } else if (isCustomPaper) {
     if (paperCapacity) {
       // Use the actual capacity from config.paper
@@ -262,6 +268,9 @@ export const validateFillingCapacity = (
       const dosage = getCustomPaperDosage(jointLength);
       maxCapacity = dosage.internalCapacity;
     }
+  } else if (paperCapacity) {
+    // Fallback: use provided capacity for any unrecognized paper type
+    maxCapacity = paperCapacity;
   }
 
   const totalFill = calculateTotalFilling(filling);
