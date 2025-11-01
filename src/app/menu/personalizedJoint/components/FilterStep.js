@@ -47,8 +47,10 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [selectedFilterForModal, setSelectedFilterForModal] = useState(null);
 
-  // Check if paper type is pre-rolled (built-in filter)
+  // Check if paper type is pre-rolled or glass cone (built-in filter)
   const isPreRolled = config.paper?.type === "pre-rolled-ck";
+  const isGlassCone = config.paper?.type === "glass-cone";
+  const hasBuiltInFilter = isPreRolled || isGlassCone;
   const paperType = config.paper?.type;
   const customLength = config.paper?.customLength || 0;
 
@@ -134,16 +136,34 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
     setShowSizeModal(false);
   };
 
-  // If pre-rolled, show message and skip this step
-  if (isPreRolled) {
+  // If pre-rolled or glass cone, show message and skip this step
+  if (hasBuiltInFilter) {
     return (
       <div className="space-y-6">
         <div className="p-8 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl border border-green-400/30 text-center">
           <div className="text-6xl mb-4">✓</div>
           <h2 className="text-3xl font-bold mb-2">Filter Already Included</h2>
           <p className="text-green-200 text-lg">
-            Pre-rolled cones come with a built-in filter. No need to select one!
+            {isGlassCone 
+              ? "Glass cones come with a built-in glass filter. No need to select one!"
+              : "Pre-rolled cones come with a built-in filter. No need to select one!"}
           </p>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-6">
+          <button
+            onClick={onPrev}
+            className="px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-medium transition-all duration-300 border border-white/20"
+          >
+            ← Back to Paper
+          </button>
+          <button
+            onClick={onNext}
+            className="px-8 py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 rounded-xl font-bold text-lg transition-all duration-300 shadow-xl hover:shadow-2xl"
+          >
+            Continue to Filling →
+          </button>
         </div>
       </div>
     );
