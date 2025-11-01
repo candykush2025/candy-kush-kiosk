@@ -206,7 +206,7 @@ export default function PointsHistory({ customerId, isOpen, onClose }) {
         <div className="bg-gray-50 px-6 py-4">
           <button
             onClick={onClose}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
+            className="w-full bg-green-600 text-white py-6 rounded-lg font-semibold hover:bg-green-700 transition-colors"
           >
             Close
           </button>

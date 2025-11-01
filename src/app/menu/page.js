@@ -4190,7 +4190,7 @@ export default function MenuPage() {
         <div className="px-6 pb-6">
           <button
             onClick={handleCancelOrder}
-            className="w-full bg-red-600 hover:bg-red-700 text-white py-4 px-6 rounded-xl font-semibold text-lg transition-colors"
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-8 px-6 rounded-xl font-semibold text-lg transition-colors"
           >
             Cancel Order
           </button>

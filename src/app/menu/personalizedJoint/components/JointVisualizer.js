@@ -210,6 +210,19 @@ export default function JointVisualizer({ config }) {
               </p>
             </div>
           )}
+
+          {/* Length Indicator - positioned at bottom of joint */}
+          {config.paper?.customLength && (
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[80%] flex items-center justify-center z-20">
+              <div className="flex items-center gap-2 w-full">
+                <div className="flex-1 h-[2px] bg-gradient-to-r from-transparent via-green-400 to-green-400"></div>
+                <span className="text-base font-bold px-4 py-1 bg-green-500/30 rounded-full border border-green-400/50 text-green-300 whitespace-nowrap backdrop-blur-sm">
+                  {config.paper.customLength}cm
+                </span>
+                <div className="flex-1 h-[2px] bg-gradient-to-l from-transparent via-green-400 to-green-400"></div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right - Order Details */}
