@@ -1,103 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-
-const paperOptions = [
-  {
-    id: "pre-rolled-ck",
-    name: "Pre-Rolled Cone",
-    description: "Classic cone shape, ready to fill",
-    variants: [
-      { id: "small", capacity: 0.4, price: 1, label: "Small (0.4g)" },
-      { id: "medium", capacity: 0.8, price: 3, label: "Medium (0.8g)" },
-      { id: "big", capacity: 1.2, price: 5, label: "Big (1.2g)" },
-    ],
-    color: "from-amber-100 to-amber-200",
-    icon: "CONE",
-  },
-  {
-    id: "blunt-hemp-wrap",
-    name: "Blunt/Hemp Wraps",
-    description: "Natural hemp leaf wrap",
-    variants: [
-      { id: "standard", capacity: 1.5, price: 60, label: "Standard (1.5g)" },
-      { id: "blackwood", capacity: 2.0, price: 95, label: "Blackwood (2.0g)" },
-      { id: "hemp-cone", capacity: 1.0, price: 25, label: "Hemp Cone (1.0g)" },
-    ],
-    color: "from-green-700 to-green-800",
-    icon: "HEMP",
-  },
-  {
-    id: "standard-rolling-paper",
-    name: "Standard Rolling Paper",
-    description: "Various flavored rolling papers",
-    variants: [
-      { id: "weed-th", capacity: 1.0, price: 5, label: "Weed TH (1.0g)" },
-      { id: "elements", capacity: 1.0, price: 5, label: "Elements (1.0g)" },
-      {
-        id: "smoking-blue",
-        capacity: 1.5,
-        price: 5,
-        label: "Smoking Blue (1.5g)",
-      },
-      {
-        id: "orange-flavour",
-        capacity: 1.0,
-        price: 5,
-        label: "Orange Flavour (1.0g)",
-      },
-      {
-        id: "watermelon-flavour",
-        capacity: 1.0,
-        price: 5,
-        label: "Watermelon Flavour (1.0g)",
-      },
-      {
-        id: "chocolate-flavour",
-        capacity: 1.0,
-        price: 5,
-        label: "Chocolate Flavour (1.0g)",
-      },
-    ],
-    color: "from-blue-100 to-blue-200",
-    icon: "PAPER",
-  },
-  {
-    id: "rolling-paper-custom",
-    name: "Rolling Paper (Custom)",
-    description: "Adjust length for custom capacity (2g+)",
-    isCustom: true,
-    basePrice: 20,
-    pricePerCm: 3,
-    minLength: 7,
-    maxLength: 20,
-    color: "from-gray-100 to-gray-200",
-    icon: "PAPER",
-  },
-  {
-    id: "golden-paper",
-    name: "Golden Rolling Paper",
-    description: "Premium gold-infused paper",
-    variants: [
-      { id: "premium", capacity: 1.0, price: 150, label: "Premium (1.0g)" },
-    ],
-    color: "from-yellow-400 to-amber-500",
-    icon: "GOLD",
-  },
-  {
-    id: "glass-cone",
-    name: "Glass Cone",
-    description: "Premium glass cone",
-    variants: [
-      { id: "glass", capacity: 1.0, price: 150, label: "Glass (1.0g)" },
-    ],
-    color: "from-cyan-200 to-blue-300",
-    icon: "CONE",
-  },
-];
+import { getPaperOptions } from "@/lib/jointBuilderService";
 
 export default function PaperStep({ config, updateConfig, onNext }) {
+  const [paperOptions, setPaperOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const backdropRef = useRef(null);
   const [selectedType, setSelectedType] = useState(config.paper?.type || null);
   const [selectedVariant, setSelectedVariant] = useState(
@@ -108,6 +17,22 @@ export default function PaperStep({ config, updateConfig, onNext }) {
   );
   const [showSelectionModal, setShowSelectionModal] = useState(false);
 
+  // Fetch paper options from Firebase
+  useEffect(() => {
+    const fetchPaperOptions = async () => {
+      try {
+        const options = await getPaperOptions();
+        setPaperOptions(options);
+      } catch (error) {
+        console.error("Error fetching paper options:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPaperOptions();
+  }, []);
+
   const handleTypeSelect = (paperType) => {
     // If selecting the same paper type again, keep existing values
     if (selectedType === paperType.id) {
@@ -117,7 +42,11 @@ export default function PaperStep({ config, updateConfig, onNext }) {
       // New paper type - reset values to defaults
       setSelectedType(paperType.id);
       setSelectedVariant(null);
-      setCustomLength(paperType.isCustom ? config.paper?.customLength || 7 : 7);
+      setCustomLength(
+        paperType.selectionType === "slider"
+          ? config.paper?.customLength || paperType.sliderConfig?.minValue || 7
+          : 7
+      );
       setShowSelectionModal(true);
     }
   };
@@ -139,8 +68,17 @@ export default function PaperStep({ config, updateConfig, onNext }) {
     console.log("📏 handleCustomLengthChange called:", length);
     setCustomLength(length);
     const paperType = paperOptions.find((p) => p.id === selectedType);
-    const capacity = (length / 7) * 2; // Base 7cm = 2g, scale linearly
-    const price = paperType.basePrice + length * paperType.pricePerCm;
+
+    // Use sliderConfig from Firebase
+    const sliderConfig = paperType.sliderConfig;
+
+    // Evaluate capacity formula (uses 'value' as variable)
+    const capacity = sliderConfig.capacityFormula
+      ? eval(sliderConfig.capacityFormula.replace(/value/g, length))
+      : (length / 7) * 2; // Fallback to old formula
+
+    // Calculate price using basePrice + (length * pricePerUnit)
+    const price = sliderConfig.basePrice + length * sliderConfig.pricePerUnit;
 
     updateConfig("paper", {
       type: selectedType,
@@ -159,6 +97,18 @@ export default function PaperStep({ config, updateConfig, onNext }) {
   };
 
   const selectedPaperType = paperOptions.find((p) => p.id === selectedType);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-green-400">Loading paper options...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -347,7 +297,7 @@ export default function PaperStep({ config, updateConfig, onNext }) {
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border-2 border-green-400/30">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-white">
-                  {selectedPaperType.isCustom
+                  {selectedPaperType.selectionType === "slider"
                     ? "Adjust Length"
                     : "Select Capacity"}
                 </h3>
@@ -359,7 +309,7 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                 </button>
               </div>
 
-              {selectedPaperType.isCustom ? (
+              {selectedPaperType.selectionType === "slider" ? (
                 <div className="space-y-6">
                   {/* Custom Length Slider */}
                   <div className="flex items-center justify-between">
@@ -374,9 +324,9 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                   <div className="relative pt-1">
                     <input
                       type="range"
-                      min={selectedPaperType.minLength}
-                      max={selectedPaperType.maxLength}
-                      step="1"
+                      min={selectedPaperType.sliderConfig.minValue}
+                      max={selectedPaperType.sliderConfig.maxValue}
+                      step={selectedPaperType.sliderConfig.step || 1}
                       value={customLength}
                       onChange={(e) => {
                         console.log("🔵 SLIDER onChange", e.target.value);
@@ -403,15 +353,17 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                         background: `linear-gradient(to right, 
                         rgb(34 197 94) 0%, 
                         rgb(16 185 129) ${
-                          ((customLength - selectedPaperType.minLength) /
-                            (selectedPaperType.maxLength -
-                              selectedPaperType.minLength)) *
+                          ((customLength -
+                            selectedPaperType.sliderConfig.minValue) /
+                            (selectedPaperType.sliderConfig.maxValue -
+                              selectedPaperType.sliderConfig.minValue)) *
                           100
                         }%, 
                         rgba(16 185 129 / 0.2) ${
-                          ((customLength - selectedPaperType.minLength) /
-                            (selectedPaperType.maxLength -
-                              selectedPaperType.minLength)) *
+                          ((customLength -
+                            selectedPaperType.sliderConfig.minValue) /
+                            (selectedPaperType.sliderConfig.maxValue -
+                              selectedPaperType.sliderConfig.minValue)) *
                           100
                         }%, 
                         rgba(5 150 105 / 0.15) 100%)`,
@@ -420,8 +372,8 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                   </div>
 
                   <div className="flex justify-between text-sm text-green-200">
-                    <span>{selectedPaperType.minLength}cm</span>
-                    <span>{selectedPaperType.maxLength}cm</span>
+                    <span>{selectedPaperType.sliderConfig.minValue}cm</span>
+                    <span>{selectedPaperType.sliderConfig.maxValue}cm</span>
                   </div>
 
                   {/* Capacity & Price Display */}
@@ -439,8 +391,9 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                         <div className="text-sm text-green-200 mb-1">Price</div>
                         <div className="text-3xl font-bold text-green-400">
                           ฿
-                          {selectedPaperType.basePrice +
-                            customLength * selectedPaperType.pricePerCm}
+                          {selectedPaperType.sliderConfig.basePrice +
+                            customLength *
+                              selectedPaperType.sliderConfig.pricePerUnit}
                         </div>
                       </div>
                     </div>
@@ -453,7 +406,8 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                     Confirm Selection
                   </button>
                 </div>
-              ) : (
+              ) : selectedPaperType.variants &&
+                selectedPaperType.variants.length > 0 ? (
                 <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto">
                   {selectedPaperType.variants.map((variant) => (
                     <div
@@ -497,6 +451,10 @@ export default function PaperStep({ config, updateConfig, onNext }) {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  No options available for this paper type.
                 </div>
               )}
             </div>

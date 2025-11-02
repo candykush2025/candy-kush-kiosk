@@ -23,6 +23,7 @@ import AdminAuthGuard from "../../components/AdminAuthGuard";
 import ModelViewer from "../../components/ModelViewer";
 import StockLinking from "../../components/admin/StockLinking";
 import StockOverview from "../../components/admin/StockOverview";
+import JointBuilderManagement from "../../components/admin/JointBuilderManagement";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
@@ -4075,6 +4076,30 @@ export default function AdminPage() {
                 </svg>
                 Payment Crypto
               </button>
+
+              <button
+                onClick={() => setActiveTab("jointBuilder")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "jointBuilder"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <svg
+                  className="w-5 h-5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                  />
+                </svg>
+                Joint Builder
+              </button>
             </div>
           </nav>
         </div>
@@ -4110,6 +4135,8 @@ export default function AdminPage() {
                       ? "Settings"
                       : activeTab === "cryptoPayments"
                       ? "Crypto Payments"
+                      : activeTab === "jointBuilder"
+                      ? "Joint Builder"
                       : activeTab}
                   </h1>
                   <p className="text-gray-600 mt-1">
@@ -4137,6 +4164,8 @@ export default function AdminPage() {
                       ? "System configuration and preferences"
                       : activeTab === "cryptoPayments"
                       ? "Monitor and manage cryptocurrency payments from kiosk"
+                      : activeTab === "jointBuilder"
+                      ? "Manage custom joint builder options, pricing, and selections"
                       : "Admin management"}
                   </p>
                 </div>
@@ -4155,25 +4184,6 @@ export default function AdminPage() {
                           )}`}
                     </p>
                   </div>
-                  <button
-                    onClick={() => router.push("/admin/debug")}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                  >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                      />
-                    </svg>
-                    Debug
-                  </button>
                   <button
                     onClick={() => AdminAuth.logout()}
                     className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
@@ -12515,6 +12525,9 @@ export default function AdminPage() {
                   </div>
                 </div>
               )}
+
+              {/* Joint Builder Tab */}
+              {activeTab === "jointBuilder" && <JointBuilderManagement />}
             </div>
           </main>
         </div>

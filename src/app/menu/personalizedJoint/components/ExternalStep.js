@@ -1,74 +1,12 @@
 "use client";
 
-import { useState } from "react";
-
-const externalOptions = [
-  {
-    id: "rosin-full-dip",
-    name: "Rosin Coating (Full Dip)",
-    description: "Entire joint dipped in premium rosin",
-    price: 80,
-    type: "coating",
-    icon: "ROSIN",
-    color: "from-amber-400 to-yellow-600",
-  },
-  {
-    id: "rosin-spiral",
-    name: "Rosin Spiral Wrap",
-    description: "Elegant spiral rosin pattern",
-    price: 60,
-    type: "wrap",
-    icon: "SPIRAL",
-    color: "from-yellow-500 to-amber-500",
-  },
-  {
-    id: "hash-M",
-    name: "Hash M Wrap",
-    description: "Premium hash in M pattern",
-    price: 70,
-    type: "wrap",
-    icon: "M",
-    color: "from-purple-500 to-pink-500",
-  },
-  {
-    id: "rosin-M",
-    name: "Rosin M Wrap",
-    description: "Premium rosin in M pattern",
-    price: 80,
-    type: "wrap",
-    icon: "M",
-    color: "from-purple-400 to-indigo-500",
-  },
-  {
-    id: "kief-coating",
-    name: "Kief Coating",
-    description: "Covered in premium kief crystals",
-    price: 70,
-    type: "coating",
-    icon: "KIEF",
-    color: "from-green-400 to-emerald-500",
-  },
-  {
-    id: "rosin-kief-combo",
-    name: "Rosin + Kief Combo",
-    description: "Rosin layer with kief coating",
-    price: 120,
-    type: "coating",
-    icon: "COMBO",
-    color: "from-green-400 to-emerald-500",
-  },
-  {
-    id: "oil-coating",
-    name: "Oil Coating (Light Brush)",
-    description: "Light cannabis oil application",
-    price: 50,
-    type: "coating",
-    icon: "OIL",
-    color: "from-orange-400 to-red-500",
-  },
-];
+import { useState, useEffect } from "react";
+import { getExternalOptions } from "@/lib/jointBuilderService";
 
 export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
+  const [coatingOptions, setCoatingOptions] = useState([]);
+  const [wrapOptions, setWrapOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCoating, setSelectedCoating] = useState(
     config.external?.coating?.id || null
   );
@@ -76,8 +14,29 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
     config.external?.wrap?.id || null
   );
 
+  // Fetch external options from Firebase
+  useEffect(() => {
+    const fetchExternalOptions = async () => {
+      try {
+        const [coatings, wraps] = await Promise.all([
+          getExternalOptions("coating"),
+          getExternalOptions("wrap"),
+        ]);
+        setCoatingOptions(coatings);
+        setWrapOptions(wraps);
+      } catch (error) {
+        console.error("Error fetching external options:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchExternalOptions();
+  }, []);
+
   const handleOptionSelect = (option) => {
-    if (option.type === "coating") {
+    // Use 'category' field from Firebase instead of 'type'
+    if (option.category === "coating") {
       const newCoating = selectedCoating === option.id ? null : option;
       setSelectedCoating(newCoating?.id || null);
 
@@ -90,7 +49,7 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
         coating: newCoating,
         wrap: newCoating ? null : config.external?.wrap, // Clear wrap if selecting coating
       });
-    } else if (option.type === "wrap") {
+    } else if (option.category === "wrap") {
       const newWrap = selectedWrap === option.id ? null : option;
       setSelectedWrap(newWrap?.id || null);
 
@@ -112,6 +71,21 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
 
   // Check if any external option is selected
   const hasExternalSelected = selectedCoating || selectedWrap;
+
+  // Combine coating and wrap options for display
+  const allExternalOptions = [...coatingOptions, ...wrapOptions];
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-green-400">Loading external options...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -146,10 +120,10 @@ export default function ExternalStep({ config, updateConfig, onNext, onPrev }) {
 
       {/* Options Grid - 2 columns x 4 rows */}
       <div className="grid grid-cols-2 gap-4">
-        {externalOptions.map((option) => {
+        {allExternalOptions.map((option) => {
           const isSelected =
-            (option.type === "coating" && selectedCoating === option.id) ||
-            (option.type === "wrap" && selectedWrap === option.id);
+            (option.category === "coating" && selectedCoating === option.id) ||
+            (option.category === "wrap" && selectedWrap === option.id);
 
           // Disable if another option is selected (only one external allowed)
           const isDisabled = hasExternalSelected && !isSelected;

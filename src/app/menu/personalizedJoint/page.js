@@ -348,8 +348,86 @@ export default function CustomJointBuilder() {
     resetSessionTimer(); // Reset timer on interaction
     // Handle the completed joint configuration
     console.log("Joint configuration completed:", jointConfig);
-    // You can add the joint to cart or process it here
-    // For now, just go back to menu
+
+    // Generate detailed description for cart display
+    const details = [];
+
+    // Paper details
+    if (jointConfig.paper) {
+      details.push(
+        `Paper: ${jointConfig.paper.name}${
+          jointConfig.paper.customLength
+            ? ` (${jointConfig.paper.customLength}cm)`
+            : ""
+        }`
+      );
+      details.push(`Capacity: ${jointConfig.paper.capacity.toFixed(1)}g`);
+    }
+
+    // Filter details
+    if (jointConfig.filter) {
+      details.push(`Filter: ${jointConfig.filter.name}`);
+    }
+
+    // Filling details
+    if (jointConfig.filling) {
+      // Worm
+      if (jointConfig.filling.worm) {
+        details.push(`Worm: ${jointConfig.filling.worm.name}`);
+      }
+
+      // Flower strains
+      if (jointConfig.filling.flower && jointConfig.filling.flower.length > 0) {
+        jointConfig.filling.flower.forEach((f) => {
+          details.push(`Flower: ${f.name} (${f.weight.toFixed(1)}g)`);
+        });
+      }
+
+      // Hash
+      if (jointConfig.filling.hash && jointConfig.filling.hash.length > 0) {
+        jointConfig.filling.hash.forEach((h) => {
+          details.push(`Hash: ${h.name} (${h.weight.toFixed(1)}g)`);
+        });
+      }
+    }
+
+    // External details
+    if (jointConfig.external) {
+      if (jointConfig.external.coating) {
+        details.push(`Coating: ${jointConfig.external.coating.name}`);
+      }
+      if (jointConfig.external.wrap) {
+        details.push(`Wrap: ${jointConfig.external.wrap.name}`);
+      }
+    }
+
+    // Add the custom joint to cart
+    const cartItem = {
+      id: `custom-joint-${Date.now()}`, // Unique ID for custom joint
+      name: "Custom Joint",
+      price: jointConfig.totalPrice,
+      quantity: 1,
+      image: "/Product/indoor hybrid normal.png", // Default joint image
+      productId: `custom-joint-${Date.now()}`,
+      categoryId: "custom-joint",
+      cashbackEnabled: false, // Custom joints don't have cashback
+      isCustomJoint: true, // Flag to identify custom joints
+      config: jointConfig, // Store the full configuration
+      details: details, // Detailed breakdown for cart display
+    };
+
+    // Get existing cart from sessionStorage
+    const existingCart = JSON.parse(sessionStorage.getItem("cart") || "[]");
+
+    // Add custom joint to cart
+    const newCart = [...existingCart, cartItem];
+
+    // Save to sessionStorage
+    sessionStorage.setItem("cart", JSON.stringify(newCart));
+
+    console.log("Custom joint added to cart:", cartItem);
+
+    // Redirect back to main kiosk menu
     router.push("/menu");
   };
 
@@ -504,7 +582,11 @@ export default function CustomJointBuilder() {
                   />
                 )}
                 {currentStep === 5 && (
-                  <ReviewStep config={jointConfig} onPrev={prevStep} />
+                  <ReviewStep
+                    config={jointConfig}
+                    onPrev={prevStep}
+                    onComplete={handleComplete}
+                  />
                 )}
               </div>
 

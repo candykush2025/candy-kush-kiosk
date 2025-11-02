@@ -2,61 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-
-const strainOptions = [
-  {
-    id: "sativa-og",
-    name: "Sativa OG",
-    type: "sativa",
-    pricePerGram: 150,
-    thc: "22%",
-  },
-  {
-    id: "indica-kush",
-    name: "Indica Kush",
-    type: "indica",
-    pricePerGram: 160,
-    thc: "24%",
-  },
-  {
-    id: "hybrid-haze",
-    name: "Hybrid Haze",
-    type: "hybrid",
-    pricePerGram: 155,
-    thc: "23%",
-  },
-  {
-    id: "green-dream",
-    name: "green Dream",
-    type: "hybrid",
-    pricePerGram: 170,
-    thc: "25%",
-  },
-];
-
-const hashOptions = [
-  { id: "moroccan-hash", name: "Moroccan Hash", pricePerGram: 200, thc: "40%" },
-  { id: "afghan-hash", name: "Afghan Hash", pricePerGram: 220, thc: "45%" },
-  { id: "ice-hash", name: "Ice Hash", pricePerGram: 250, thc: "50%" },
-  { id: "bubble-hash", name: "Bubble Hash", pricePerGram: 240, thc: "48%" },
-];
-
-const wormOptions = [
-  {
-    id: "hash-worm",
-    name: "Hash Worm (Donut Style)",
-    basePrice: 100,
-    description: "Hash center wrapped in flower",
-  },
-  {
-    id: "concentrate-worm",
-    name: "Concentrate Worm",
-    basePrice: 150,
-    description: "Concentrate core for extra potency",
-  },
-];
+import { getFillingOptions } from "@/lib/jointBuilderService";
 
 export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
+  const [strainOptions, setStrainOptions] = useState([]);
+  const [hashOptions, setHashOptions] = useState([]);
+  const [wormOptions, setWormOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [flowerItems, setFlowerItems] = useState(config.filling.flower || []);
   const [hashItems, setHashItems] = useState(config.filling.hash || []);
   const [wormEnabled, setWormEnabled] = useState(config.filling.worm !== null);
@@ -66,6 +18,28 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
   const [showWormModal, setShowWormModal] = useState(false);
   const [showFlowerModal, setShowFlowerModal] = useState(false);
   const [showHashModal, setShowHashModal] = useState(false);
+
+  // Fetch filling options from Firebase
+  useEffect(() => {
+    const fetchFillingOptions = async () => {
+      try {
+        const [flowers, hashes, worms] = await Promise.all([
+          getFillingOptions("flower"),
+          getFillingOptions("hash"),
+          getFillingOptions("worm"),
+        ]);
+        setStrainOptions(flowers);
+        setHashOptions(hashes);
+        setWormOptions(worms);
+      } catch (error) {
+        console.error("Error fetching filling options:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFillingOptions();
+  }, []);
 
   const totalCapacity = config.paper?.capacity || 0;
 
@@ -154,6 +128,18 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
       setSelectedWorm(worm);
     }
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-green-400">Loading filling options...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -326,39 +312,32 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                         <input
                           type="range"
                           min="0"
-                          max={Math.min(
-                            availableCapacity,
-                            item.weight + remainingCapacity
-                          )}
+                          max={availableCapacity}
                           step="0.01"
                           value={item.weight}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const newWeight = Number(e.target.value);
+                            const maxAllowed = item.weight + remainingCapacity;
+                            const clampedWeight = Math.min(
+                              newWeight,
+                              maxAllowed
+                            );
                             updateItemWeight(
                               flowerItems,
                               setFlowerItems,
                               item.id,
-                              Number(e.target.value)
-                            )
-                          }
+                              clampedWeight
+                            );
+                          }}
                           className="modern-slider w-full h-3 bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-full appearance-none cursor-pointer border border-green-500/20"
                           style={{
                             background: `linear-gradient(to right, 
                           rgb(34 197 94) 0%, 
                           rgb(16 185 129) ${
-                            (item.weight /
-                              Math.min(
-                                availableCapacity,
-                                item.weight + remainingCapacity
-                              )) *
-                            100
+                            (item.weight / availableCapacity) * 100
                           }%, 
                           rgba(255 255 255 / 0.1) ${
-                            (item.weight /
-                              Math.min(
-                                availableCapacity,
-                                item.weight + remainingCapacity
-                              )) *
-                            100
+                            (item.weight / availableCapacity) * 100
                           }%, 
                           rgba(255 255 255 / 0.1) 100%)`,
                           }}
@@ -369,13 +348,7 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                           <span className="text-green-400 font-medium">
                             {item.weight.toFixed(2)}g
                           </span>
-                          <span>
-                            {Math.min(
-                              availableCapacity,
-                              item.weight + remainingCapacity
-                            ).toFixed(1)}
-                            g
-                          </span>
+                          <span>{availableCapacity.toFixed(1)}g</span>
                         </div>
                       </div>
 
@@ -442,39 +415,32 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                         <input
                           type="range"
                           min="0"
-                          max={Math.min(
-                            availableCapacity,
-                            item.weight + remainingCapacity
-                          )}
+                          max={availableCapacity}
                           step="0.01"
                           value={item.weight}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const newWeight = Number(e.target.value);
+                            const maxAllowed = item.weight + remainingCapacity;
+                            const clampedWeight = Math.min(
+                              newWeight,
+                              maxAllowed
+                            );
                             updateItemWeight(
                               hashItems,
                               setHashItems,
                               item.id,
-                              Number(e.target.value)
-                            )
-                          }
+                              clampedWeight
+                            );
+                          }}
                           className="modern-slider w-full h-3 bg-gradient-to-r from-amber-900/30 to-yellow-900/30 rounded-full appearance-none cursor-pointer border border-amber-500/20"
                           style={{
                             background: `linear-gradient(to right, 
                           rgb(245 158 11) 0%, 
                           rgb(251 191 36) ${
-                            (item.weight /
-                              Math.min(
-                                availableCapacity,
-                                item.weight + remainingCapacity
-                              )) *
-                            100
+                            (item.weight / availableCapacity) * 100
                           }%, 
                           rgba(255 255 255 / 0.1) ${
-                            (item.weight /
-                              Math.min(
-                                availableCapacity,
-                                item.weight + remainingCapacity
-                              )) *
-                            100
+                            (item.weight / availableCapacity) * 100
                           }%, 
                           rgba(255 255 255 / 0.1) 100%)`,
                           }}
@@ -485,13 +451,7 @@ export default function FillingStep({ config, updateConfig, onNext, onPrev }) {
                           <span className="text-amber-400 font-medium">
                             {item.weight.toFixed(2)}g
                           </span>
-                          <span>
-                            {Math.min(
-                              availableCapacity,
-                              item.weight + remainingCapacity
-                            ).toFixed(1)}
-                            g
-                          </span>
+                          <span>{availableCapacity.toFixed(1)}g</span>
                         </div>
                       </div>
 

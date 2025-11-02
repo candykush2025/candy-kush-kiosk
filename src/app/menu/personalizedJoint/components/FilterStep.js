@@ -1,51 +1,42 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-
-const filterOptions = [
-  {
-    id: "paper-filter",
-    name: "Paper Filter",
-    description: "Classic cardboard tip, smooth draw",
-    hasSizes: true,
-    sizes: [
-      { id: "small", label: "Small", price: 5 },
-      { id: "medium", label: "Medium", price: 5 },
-    ],
-    icon: "PAPER",
-    color: "from-amber-50 to-amber-100",
-    glassSize: null,
-  },
-  {
-    id: "slim-glass",
-    name: "Slim Glass Filter (10mm)",
-    description: "Elegant glass tip, cooler smoke",
-    price: 25,
-    hasSizes: false,
-    icon: "SLIM",
-    color: "from-blue-200 to-cyan-200",
-    glassSize: "10mm",
-  },
-  {
-    id: "wide-glass",
-    name: "Wide Glass Filter (12mm)",
-    description: "Premium wide glass, maximum airflow",
-    price: 35,
-    hasSizes: false,
-    icon: "WIDE",
-    color: "from-indigo-200 to-green-200",
-    glassSize: "12mm",
-  },
-];
+import {
+  getFilterOptions,
+  getCompatibilityRules,
+} from "@/lib/jointBuilderService";
 
 export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
+  const [filterOptions, setFilterOptions] = useState([]);
+  const [compatibilityRules, setCompatibilityRules] = useState([]);
+  const [loading, setLoading] = useState(true);
   const backdropRef = useRef(null);
   const [selectedFilter, setSelectedFilter] = useState(
     config.filter?.id || null
   );
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [selectedFilterForModal, setSelectedFilterForModal] = useState(null);
+
+  // Fetch filter options and compatibility rules from Firebase
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      try {
+        const [filters, rules] = await Promise.all([
+          getFilterOptions(),
+          getCompatibilityRules(config.paper?.type),
+        ]);
+        setFilterOptions(filters);
+        setCompatibilityRules(rules);
+      } catch (error) {
+        console.error("Error fetching filter data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFilterData();
+  }, [config.paper?.type]);
 
   // Check if paper type is pre-rolled or glass cone (built-in filter)
   const isPreRolled = config.paper?.type === "pre-rolled-ck";
@@ -61,50 +52,33 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
     isPreRolled
   );
 
-  // Filter available options based on paper type and conflic.txt rules
+  // Filter available options based on compatibility rules from Firebase
   const availableFilters = useMemo(() => {
-    if (!paperType) return filterOptions;
+    if (!paperType || compatibilityRules.length === 0) return filterOptions;
 
-    switch (paperType) {
-      case "pre-rolled-ck":
-        // Pre-rolled has built-in filter
-        return [];
+    // Find the rule for the current paper type
+    const rule = compatibilityRules.find((r) => r.paperType === paperType);
+    if (!rule) return filterOptions;
 
-      case "hemp-wrap":
-        // Hemp Wrap: ✅ Large glass (12mm) OR Paper filter
-        // ❌ Small glass (10mm) NOT allowed
-        return filterOptions.filter(
-          (f) => f.id === "paper-filter" || f.glassSize === "12mm"
-        );
+    // Apply the rule
+    return filterOptions.filter((filter) => {
+      // Check if filter is allowed
+      const isAllowed = rule.allowedFilters.includes(filter.id);
 
-      case "golden-paper":
-        // Golden Paper: ✅ Paper filter OR Small glass (10mm)
-        // ❌ Large glass (12mm) NOT allowed
-        return filterOptions.filter(
-          (f) => f.id === "paper-filter" || f.glassSize === "10mm"
-        );
-
-      case "rolling-paper-custom":
-        // Custom Paper: Filter depends on length
+      // For custom paper, also check length restrictions
+      if (paperType === "rolling-paper-custom" && customLength > 0) {
         if (customLength <= 12) {
-          // Up to 12 cm → paper filter or small glass (10mm)
-          return filterOptions.filter(
-            (f) => f.id === "paper-filter" || f.glassSize === "10mm"
-          );
+          return filter.id === "paper-filter" || filter.glassSize === "10mm";
         } else if (customLength <= 16) {
-          // 12-16 cm → medium paper filter (3.5 cm)
-          // For now, show paper filter option
-          return filterOptions.filter((f) => f.id === "paper-filter");
+          return filter.id === "paper-filter";
         } else {
-          // 16-23 cm → large paper filter (5 cm)
-          // For now, show paper filter option
-          return filterOptions.filter((f) => f.id === "paper-filter");
+          return filter.id === "paper-filter";
         }
+      }
 
-      default:
-        return filterOptions;
-    }
-  }, [paperType, customLength]);
+      return isAllowed;
+    });
+  }, [paperType, customLength, filterOptions, compatibilityRules]);
 
   const handleFilterSelect = (filter) => {
     // If filter has sizes, open modal
@@ -136,6 +110,18 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
     setShowSizeModal(false);
   };
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-green-400">Loading filter options...</p>
+        </div>
+      </div>
+    );
+  }
+
   // If pre-rolled or glass cone, show message and skip this step
   if (hasBuiltInFilter) {
     return (
@@ -144,7 +130,7 @@ export default function FilterStep({ config, updateConfig, onNext, onPrev }) {
           <div className="text-6xl mb-4">✓</div>
           <h2 className="text-3xl font-bold mb-2">Filter Already Included</h2>
           <p className="text-green-200 text-lg">
-            {isGlassCone 
+            {isGlassCone
               ? "Glass cones come with a built-in glass filter. No need to select one!"
               : "Pre-rolled cones come with a built-in filter. No need to select one!"}
           </p>

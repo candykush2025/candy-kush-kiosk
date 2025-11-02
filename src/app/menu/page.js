@@ -2641,6 +2641,32 @@ export default function MenuPage() {
     };
   };
 
+  // Helper function to get cashback percentage for a product card
+  const getProductCashbackPercentage = (product) => {
+    // Don't show cashback for non-members
+    if (!customer || customer.isNoMember) {
+      return 0;
+    }
+
+    // Priority 1: Product-level cashback
+    if (product.cashbackEnabled && product.cashbackValue > 0) {
+      if (product.cashbackType === "percentage") {
+        return product.cashbackValue;
+      } else if (product.cashbackType === "fixed") {
+        // For fixed cashback, we can't show a percentage on the card
+        // but we can indicate there's cashback available
+        return "fixed";
+      }
+    }
+
+    // Priority 2: Category-level cashback
+    if (product.categoryId && categoryPercentages[product.categoryId]) {
+      return categoryPercentages[product.categoryId];
+    }
+
+    return 0;
+  };
+
   // Stock alert helper functions
   const getProductStockAlert = (productId) => {
     return stockAlerts.find(
@@ -4009,6 +4035,20 @@ export default function MenuPage() {
                                                 )}
                                               </div>
                                             )}
+                                            {/* Cashback Badge */}
+                                            {getProductCashbackPercentage(
+                                              product
+                                            ) > 0 && (
+                                              <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-2 py-1 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+                                                {getProductCashbackPercentage(
+                                                  product
+                                                ) === "fixed"
+                                                  ? "💰"
+                                                  : `+${getProductCashbackPercentage(
+                                                      product
+                                                    )}%`}
+                                              </div>
+                                            )}
                                           </div>
                                         )}
                                         <div className="text-center space-y-1">
@@ -4087,6 +4127,18 @@ export default function MenuPage() {
                                   {getProductCartQuantity(product) > 0 && (
                                     <div className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full min-w-[24px] h-6 flex items-center justify-center text-lg font-bold shadow-lg">
                                       {getProductCartQuantity(product)}
+                                    </div>
+                                  )}
+                                  {/* Cashback Badge */}
+                                  {getProductCashbackPercentage(product) >
+                                    0 && (
+                                    <div className="absolute -top-2 -left-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-full px-2 py-1 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white">
+                                      {getProductCashbackPercentage(product) ===
+                                      "fixed"
+                                        ? "💰"
+                                        : `+${getProductCashbackPercentage(
+                                            product
+                                          )}%`}
                                     </div>
                                   )}
                                 </div>
@@ -4190,7 +4242,7 @@ export default function MenuPage() {
         <div className="px-6 pb-6">
           <button
             onClick={handleCancelOrder}
-            className="w-full bg-red-600 hover:bg-red-700 text-white py-8 px-6 rounded-xl font-semibold text-lg transition-colors"
+            className="w-full bg-red-600 hover:bg-red-700 text-white py-7 px-6 rounded-xl font-semibold text-3xl transition-colors"
           >
             Cancel Order
           </button>
