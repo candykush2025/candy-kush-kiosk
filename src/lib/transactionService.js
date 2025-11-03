@@ -21,6 +21,33 @@ import { db } from "./firebase";
 const TRANSACTIONS_COLLECTION = "transactions";
 const ORDERS_COLLECTION = "orders";
 
+// Helper function to remove undefined values from objects and arrays
+function cleanUndefinedValues(obj) {
+  if (obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj
+      .map((item) => cleanUndefinedValues(item))
+      .filter((item) => item !== undefined);
+  } else if (obj !== null && typeof obj === "object") {
+    const cleaned = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        const value = obj[key];
+        if (value !== undefined) {
+          const cleanedValue = cleanUndefinedValues(value);
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+          }
+        }
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
 // Transaction Service
 export class TransactionService {
   // Generate next transaction ID
@@ -98,13 +125,33 @@ export class TransactionService {
       const transactionId = await this.generateTransactionId();
       console.log("🆔 Generated transaction ID:", transactionId);
 
+      // Clean and validate items array
+      const cleanedItems = (transactionData.items || []).map((item) => ({
+        id: item.id || "",
+        name: item.name || "",
+        price: item.price || 0,
+        quantity: item.quantity || 0,
+        image: item.image || "",
+        productId: item.productId || item.id || "",
+        categoryId: item.categoryId || "",
+        cashbackEnabled: item.cashbackEnabled || false,
+        cashbackType: item.cashbackType || "",
+        cashbackValue: item.cashbackValue || 0,
+        cashbackMinPurchase: item.cashbackMinPurchase || 0,
+      }));
+
+      // Build transaction document with only defined values
       const transactionDocument = {
         transactionId: transactionId,
         customerId: transactionData.customerId || null,
         customerName: transactionData.customerName || "",
-        orderNumber: transactionData.orderNumber || "",
-        items: transactionData.items || [],
-        subtotal: transactionData.subtotal || 0,
+        orderNumber: transactionData.orderNumber || transactionId, // Use transactionId as fallback
+        items: cleanedItems,
+        subtotal:
+          transactionData.subtotal ||
+          transactionData.originalTotal ||
+          transactionData.total ||
+          0,
         tax: transactionData.tax || 0,
         discount: transactionData.discount || 0,
         total: transactionData.total || 0,
@@ -116,21 +163,62 @@ export class TransactionService {
         location: transactionData.location || "Main Store",
         notes: transactionData.notes || "",
         refundReason: transactionData.refundReason || "",
-        originalTransactionId: transactionData.originalTransactionId || null,
         // Add point calculation fields
         pointsEarned: transactionData.pointsEarned || 0,
         pointDetails: transactionData.pointDetails || [],
-        pointCalculation: transactionData.pointCalculation || null,
         cashbackEarned: transactionData.cashbackEarned || 0,
+        // Points usage information
+        pointsUsed: transactionData.pointsUsed || 0,
+        pointsUsedValue: transactionData.pointsUsedValue || 0,
+        pointsUsagePercentage: transactionData.pointsUsagePercentage || 0,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
 
+      // Only add optional fields if they have actual values (not null/undefined)
+      if (transactionData.originalTransactionId) {
+        transactionDocument.originalTransactionId =
+          transactionData.originalTransactionId;
+      }
+      if (
+        transactionData.pointCalculation &&
+        typeof transactionData.pointCalculation === "object"
+      ) {
+        // Clean the pointCalculation object
+        transactionDocument.pointCalculation = {
+          totalPointsEarned:
+            transactionData.pointCalculation.totalPointsEarned || 0,
+          calculationMethod:
+            transactionData.pointCalculation.calculationMethod || "none",
+          items: Array.isArray(transactionData.pointCalculation.items)
+            ? transactionData.pointCalculation.items.map((item) => ({
+                productId: item.productId || "",
+                productName: item.productName || "",
+                categoryId: item.categoryId || "",
+                categoryName: item.categoryName || "",
+                subtotal: item.subtotal || 0,
+                cashbackType: item.cashbackType || "",
+                cashbackValue: item.cashbackValue || 0,
+                cashbackAmount: item.cashbackAmount || 0,
+                points: item.points || 0,
+              }))
+            : [],
+        };
+      }
+
       console.log("📄 Transaction document to save:", transactionDocument);
+
+      // Clean undefined values from the document
+      const cleanedDocument = cleanUndefinedValues(transactionDocument);
+      console.log("🧹 Cleaned transaction document:", cleanedDocument);
+      console.log(
+        "🔍 Cleaned document as JSON:",
+        JSON.stringify(cleanedDocument, null, 2)
+      );
 
       const docRef = await addDoc(
         collection(db, TRANSACTIONS_COLLECTION),
-        transactionDocument
+        cleanedDocument
       );
 
       console.log(

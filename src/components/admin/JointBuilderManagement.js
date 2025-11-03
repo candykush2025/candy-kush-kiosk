@@ -436,8 +436,8 @@ export default function JointBuilderManagement() {
               <div>
                 <h3 className="text-2xl font-bold">Filter Selection</h3>
                 <p className="text-blue-100 mt-1">
-                  Customer chooses filter type and size (if paper doesn&apos;t have
-                  built-in filter)
+                  Customer chooses filter type and size (if paper doesn&apos;t
+                  have built-in filter)
                 </p>
               </div>
             </div>

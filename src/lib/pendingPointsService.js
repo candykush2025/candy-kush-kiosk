@@ -17,13 +17,22 @@ export class PendingPointsService {
   static async createPendingPoints(pendingPointData) {
     try {
       const pendingPointsRef = collection(db, "pendingPoints");
-      const docRef = await addDoc(pendingPointsRef, {
-        ...pendingPointData,
+
+      // Create a clean document with only defined values
+      const cleanDocument = {
+        customerId: pendingPointData.customerId || "",
+        customerName: pendingPointData.customerName || "",
+        pointsAmount: pendingPointData.pointsAmount || 0,
+        transactionId: pendingPointData.transactionId || "",
+        reason: pendingPointData.reason || "",
+        details: pendingPointData.details || "",
         status: "pending",
         createdAt: Timestamp.now(),
         processedAt: null,
         processedBy: null,
-      });
+      };
+
+      const docRef = await addDoc(pendingPointsRef, cleanDocument);
 
       console.log("Pending points created with ID:", docRef.id);
       return docRef.id;
