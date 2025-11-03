@@ -7,23 +7,27 @@ The kiosk now **automatically sends completed orders to the POS system** via HTT
 ## Implementation Summary
 
 ### 1. **Added `sendOrderToPOS()` Function**
-   - Location: `src/app/menu/page.js` (line ~218)
-   - Sends HTTP POST to POS API endpoint
-   - Includes complete order data with customer, items, pricing, payment details
+
+- Location: `src/app/menu/page.js` (line ~218)
+- Sends HTTP POST to POS API endpoint
+- Includes complete order data with customer, items, pricing, payment details
 
 ### 2. **Integrated into Payment Flow**
-   - Location: `src/app/menu/page.js` (line ~1775)
-   - Automatically called after successful transaction creation
-   - Sends data immediately when order completes
+
+- Location: `src/app/menu/page.js` (line ~1775)
+- Automatically called after successful transaction creation
+- Sends data immediately when order completes
 
 ### 3. **Added Crypto Payment Data State**
-   - Stores crypto payment details for POS submission
-   - Includes payment ID, transaction hash, currency, amount
+
+- Stores crypto payment details for POS submission
+- Includes payment ID, transaction hash, currency, amount
 
 ### 4. **Environment Variables Added**
-   - `NEXT_PUBLIC_POS_API_URL` - POS API endpoint URL
-   - `NEXT_PUBLIC_KIOSK_ID` - Unique kiosk identifier
-   - `NEXT_PUBLIC_KIOSK_API_KEY` - Optional API key for security
+
+- `NEXT_PUBLIC_POS_API_URL` - POS API endpoint URL
+- `NEXT_PUBLIC_KIOSK_ID` - Unique kiosk identifier
+- `NEXT_PUBLIC_KIOSK_API_KEY` - Optional API key for security
 
 ## How It Works
 
@@ -86,6 +90,7 @@ The POS system must create the API endpoint to receive orders:
 **Endpoint:** `POST /api/orders/submit`
 
 **Expected Request:**
+
 ```json
 {
   "orderData": {
@@ -101,6 +106,7 @@ The POS system must create the API endpoint to receive orders:
 ```
 
 **Expected Response:**
+
 ```json
 {
   "success": true,
@@ -116,6 +122,7 @@ The POS system must create the API endpoint to receive orders:
 ## Files Modified
 
 1. ✅ `src/app/menu/page.js`
+
    - Added `sendOrderToPOS()` function
    - Added crypto payment data state
    - Integrated POS submission into payment flow
@@ -126,10 +133,12 @@ The POS system must create the API endpoint to receive orders:
 ## Next Steps for POS Team
 
 Refer to the documentation:
+
 - `KIOSK_ORDER_SUBMISSION_API.md` - Complete API specification
 - `KIOSK_TO_POS_ORDER_API.md` - Order data structure reference
 
 The POS team needs to:
+
 1. Create `/api/orders/submit` endpoint
 2. Save orders to Firebase `kioskOrders` collection
 3. Build cashier confirmation interface

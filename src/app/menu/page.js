@@ -221,32 +221,33 @@ export default function MenuPage() {
   // Send order to POS API
   const sendOrderToPOS = async (orderData) => {
     try {
-      const posApiUrl = process.env.NEXT_PUBLIC_POS_API_URL || 'https://pos-candy-kush.vercel.app';
-      const apiKey = process.env.NEXT_PUBLIC_KIOSK_API_KEY || '';
-      
-      console.log('📤 Sending order to POS:', posApiUrl);
-      
+      const posApiUrl =
+        process.env.NEXT_PUBLIC_POS_API_URL ||
+        "https://pos-candy-kush.vercel.app";
+      const apiKey = process.env.NEXT_PUBLIC_KIOSK_API_KEY || "";
+
+      console.log("📤 Sending order to POS:", posApiUrl);
+
       const response = await fetch(`${posApiUrl}/api/orders/submit`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Kiosk-ID': process.env.NEXT_PUBLIC_KIOSK_ID || 'KIOSK-001',
-          ...(apiKey && { 'X-API-Key': apiKey })
+          "Content-Type": "application/json",
+          "X-Kiosk-ID": process.env.NEXT_PUBLIC_KIOSK_ID || "KIOSK-001",
+          ...(apiKey && { "X-API-Key": apiKey }),
         },
-        body: JSON.stringify({ orderData })
+        body: JSON.stringify({ orderData }),
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to submit order to POS');
+        throw new Error(result.message || "Failed to submit order to POS");
       }
-      
-      console.log('✅ Order submitted to POS successfully:', result.data);
+
+      console.log("✅ Order submitted to POS successfully:", result.data);
       return result.data;
-      
     } catch (error) {
-      console.error('❌ Failed to send order to POS:', error);
+      console.error("❌ Failed to send order to POS:", error);
       // Don't throw error - order is already saved in Firebase
       // Just log for monitoring
       return null;
@@ -1808,24 +1809,24 @@ export default function MenuPage() {
           transactionId: result.transactionId,
           orderNumber: result.transactionId,
           kioskId: process.env.NEXT_PUBLIC_KIOSK_ID || "KIOSK-001",
-          
+
           customer: {
             id: customer?.id || null,
             customerId: customer?.customerId || null,
-            name: customer?.name || '',
-            lastName: customer?.lastName || '',
-            fullName: customer 
-              ? customer.isNoMember 
-                ? "No Member" 
-                : `${customer.name} ${customer.lastName || ''}`.trim()
-              : 'Guest',
-            email: customer?.email || '',
-            phone: customer?.cell || '',
+            name: customer?.name || "",
+            lastName: customer?.lastName || "",
+            fullName: customer
+              ? customer.isNoMember
+                ? "No Member"
+                : `${customer.name} ${customer.lastName || ""}`.trim()
+              : "Guest",
+            email: customer?.email || "",
+            phone: customer?.cell || "",
             isNoMember: customer?.isNoMember !== false,
-            currentPoints: customer?.customPoints || 0
+            currentPoints: customer?.customPoints || 0,
           },
-          
-          items: cart.map(item => ({
+
+          items: cart.map((item) => ({
             id: item.id,
             productId: item.productId,
             name: item.name,
@@ -1833,63 +1834,76 @@ export default function MenuPage() {
             quantity: item.quantity,
             image: item.image,
             categoryId: item.categoryId,
-            categoryName: item.categoryName || '',
+            categoryName: item.categoryName || "",
             subtotal: item.price * item.quantity,
             cashbackEnabled: item.cashbackEnabled || false,
-            cashbackType: item.cashbackType || '',
-            cashbackValue: item.cashbackValue || 0
+            cashbackType: item.cashbackType || "",
+            cashbackValue: item.cashbackValue || 0,
           })),
-          
+
           pricing: {
             subtotal: originalTotal,
             tax: 0,
             discount: 0,
             pointsUsed: pointsToUse,
             pointsUsedValue: pointsValue,
-            total: finalTotal
+            total: finalTotal,
           },
-          
+
           payment: {
             method: finalPaymentMethod,
-            status: finalPaymentMethod === 'crypto' ? 'pending_confirmation' : 'completed',
-            cryptoDetails: finalPaymentMethod === 'crypto' && cryptoPaymentData ? {
-              currency: cryptoPaymentData.currency || selectedCryptoCurrency,
-              paymentId: cryptoPaymentData.payment_id || '',
-              amount: cryptoPaymentData.pay_amount || 0,
-              amountInCrypto: cryptoPaymentData.pay_amount || 0,
-              network: cryptoPaymentData.network || '',
-              address: cryptoPaymentData.pay_address || '',
-              transactionHash: null,
-              paymentUrl: cryptoPaymentData.invoice_url || ''
-            } : null
+            status:
+              finalPaymentMethod === "crypto"
+                ? "pending_confirmation"
+                : "completed",
+            cryptoDetails:
+              finalPaymentMethod === "crypto" && cryptoPaymentData
+                ? {
+                    currency:
+                      cryptoPaymentData.currency || selectedCryptoCurrency,
+                    paymentId: cryptoPaymentData.payment_id || "",
+                    amount: cryptoPaymentData.pay_amount || 0,
+                    amountInCrypto: cryptoPaymentData.pay_amount || 0,
+                    network: cryptoPaymentData.network || "",
+                    address: cryptoPaymentData.pay_address || "",
+                    transactionHash: null,
+                    paymentUrl: cryptoPaymentData.invoice_url || "",
+                  }
+                : null,
           },
-          
+
           points: {
             earned: customer?.isNoMember ? 0 : cashbackPoints,
             used: pointsToUse,
             usedValue: pointsValue,
             usagePercentage: pointsUsagePercentage,
-            details: customer?.isNoMember ? [] : window.menuCashbackDetails || [],
+            details: customer?.isNoMember
+              ? []
+              : window.menuCashbackDetails || [],
             calculation: {
               totalPointsEarned: customer?.isNoMember ? 0 : cashbackPoints,
-              calculationMethod: customer?.isNoMember ? 'none' : 'category-based',
-              items: customer?.isNoMember ? [] : window.menuCashbackDetails || []
-            }
+              calculationMethod: customer?.isNoMember
+                ? "none"
+                : "category-based",
+              items: customer?.isNoMember
+                ? []
+                : window.menuCashbackDetails || [],
+            },
           },
-          
+
           metadata: {
-            source: 'kiosk',
-            kioskId: process.env.NEXT_PUBLIC_KIOSK_ID || 'KIOSK-001',
-            kioskLocation: 'Main Store',
+            source: "kiosk",
+            kioskId: process.env.NEXT_PUBLIC_KIOSK_ID || "KIOSK-001",
+            kioskLocation: "Main Store",
             orderCompletedAt: new Date().toISOString(),
             requiresConfirmation: true,
-            notes: ''
-          }
+            notes: "",
+          },
         });
-        
-        console.log('✅ Order sent to POS successfully');
+
+        console.log("✅ Order sent to POS successfully");
       } catch (posError) {
-        console.error('❌ Failed to send order to POS:', posError);
+        console.error("❌ Failed to send order to POS:", posError);
         // Don't fail the transaction - order is already saved in Firebase
       }
 
