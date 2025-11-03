@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const CATEGORIES_COLLECTION = "categories";
@@ -28,23 +28,11 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get("active") === "true";
 
-    // Build query
-    let q = query(
-      collection(db, CATEGORIES_COLLECTION),
-      orderBy("order", "asc")
-    );
-
-    // Filter active only if requested
-    if (activeOnly) {
-      q = query(
-        collection(db, CATEGORIES_COLLECTION),
-        where("isActive", "==", true),
-        orderBy("order", "asc")
-      );
-    }
-
+    // Build query - simplified to avoid Firestore index requirements
+    const q = query(collection(db, CATEGORIES_COLLECTION));
+    
     const querySnapshot = await getDocs(q);
-    const categories = querySnapshot.docs.map((doc) => ({
+    let categories = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       categoryId: doc.data().categoryId || doc.id,
       name: doc.data().name,
@@ -52,6 +40,14 @@ export async function GET(request) {
       isActive: doc.data().isActive !== false,
       order: doc.data().order || 0,
     }));
+
+    // Filter active only if requested (client-side filtering)
+    if (activeOnly) {
+      categories = categories.filter(cat => cat.isActive === true);
+    }
+
+    // Sort by order field (client-side sorting)
+    categories.sort((a, b) => a.order - b.order);
 
     console.log("📂 Categories fetched for POS:", categories.length);
 
