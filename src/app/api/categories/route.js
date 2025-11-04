@@ -6,9 +6,9 @@ const CATEGORIES_COLLECTION = "categories";
 
 // CORS headers for POS system access
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 /**
@@ -30,7 +30,7 @@ export async function GET(request) {
 
     // Build query - simplified to avoid Firestore index requirements
     const q = query(collection(db, CATEGORIES_COLLECTION));
-    
+
     const querySnapshot = await getDocs(q);
     let categories = querySnapshot.docs.map((doc) => ({
       id: doc.id,
@@ -43,7 +43,7 @@ export async function GET(request) {
 
     // Filter active only if requested (client-side filtering)
     if (activeOnly) {
-      categories = categories.filter(cat => cat.isActive === true);
+      categories = categories.filter((cat) => cat.isActive === true);
     }
 
     // Sort by order field (client-side sorting)
@@ -51,11 +51,14 @@ export async function GET(request) {
 
     console.log("📂 Categories fetched for POS:", categories.length);
 
-    return NextResponse.json({
-      success: true,
-      data: categories,
-      count: categories.length,
-    }, { headers: corsHeaders });
+    return NextResponse.json(
+      {
+        success: true,
+        data: categories,
+        count: categories.length,
+      },
+      { headers: corsHeaders }
+    );
   } catch (error) {
     console.error("Error fetching categories:", error);
     return NextResponse.json(

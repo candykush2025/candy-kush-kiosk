@@ -16,9 +16,9 @@ const CUSTOMERS_COLLECTION = "customers";
 
 // CORS headers for POS system access
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 /**
@@ -73,10 +73,13 @@ export async function GET(request, { params }) {
       updatedAt: customerDoc.data().updatedAt?.toDate()?.toISOString(),
     };
 
-    return NextResponse.json({
-      success: true,
-      data: customerData,
-    }, { headers: corsHeaders });
+    return NextResponse.json(
+      {
+        success: true,
+        data: customerData,
+      },
+      { headers: corsHeaders }
+    );
   } catch (error) {
     console.error("Error fetching customer:", error);
     return NextResponse.json(
@@ -238,17 +241,20 @@ export async function DELETE(request, { params }) {
       console.log("✅ Customer soft deleted:", id);
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Customer deleted successfully",
-      data: {
-        id: customerRef.id,
-        customerId: customerData.customerId,
-        deleted: true,
-        deletedAt: new Date().toISOString(),
-        hardDelete: hardDelete,
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Customer deleted successfully",
+        data: {
+          id: customerRef.id,
+          customerId: customerData.customerId,
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+          hardDelete: hardDelete,
+        },
       },
-    }, { headers: corsHeaders });
+      { headers: corsHeaders }
+    );
   } catch (error) {
     console.error("Error deleting customer:", error);
     return NextResponse.json(

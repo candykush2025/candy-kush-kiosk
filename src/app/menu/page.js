@@ -4415,9 +4415,9 @@ export default function MenuPage() {
           {/* Close Button - Top Right */}
           <button
             onClick={closeQuantityPopup}
-            className="absolute top-8 right-8 bg-red-600 hover:bg-red-700 text-white w-16 h-16 rounded-full font-bold text-3xl transition-all duration-200 shadow-lg z-20 flex items-center justify-center"
+            className="absolute top-8 right-8 bg-red-600 hover:bg-red-700 text-white w-24 h-24 rounded-full font-bold text-4xl transition-all duration-200 shadow-lg z-20 flex items-center justify-center"
           >
-            ×
+            X
           </button>
 
           {/* Background Content - 3D Model OR Image (Clear and Normal, No Blur) */}

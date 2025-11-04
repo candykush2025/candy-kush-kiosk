@@ -5,6 +5,7 @@
 This API allows the POS system to manage customers that are synced with the Kiosk system via Firebase. All customer operations are performed on Firebase Firestore, which automatically syncs with the Kiosk in real-time.
 
 **CORS Enabled:**
+
 - ✅ localhost (development)
 - ✅ https://pos-candy-kush.vercel.app (production)
 
@@ -1151,10 +1152,12 @@ export async function DELETE(request, { params }) {
 ### CORS Testing
 
 All endpoints support CORS for:
+
 - **localhost** (any port) - for development
 - **https://pos-candy-kush.vercel.app** - for production POS system
 
 CORS headers included:
+
 - `Access-Control-Allow-Origin: *`
 - `Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS`
 - `Access-Control-Allow-Headers: Content-Type, Authorization`

@@ -15,9 +15,9 @@ const CUSTOMERS_COLLECTION = "customers";
 
 // CORS headers for POS system access
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*', // Allow all origins (localhost + production)
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  "Access-Control-Allow-Origin": "*", // Allow all origins (localhost + production)
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
 /**
@@ -81,12 +81,15 @@ export async function GET(request) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: customers,
-      count: customers.length,
-      total: customers.length,
-    }, { headers: corsHeaders });
+    return NextResponse.json(
+      {
+        success: true,
+        data: customers,
+        count: customers.length,
+        total: customers.length,
+      },
+      { headers: corsHeaders }
+    );
   } catch (error) {
     console.error("Error fetching customers:", error);
     return NextResponse.json(
