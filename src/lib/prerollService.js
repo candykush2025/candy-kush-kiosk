@@ -40,6 +40,8 @@ export class PrerollService {
       // Return default configuration if not exists
       return {
         id: PREROLLS_CONFIG_DOC,
+        backgroundType: "image", // "image" or "color"
+        backgroundColor: "#ffffff",
         backgroundImage: "/background.jpg",
         backgroundFit: "cover",
         isActive: true,
@@ -57,13 +59,15 @@ export class PrerollService {
     try {
       const docRef = doc(db, PREROLLS_COLLECTION, PREROLLS_CONFIG_DOC);
       let updateData = {
+        backgroundType: configData.backgroundType || "image",
+        backgroundColor: configData.backgroundColor || "#ffffff",
         backgroundFit: configData.backgroundFit || "cover",
         isActive:
           configData.isActive !== undefined ? configData.isActive : true,
         updatedAt: serverTimestamp(),
       };
 
-      // Handle background image upload
+      // Handle background image upload (only if type is "image")
       if (backgroundImageFile) {
         const imagePath = `prerolls/background/${backgroundImageFile.name}`;
         const imageUrl = await this.uploadImage(backgroundImageFile, imagePath);
@@ -629,6 +633,73 @@ export class PrerollService {
   }
 
   /**
+   * Update cell background for a product
+   */
+  static async updateCellBackground(
+    productId,
+    backgroundType,
+    backgroundColor = null,
+    backgroundImageFile = null,
+    textColor = null
+  ) {
+    try {
+      const docRef = doc(
+        db,
+        PREROLLS_COLLECTION,
+        "data",
+        "products",
+        productId
+      );
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        throw new Error("Product not found");
+      }
+
+      const currentData = docSnap.data();
+      let updateData = {
+        cellBackgroundType: backgroundType,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Update text color if provided
+      if (textColor !== null) {
+        updateData.cellTextColor = textColor;
+      }
+
+      if (backgroundType === "color") {
+        // Set color background
+        updateData.cellBackgroundColor = backgroundColor || "#ffffff";
+
+        // Delete background image if exists
+        if (currentData.cellBackgroundImagePath) {
+          await this.deleteImage(currentData.cellBackgroundImagePath);
+          updateData.cellBackgroundImage = "";
+          updateData.cellBackgroundImagePath = "";
+        }
+      } else if (backgroundType === "image" && backgroundImageFile) {
+        // Delete old background image if exists
+        if (currentData.cellBackgroundImagePath) {
+          await this.deleteImage(currentData.cellBackgroundImagePath);
+        }
+
+        // Upload new background image
+        const imagePath = `prerolls/products/${currentData.quality}_${currentData.strain}/cell_background_${backgroundImageFile.name}`;
+        const imageUrl = await this.uploadImage(backgroundImageFile, imagePath);
+
+        updateData.cellBackgroundImage = imageUrl;
+        updateData.cellBackgroundImagePath = imagePath;
+      }
+
+      await updateDoc(docRef, updateData);
+      return true;
+    } catch (error) {
+      console.error("Error updating cell background:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete preroll product
    */
   static async deletePrerollProduct(id) {
@@ -731,6 +802,11 @@ export class PrerollService {
             strain: strain,
             mainImage: `/Product/${quality} ${strain} king.png`, // Use king size as default main image
             mainImagePath: "",
+            cellBackgroundType: "color", // "color" or "image"
+            cellBackgroundColor: "#ffffff", // White by default
+            cellBackgroundImage: "",
+            cellBackgroundImagePath: "",
+            cellTextColor: "#000000", // Black text by default
             variants: {
               small: {
                 price: qualityPrices[quality].small,
@@ -758,6 +834,8 @@ export class PrerollService {
 
       // Create default configuration
       await this.updateConfiguration({
+        backgroundType: "image",
+        backgroundColor: "#ffffff",
         backgroundImage: "/background.jpg",
         backgroundFit: "cover",
         isActive: true,

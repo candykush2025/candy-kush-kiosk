@@ -20,6 +20,8 @@ export default function PrerollsManagement({
 
   // Configuration form
   const [configForm, setConfigForm] = useState({
+    backgroundType: prerollsConfig?.backgroundType || "image", // "image" or "color"
+    backgroundColor: prerollsConfig?.backgroundColor || "#ffffff",
     backgroundImage: prerollsConfig?.backgroundImage || "/background.jpg",
     backgroundFit: prerollsConfig?.backgroundFit || "cover",
     isActive: prerollsConfig?.isActive !== false,
@@ -33,6 +35,8 @@ export default function PrerollsManagement({
         prerollsConfig
       );
       setConfigForm({
+        backgroundType: prerollsConfig.backgroundType || "image",
+        backgroundColor: prerollsConfig.backgroundColor || "#ffffff",
         backgroundImage: prerollsConfig.backgroundImage || "/background.jpg",
         backgroundFit: prerollsConfig.backgroundFit || "cover",
         isActive: prerollsConfig.isActive !== false,
@@ -44,9 +48,11 @@ export default function PrerollsManagement({
   const [backgroundPreview, setBackgroundPreview] = useState(null);
   const [mainImageFile, setMainImageFile] = useState(null);
   const [variantImageFile, setVariantImageFile] = useState(null);
+  const [cellBackgroundFile, setCellBackgroundFile] = useState(null);
+  const [cellBackgroundPreview, setCellBackgroundPreview] = useState(null);
 
-  // Fixed 3x3 grid structure
-  const qualities = ["outdoor", "indoor", "top"];
+  // Fixed 3x3 grid structure - matches menu order
+  const qualities = ["indoor", "outdoor", "top"];
   const strains = ["sativa", "hybrid", "indica"];
   const sizes = ["small", "normal", "king"];
 
@@ -198,6 +204,35 @@ export default function PrerollsManagement({
     }
   };
 
+  // Cell background update
+  const handleUpdateCellBackground = async (
+    productId,
+    backgroundType,
+    backgroundColor = null,
+    textColor = null
+  ) => {
+    try {
+      setLoading(true);
+      await PrerollService.updateCellBackground(
+        productId,
+        backgroundType,
+        backgroundColor,
+        cellBackgroundFile,
+        textColor
+      );
+      setCellBackgroundFile(null);
+      setCellBackgroundPreview(null);
+      setSelectedProduct(null);
+      onDataChange();
+      alert("Cell background updated!");
+    } catch (error) {
+      console.error("Error updating cell background:", error);
+      alert("Failed to update cell background.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Sub-tabs */}
@@ -231,62 +266,157 @@ export default function PrerollsManagement({
             <h3 className="text-lg font-semibold">Background Settings</h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Background Image
+          {/* Background Type Selector */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Background Type
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="backgroundType"
+                  value="color"
+                  checked={configForm.backgroundType === "color"}
+                  onChange={(e) =>
+                    setConfigForm({
+                      ...configForm,
+                      backgroundType: e.target.value,
+                    })
+                  }
+                  className="w-4 h-4"
+                />
+                <span>Solid Color</span>
               </label>
-              {(backgroundPreview || configForm.backgroundImage) && (
-                <div className="mb-2 relative h-40">
-                  <img
-                    src={backgroundPreview || configForm.backgroundImage}
-                    alt="Background"
-                    className="w-full h-40 object-cover rounded"
-                  />
-                  {backgroundPreview && (
-                    <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                      New Preview
-                    </div>
-                  )}
-                </div>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleBackgroundFileChange}
-                className="w-full p-2 border rounded"
-              />
-              {prerollsConfig?.backgroundImage && (
-                <button
-                  onClick={handleDeleteBackground}
-                  className="mt-2 text-red-600 text-sm hover:underline"
-                  disabled={loading}
-                >
-                  Delete Background Image
-                </button>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Background Fit
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="backgroundType"
+                  value="image"
+                  checked={configForm.backgroundType === "image"}
+                  onChange={(e) =>
+                    setConfigForm({
+                      ...configForm,
+                      backgroundType: e.target.value,
+                    })
+                  }
+                  className="w-4 h-4"
+                />
+                <span>Image</span>
               </label>
-              <select
-                value={configForm.backgroundFit}
-                onChange={(e) =>
-                  setConfigForm({
-                    ...configForm,
-                    backgroundFit: e.target.value,
-                  })
-                }
-                className="w-full p-2 border rounded"
-              >
-                <option value="cover">Cover</option>
-                <option value="contain">Contain</option>
-                <option value="fill">Fill</option>
-              </select>
             </div>
           </div>
+
+          {/* Conditional rendering based on background type */}
+          {configForm.backgroundType === "color" ? (
+            // Color Picker Section
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Background Color
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={configForm.backgroundColor}
+                    onChange={(e) =>
+                      setConfigForm({
+                        ...configForm,
+                        backgroundColor: e.target.value,
+                      })
+                    }
+                    className="w-20 h-10 border rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={configForm.backgroundColor}
+                    onChange={(e) =>
+                      setConfigForm({
+                        ...configForm,
+                        backgroundColor: e.target.value,
+                      })
+                    }
+                    placeholder="#ffffff"
+                    className="flex-1 p-2 border rounded"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Choose a solid color for the background
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Preview
+                </label>
+                <div
+                  className="w-full h-40 rounded border-2 border-gray-300"
+                  style={{ backgroundColor: configForm.backgroundColor }}
+                >
+                  <div className="w-full h-full flex items-center justify-center text-gray-600 text-sm">
+                    Color Preview
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            // Image Upload Section
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Background Image
+                </label>
+                {(backgroundPreview || configForm.backgroundImage) && (
+                  <div className="mb-2 relative h-40">
+                    <img
+                      src={backgroundPreview || configForm.backgroundImage}
+                      alt="Background"
+                      className="w-full h-40 object-cover rounded"
+                    />
+                    {backgroundPreview && (
+                      <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
+                        New Preview
+                      </div>
+                    )}
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleBackgroundFileChange}
+                  className="w-full p-2 border rounded"
+                />
+                {prerollsConfig?.backgroundImage && (
+                  <button
+                    onClick={handleDeleteBackground}
+                    className="mt-2 text-red-600 text-sm hover:underline"
+                    disabled={loading}
+                  >
+                    Delete Background Image
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Background Fit
+                </label>
+                <select
+                  value={configForm.backgroundFit}
+                  onChange={(e) =>
+                    setConfigForm({
+                      ...configForm,
+                      backgroundFit: e.target.value,
+                    })
+                  }
+                  className="w-full p-2 border rounded"
+                >
+                  <option value="cover">Cover</option>
+                  <option value="contain">Contain</option>
+                  <option value="fill">Fill</option>
+                </select>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleSaveConfiguration}
@@ -328,18 +458,20 @@ export default function PrerollsManagement({
             <table className="min-w-full border-collapse border">
               <thead>
                 <tr>
-                  <th className="border bg-gray-100 p-2">Quality / Strain</th>
-                  <th className="border bg-yellow-100 p-2">Sativa</th>
-                  <th className="border bg-green-100 p-2">Hybrid</th>
-                  <th className="border bg-blue-100 p-2">Indica</th>
+                  <th className="border p-4 text-xl font-bold text-white bg-[#e1ba41]">
+                    Sativa
+                  </th>
+                  <th className="border p-4 text-xl font-bold text-white bg-[#7b9943]">
+                    Hybrid
+                  </th>
+                  <th className="border p-4 text-xl font-bold text-white bg-[#4b4baf]">
+                    Indica
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {qualities.map((quality) => (
                   <tr key={quality}>
-                    <td className="border bg-gray-100 p-2 font-semibold capitalize">
-                      {quality === "top" ? "Top Quality" : quality}
-                    </td>
                     {strains.map((strain) => {
                       const product = findProduct(quality, strain);
                       return (
@@ -353,6 +485,9 @@ export default function PrerollsManagement({
                               onUpdateVariantPrice={handleUpdateVariantPrice}
                               onUpdateVariantImage={handleUpdateVariantImage}
                               onUpdateMainImage={handleUpdateMainImage}
+                              onUpdateCellBackground={
+                                handleUpdateCellBackground
+                              }
                               selectedProduct={selectedProduct}
                               setSelectedProduct={setSelectedProduct}
                               editingVariant={editingVariant}
@@ -361,6 +496,12 @@ export default function PrerollsManagement({
                               setMainImageFile={setMainImageFile}
                               variantImageFile={variantImageFile}
                               setVariantImageFile={setVariantImageFile}
+                              cellBackgroundFile={cellBackgroundFile}
+                              setCellBackgroundFile={setCellBackgroundFile}
+                              cellBackgroundPreview={cellBackgroundPreview}
+                              setCellBackgroundPreview={
+                                setCellBackgroundPreview
+                              }
                               loading={loading}
                             />
                           ) : (
@@ -391,6 +532,7 @@ function ProductCell({
   onUpdateVariantPrice,
   onUpdateVariantImage,
   onUpdateMainImage,
+  onUpdateCellBackground,
   selectedProduct,
   setSelectedProduct,
   editingVariant,
@@ -399,6 +541,10 @@ function ProductCell({
   setMainImageFile,
   variantImageFile,
   setVariantImageFile,
+  cellBackgroundFile,
+  setCellBackgroundFile,
+  cellBackgroundPreview,
+  setCellBackgroundPreview,
   loading,
 }) {
   const isSelected = selectedProduct === product.id;
@@ -408,8 +554,28 @@ function ProductCell({
     king: product.variants?.king?.price || 0,
   });
 
+  const [editingBackground, setEditingBackground] = useState(false);
+  const [cellBgType, setCellBgType] = useState(
+    product.cellBackgroundType || "color"
+  );
+  const [cellBgColor, setCellBgColor] = useState(
+    product.cellBackgroundColor || "#ffffff"
+  );
+  const [cellTextColor, setCellTextColor] = useState(
+    product.cellTextColor || "#000000"
+  );
+
   return (
     <div className="space-y-2 min-w-[300px]">
+      {/* Quality Label */}
+      <div className="text-center mb-2">
+        <span className="inline-block px-3 py-1 bg-gray-800 text-white text-xs font-bold rounded-full">
+          {quality === "top"
+            ? "Top Quality"
+            : quality.charAt(0).toUpperCase() + quality.slice(1)}
+        </span>
+      </div>
+
       {/* Main Image */}
       <div className="text-center">
         <p className="text-xs font-semibold mb-1">Main Image</p>
@@ -560,6 +726,213 @@ function ProductCell({
             </div>
           );
         })}
+      </div>
+
+      {/* Cell Background */}
+      <div className="border-t pt-2">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-semibold">Cell Background:</p>
+          {!editingBackground ? (
+            <button
+              onClick={() => setEditingBackground(true)}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              Edit Background
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setEditingBackground(false);
+                setCellBackgroundFile(null);
+                setCellBackgroundPreview(null);
+              }}
+              className="text-xs text-gray-600 hover:underline"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+
+        {editingBackground && (
+          <div className="space-y-2 bg-gray-50 p-2 rounded">
+            {/* Background Type Selector */}
+            <div className="flex gap-2 text-xs">
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  name={`bg-type-${product.id}`}
+                  value="color"
+                  checked={cellBgType === "color"}
+                  onChange={(e) => setCellBgType(e.target.value)}
+                  className="w-3 h-3"
+                />
+                Color
+              </label>
+              <label className="flex items-center gap-1">
+                <input
+                  type="radio"
+                  name={`bg-type-${product.id}`}
+                  value="image"
+                  checked={cellBgType === "image"}
+                  onChange={(e) => setCellBgType(e.target.value)}
+                  className="w-3 h-3"
+                />
+                Image
+              </label>
+            </div>
+
+            {/* Color Picker or Image Upload */}
+            {cellBgType === "color" ? (
+              <div>
+                <label className="text-xs font-medium">Background Color:</label>
+                <div className="flex gap-2 items-center mb-2">
+                  <input
+                    type="color"
+                    value={cellBgColor}
+                    onChange={(e) => setCellBgColor(e.target.value)}
+                    className="w-12 h-8 border rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={cellBgColor}
+                    onChange={(e) => setCellBgColor(e.target.value)}
+                    className="flex-1 text-xs p-1 border rounded"
+                  />
+                </div>
+
+                <label className="text-xs font-medium">Text Color:</label>
+                <div className="flex gap-2 items-center mb-2">
+                  <input
+                    type="color"
+                    value={cellTextColor}
+                    onChange={(e) => setCellTextColor(e.target.value)}
+                    className="w-12 h-8 border rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={cellTextColor}
+                    onChange={(e) => setCellTextColor(e.target.value)}
+                    className="flex-1 text-xs p-1 border rounded"
+                  />
+                </div>
+
+                <button
+                  onClick={() =>
+                    onUpdateCellBackground(
+                      product.id,
+                      "color",
+                      cellBgColor,
+                      cellTextColor
+                    )
+                  }
+                  disabled={loading}
+                  className="w-full text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                  Save Colors
+                </button>
+              </div>
+            ) : (
+              <div>
+                {(cellBackgroundPreview || product.cellBackgroundImage) && (
+                  <div className="mb-1 relative h-16">
+                    <img
+                      src={cellBackgroundPreview || product.cellBackgroundImage}
+                      alt="Cell background"
+                      className="w-full h-16 object-cover rounded"
+                    />
+                    {cellBackgroundPreview && (
+                      <div className="absolute top-1 right-1 bg-blue-600 text-white text-xs px-1 rounded">
+                        New
+                      </div>
+                    )}
+                  </div>
+                )}
+                <label className="text-xs font-medium">Background Image:</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setCellBackgroundFile(file);
+                      setCellBackgroundPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                  className="text-xs w-full mb-2"
+                />
+
+                <label className="text-xs font-medium">Text Color:</label>
+                <div className="flex gap-2 items-center mb-2">
+                  <input
+                    type="color"
+                    value={cellTextColor}
+                    onChange={(e) => setCellTextColor(e.target.value)}
+                    className="w-12 h-8 border rounded cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={cellTextColor}
+                    onChange={(e) => setCellTextColor(e.target.value)}
+                    className="flex-1 text-xs p-1 border rounded"
+                  />
+                </div>
+
+                <button
+                  onClick={() =>
+                    onUpdateCellBackground(
+                      product.id,
+                      "image",
+                      null,
+                      cellTextColor
+                    )
+                  }
+                  disabled={!cellBackgroundFile || loading}
+                  className="w-full text-xs px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                >
+                  Save Image & Text Color
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Current Background Display */}
+        {!editingBackground && (
+          <div className="text-xs text-gray-600 space-y-1">
+            {product.cellBackgroundType === "image" &&
+            product.cellBackgroundImage ? (
+              <div className="flex items-center gap-1">
+                <span>🖼️ Image</span>
+                <img
+                  src={product.cellBackgroundImage}
+                  alt="Current background"
+                  className="w-12 h-8 object-cover rounded border"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <span>🎨 BG:</span>
+                <div
+                  className="w-8 h-4 border rounded"
+                  style={{
+                    backgroundColor: product.cellBackgroundColor || "#ffffff",
+                  }}
+                />
+                <span>{product.cellBackgroundColor || "#ffffff"}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1">
+              <span>📝 Text:</span>
+              <div
+                className="w-8 h-4 border rounded"
+                style={{
+                  backgroundColor: product.cellTextColor || "#000000",
+                }}
+              />
+              <span>{product.cellTextColor || "#000000"}</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

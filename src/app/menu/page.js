@@ -931,7 +931,7 @@ export default function MenuPage() {
     });
 
     // Hardcoded quality/strain info for display (order matters for grid)
-    const qualityOrder = ["outdoor", "indoor", "top"];
+    const qualityOrder = ["indoor", "outdoor", "top"];
     const strainOrder = ["sativa", "hybrid", "indica"];
 
     // Color mappings
@@ -942,9 +942,9 @@ export default function MenuPage() {
     };
 
     const strainColors = {
-      sativa: "#FDE047", // Yellow
-      hybrid: "#22C55E", // Green
-      indica: "#3B82F6", // Blue
+      sativa: "#e1ba41", // Golden Yellow
+      hybrid: "#7b9943", // Olive Green
+      indica: "#4b4baf", // Purple Blue
     };
 
     const qualityTypes = qualityOrder
@@ -3149,17 +3149,27 @@ export default function MenuPage() {
 
   // Show Personalized Joints page as separate layout
   if (showPersonalizedJoints) {
+    // Determine background style based on configuration
+    const backgroundStyle = {};
+
+    if (prerollsConfig?.backgroundType === "color") {
+      // Use solid color background
+      backgroundStyle.backgroundColor =
+        prerollsConfig.backgroundColor || "#ffffff";
+    } else {
+      // Use image background (default)
+      backgroundStyle.backgroundImage = `url(${
+        prerollsConfig?.backgroundImage || "/background.jpg"
+      })`;
+      backgroundStyle.backgroundSize = prerollsConfig?.backgroundFit || "cover";
+      backgroundStyle.backgroundPosition = "center";
+      backgroundStyle.backgroundRepeat = "no-repeat";
+    }
+
     return (
       <div
         className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
-        style={{
-          backgroundImage: `url(${
-            prerollsConfig?.backgroundImage || "/background.jpg"
-          })`,
-          backgroundSize: prerollsConfig?.backgroundFit || "cover",
-          backgroundPosition: "center",
-          backgroundRepeat: "no-repeat",
-        }}
+        style={backgroundStyle}
       >
         {/* Header for Personalized Joints */}
         <div className="p-4 flex items-center justify-between">
@@ -3378,22 +3388,106 @@ export default function MenuPage() {
         {/* Customer Section */}
         <CustomerSection customer={customer} />
 
-        {/* Main Prerolls Content */}
-        <div className="flex-1 min-h-0 p-6">
-          <div className="h-full `flex flex-col p-8">
-            {/* Title */}
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold text-center text-gray-800 mb-2">
-                Prerolls
-              </h1>
-            </div>
+        {/* Main Content - Two Panes Layout like main menu */}
+        <div className="flex-1 min-h-0 p-6 flex gap-6 overflow-hidden">
+          {/* Left Pane: Categories Menu */}
+          <div className="w-1/5 h-full bg-white rounded-3xl shadow-lg flex flex-col">
+            <div className="flex-1 overflow-y-auto hidden-scrollbar px-2 py-4">
+              {categories.map((category, index) => (
+                <div key={category.id}>
+                  <div
+                    onClick={() => {
+                      setShowPersonalizedJoints(false);
+                      handleCategorySelect(category);
+                    }}
+                    className="cursor-pointer p-4 transition-all duration-300 hover:bg-gray-50 hover:shadow-md"
+                    style={{
+                      borderRadius: "8px",
+                    }}
+                  >
+                    {/* Category Image */}
+                    {category.image && (
+                      <div className="mb-3 relative w-3/4 mx-auto aspect-square">
+                        <CachedImage
+                          src={category.image}
+                          alt={category.name}
+                          type="category"
+                          fill
+                          className="rounded-lg object-contain"
+                          showLoading={false}
+                        />
+                        {/* Cashback Badge - only show for members */}
+                        {customer &&
+                          !customer.isNoMember &&
+                          categoryPercentages[category.id] > 0 && (
+                            <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-18 h-8 flex items-center justify-center border-2 border-white shadow-lg">
+                              up to {categoryPercentages[category.id]}%
+                            </div>
+                          )}
+                      </div>
+                    )}
 
-            {/* 4x4 Grid - header row 180px, image cells 270px */}
-            <div className="flex-1 w-full flex justify-center items-center p-4">
+                    {/* Category Name */}
+                    <div className="text-center">
+                      <h4 className="font-semibold text-sm text-gray-600">
+                        {translateCategoryName(category.name)}
+                      </h4>
+                    </div>
+                  </div>
+                  {/* Separator */}
+                  {index < categories.length - 1 && (
+                    <div className="border-b border-dashed border-gray-200"></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right Pane: Prerolls Content */}
+          <div className="flex-1 h-full flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Strain Headers - Top Row */}
+              <div className="grid grid-cols-3 gap-0">
+                {prerollsStrainTypes.map((strain, index) => {
+                  // Map strain key to logo file
+                  const logoMap = {
+                    sativa: "/sativa logo.svg",
+                    hybrid: "/hybrid logo.svg",
+                    indica: "/indica logo.svg",
+                  };
+
+                  return (
+                    <div
+                      key={strain.id}
+                      className={`h-24 flex items-center justify-center gap-1 ${
+                        index === 0 ? "rounded-tl-3xl" : ""
+                      } ${
+                        index === prerollsStrainTypes.length - 1
+                          ? "rounded-tr-3xl"
+                          : ""
+                      }`}
+                      style={{ backgroundColor: strain.color || "#000000" }}
+                    >
+                      {/* Strain Logo */}
+                      <img
+                        src={logoMap[strain.key]}
+                        alt={`${strain.name} logo`}
+                        className="h-12 w-auto"
+                      />
+                      {/* Strain Name */}
+                      <h2 className="text-5xl font-bold text-white">
+                        {strain.name}
+                      </h2>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 3x3 Grid - Products arranged by quality (rows) and strain (columns) */}
               {prerollsQualityTypes.length === 0 ||
               prerollsStrainTypes.length === 0 ? (
-                <div className="text-center">
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-2xl">
+                <div className="text-center py-12">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-2xl mx-auto">
                     <h3 className="text-2xl font-bold text-yellow-800 mb-4">
                       ⚠️ Prerolls Data Not Initialized
                     </h3>
@@ -3405,7 +3499,7 @@ export default function MenuPage() {
                     </p>
                     <ol className="text-left text-yellow-700 mb-4 list-decimal list-inside space-y-2">
                       <li>Go to Admin Panel → Prerolls Special tab</li>
-                      <li>Click &quot;Initialize Default Data&quot; button</li>
+                      <li>Click &quot;Reset to Default Data&quot; button</li>
                       <li>
                         Configure quality types, strain types, and products
                       </li>
@@ -3418,84 +3512,98 @@ export default function MenuPage() {
                   </div>
                 </div>
               ) : (
-                <div
-                  className="mx-auto"
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: `repeat(${
-                      prerollsStrainTypes.length + 1
-                    }, 270px)`,
-                    gridTemplateRows: `180px repeat(${prerollsQualityTypes.length}, 270px)`,
-                    gap: "0px",
-                  }}
-                >
-                  {/* Empty corner */}
-                  <div></div>
-
-                  {/* Header Row: Strain Types (Sativa, Hybrid, Indica) */}
-                  {prerollsStrainTypes.map((strain, index) => (
-                    <div
-                      key={strain.id}
-                      className={`w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center ${
-                        index === 0 ? "rounded-tl-[3rem]" : ""
-                      } ${
-                        index === prerollsStrainTypes.length - 1
-                          ? "rounded-tr-[3rem]"
-                          : ""
-                      }`}
-                      style={{ backgroundColor: strain.color || "#000000" }}
-                    >
-                      {strain.name}
-                    </div>
-                  ))}
-
-                  {/* Quality Rows (Outdoor, Indoor, Top Quality) */}
+                <div>
+                  {/* Quality Rows: Indoor (row 1), Outdoor (row 2), Top Quality (row 3) */}
                   {prerollsQualityTypes.map((quality, qualityIndex) => (
-                    <React.Fragment key={`quality-row-${quality.id}`}>
-                      {/* Quality Label */}
-                      <div
-                        className={`w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center ${
-                          qualityIndex === 0 ? "rounded-tl-[3rem]" : ""
-                        } ${
-                          qualityIndex === prerollsQualityTypes.length - 1
-                            ? "rounded-bl-[3rem]"
-                            : ""
-                        }`}
-                        style={{ backgroundColor: quality.color || "#000000" }}
-                      >
-                        {quality.name}
-                      </div>
-
-                      {/* Product Images */}
-                      {prerollsStrainTypes.map((strain) => {
+                    <div
+                      key={`quality-row-${quality.id}`}
+                      className="grid grid-cols-3 gap-0"
+                    >
+                      {/* Each row has 3 strain columns */}
+                      {prerollsStrainTypes.map((strain, strainIndex) => {
                         const itemKey = `${quality.key}-${strain.key}`;
                         const isSelected = selectedJointType === itemKey;
                         const isZoomed = zoomedImage === itemKey;
+                        const isLastRow =
+                          qualityIndex === prerollsQualityTypes.length - 1;
+                        const isFirstColumn = strainIndex === 0;
+                        const isLastColumn =
+                          strainIndex === prerollsStrainTypes.length - 1;
+
+                        // Find the product for this cell to get its background
+                        const currentProduct = prerollsProducts.find(
+                          (p) =>
+                            p.quality === quality.key && p.strain === strain.key
+                        );
+
+                        // Determine cell background style
+                        const cellBackgroundStyle = {};
+                        if (
+                          currentProduct?.cellBackgroundType === "image" &&
+                          currentProduct?.cellBackgroundImage
+                        ) {
+                          cellBackgroundStyle.backgroundImage = `url(${currentProduct.cellBackgroundImage})`;
+                          cellBackgroundStyle.backgroundSize = "cover";
+                          cellBackgroundStyle.backgroundPosition = "center";
+                          cellBackgroundStyle.backgroundRepeat = "no-repeat";
+                        } else if (currentProduct?.cellBackgroundColor) {
+                          cellBackgroundStyle.backgroundColor =
+                            currentProduct.cellBackgroundColor;
+                        } else {
+                          // Default white background
+                          cellBackgroundStyle.backgroundColor = "#ffffff";
+                        }
+
                         return (
                           <div
                             key={itemKey}
-                            className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
+                            className={`relative cursor-pointer transition-all duration-300 flex flex-col items-center justify-between border border-gray-300 hover:border-green-400 ${
                               isSelected || isZoomed
                                 ? "ring-4 ring-green-500 shadow-2xl z-10"
                                 : ""
-                            } ${isZoomed ? "scale-110" : "scale-100"}`}
+                            } ${
+                              isLastRow && isFirstColumn ? "rounded-bl-3xl" : ""
+                            } ${
+                              isLastRow && isLastColumn ? "rounded-br-3xl" : ""
+                            }`}
+                            style={{
+                              height: "220px",
+                              ...cellBackgroundStyle,
+                            }}
                             onClick={() => handleImageClick(itemKey)}
                           >
-                            <Image
-                              src={
-                                personalizedJointsImages[quality.key]?.[
-                                  strain.key
-                                ] || "/Product/placeholder.png"
-                              }
-                              alt={`${quality.name} ${strain.name}`}
-                              width={245}
-                              height={245}
-                              className="w-full h-full object-contain"
-                            />
+                            {/* Product Image */}
+                            <div className="flex-1 w-full flex items-center justify-center p-4">
+                              <div className="relative w-full h-full">
+                                <Image
+                                  src={
+                                    personalizedJointsImages[quality.key]?.[
+                                      strain.key
+                                    ] || "/Product/placeholder.png"
+                                  }
+                                  alt={`${quality.name} ${strain.name}`}
+                                  fill
+                                  className="object-contain"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Product Name */}
+                            <div className="w-full py-2 text-center">
+                              <p
+                                className="text-sm font-semibold"
+                                style={{
+                                  color:
+                                    currentProduct?.cellTextColor || "#000000",
+                                }}
+                              >
+                                {quality.name} {strain.name}
+                              </p>
+                            </div>
                           </div>
                         );
                       })}
-                    </React.Fragment>
+                    </div>
                   ))}
                 </div>
               )}
@@ -3546,14 +3654,25 @@ export default function MenuPage() {
                 <div className="grid grid-cols-3 gap-0">
                   {(() => {
                     // Get current product prices based on selectedJointType
-                    const [quality, strain] = selectedJointType ? selectedJointType.split("-") : ["", ""];
+                    const [quality, strain] = selectedJointType
+                      ? selectedJointType.split("-")
+                      : ["", ""];
                     const currentProduct = prerollsProducts.find(
                       (p) => p.quality === quality && p.strain === strain
                     );
                     const variantPrices = {
-                      small: currentProduct?.variants?.small?.price || prerollsSizePrices.small || 100,
-                      normal: currentProduct?.variants?.normal?.price || prerollsSizePrices.normal || 150,
-                      king: currentProduct?.variants?.king?.price || prerollsSizePrices.king || 200,
+                      small:
+                        currentProduct?.variants?.small?.price ||
+                        prerollsSizePrices.small ||
+                        100,
+                      normal:
+                        currentProduct?.variants?.normal?.price ||
+                        prerollsSizePrices.normal ||
+                        150,
+                      king:
+                        currentProduct?.variants?.king?.price ||
+                        prerollsSizePrices.king ||
+                        200,
                     };
 
                     return (
@@ -3570,16 +3689,18 @@ export default function MenuPage() {
                           <div className="w-32 h-32 mx-auto mb-3 relative">
                             {selectedJointType && (
                               <Image
-                                src={`/Product/${selectedJointType.split("-")[0]} ${
-                                  selectedJointType.split("-")[1]
-                                } small.png`}
+                                src={`/Product/${
+                                  selectedJointType.split("-")[0]
+                                } ${selectedJointType.split("-")[1]} small.png`}
                                 alt="Small"
                                 fill
                                 className="object-contain"
                               />
                             )}
                           </div>
-                          <div className="font-bold text-gray-800 text-xl">Small</div>
+                          <div className="font-bold text-gray-800 text-xl">
+                            Small
+                          </div>
                           <div className="text-green-600 font-semibold text-lg">
                             ฿{variantPrices.small}
                           </div>
@@ -3597,7 +3718,9 @@ export default function MenuPage() {
                           <div className="w-32 h-32 mx-auto mb-3 relative">
                             {selectedJointType && (
                               <Image
-                                src={`/Product/${selectedJointType.split("-")[0]} ${
+                                src={`/Product/${
+                                  selectedJointType.split("-")[0]
+                                } ${
                                   selectedJointType.split("-")[1]
                                 } normal.png`}
                                 alt="Normal"
@@ -3626,16 +3749,18 @@ export default function MenuPage() {
                           <div className="w-32 h-32 mx-auto mb-3 relative">
                             {selectedJointType && (
                               <Image
-                                src={`/Product/${selectedJointType.split("-")[0]} ${
-                                  selectedJointType.split("-")[1]
-                                } king.png`}
+                                src={`/Product/${
+                                  selectedJointType.split("-")[0]
+                                } ${selectedJointType.split("-")[1]} king.png`}
                                 alt="King"
                                 fill
                                 className="object-contain"
                               />
                             )}
                           </div>
-                          <div className="font-bold text-gray-800 text-xl">King</div>
+                          <div className="font-bold text-gray-800 text-xl">
+                            King
+                          </div>
                           <div className="text-green-600 font-semibold text-lg">
                             ฿{variantPrices.king}
                           </div>
