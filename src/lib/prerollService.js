@@ -797,10 +797,19 @@ export class PrerollService {
       // Create all 9 products (quality × strain combinations)
       for (const quality of defaultQualities) {
         for (const strain of defaultStrains) {
+          // Special naming for "top" quality images
+          let imageQuality = quality;
+          let imageStrain = strain;
+
+          if (quality === "top" && strain === "hybrid") {
+            // top hybrid uses uppercase HYBRID in filename
+            imageStrain = "HYBRID";
+          }
+
           const productData = {
             quality: quality,
             strain: strain,
-            mainImage: `/Product/${quality} ${strain} king.png`, // Use king size as default main image
+            mainImage: `/Product/${imageQuality} ${imageStrain} king.png`, // Use king size as default main image
             mainImagePath: "",
             cellBackgroundType: "color", // "color" or "image"
             cellBackgroundColor: "#ffffff", // White by default
@@ -810,17 +819,21 @@ export class PrerollService {
             variants: {
               small: {
                 price: qualityPrices[quality].small,
-                image: `/Product/${quality} ${strain} small.png`,
+                // Top quality products don't have small size images, use normal as fallback
+                image:
+                  quality === "top"
+                    ? `/Product/${imageQuality} ${imageStrain} normal.png`
+                    : `/Product/${imageQuality} ${imageStrain} small.png`,
                 imagePath: "",
               },
               normal: {
                 price: qualityPrices[quality].normal,
-                image: `/Product/${quality} ${strain} normal.png`,
+                image: `/Product/${imageQuality} ${imageStrain} normal.png`,
                 imagePath: "",
               },
               king: {
                 price: qualityPrices[quality].king,
-                image: `/Product/${quality} ${strain} king.png`,
+                image: `/Product/${imageQuality} ${imageStrain} king.png`,
                 imagePath: "",
               },
             },
