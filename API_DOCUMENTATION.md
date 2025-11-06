@@ -85,8 +85,10 @@ fetch("https://your-domain.vercel.app/api/products?search=kush", {
     "products": [
       {
         "id": "product123",
+        "productId": "PROD001",
         "name": "OG Kush",
         "description": "Premium indoor strain",
+        "sku": "SKU-001",
 
         "categoryId": "flowers",
         "categoryName": "Flowers",
@@ -96,31 +98,44 @@ fetch("https://your-domain.vercel.app/api/products?search=kush", {
         "subcategoryName": "Indica",
         "subcategoryImage": "/subcategories/indica.jpg",
 
+        "hasVariants": true,
+        "variants": [
+          {
+            "name": "1g",
+            "price": 300,
+            "memberPrice": 270,
+            "sku": "SKU-001-1G"
+          }
+        ],
+
         "price": 300,
-        "thbPrice": 300,
         "memberPrice": 270,
 
-        "stock": 100,
-        "stockUnit": "g",
-        "minStock": 10,
+        "mainImage": "/products/og-kush.jpg",
+        "images": [
+          {
+            "url": "/products/og-kush-1.jpg",
+            "path": "products/prod001/image1.jpg",
+            "name": "image1.jpg"
+          }
+        ],
+        "backgroundImage": "/backgrounds/product-bg.jpg",
+        "backgroundFit": "contain",
+        "textColor": "#000000",
 
-        "image": "/products/og-kush.jpg",
-        "images": ["/products/og-kush-1.jpg", "/products/og-kush-2.jpg"],
-
-        "thcPercentage": 25.5,
-        "cbdPercentage": 0.5,
-
-        "strain": "Indica",
-        "effects": ["Relaxed", "Happy", "Sleepy"],
-        "flavors": ["Earthy", "Pine", "Woody"],
+        "modelUrl": "/models/product.glb",
+        "modelRotationX": 90,
+        "modelRotationY": 75,
+        "modelRotationZ": 2.5,
 
         "isActive": true,
         "isFeatured": false,
+        "notes": "Premium quality",
 
         "createdAt": "2025-01-01T00:00:00Z",
-        "updatedAt": "2025-01-15T00:00:00Z",
-
-        "loyverseId": "loy_123",
+        "updatedAt": "2025-01-15T00:00:00Z"
+      }
+    ],
         "loyverseVariantId": "var_456"
       }
     ],
@@ -186,36 +201,37 @@ fetch("https://your-domain.vercel.app/api/products?search=kush", {
 
 ### Product Fields
 
-| Field               | Type      | Description                    |
-| ------------------- | --------- | ------------------------------ |
-| `id`                | string    | Unique product ID              |
-| `name`              | string    | Product name                   |
-| `description`       | string    | Product description            |
-| `categoryId`        | string    | Category ID reference          |
-| `categoryName`      | string    | Category display name          |
-| `categoryImage`     | string    | Category image URL             |
-| `subcategoryId`     | string    | Subcategory ID reference       |
-| `subcategoryName`   | string    | Subcategory display name       |
-| `subcategoryImage`  | string    | Subcategory image URL          |
-| `price`             | number    | Base price in THB              |
-| `thbPrice`          | number    | Price in THB                   |
-| `memberPrice`       | number    | Member discount price          |
-| `stock`             | number    | Current stock quantity         |
-| `stockUnit`         | string    | Stock unit (g, piece, etc.)    |
-| `minStock`          | number    | Minimum stock alert threshold  |
-| `image`             | string    | Primary product image URL      |
-| `images`            | array     | Array of additional image URLs |
-| `thcPercentage`     | number    | THC content percentage         |
-| `cbdPercentage`     | number    | CBD content percentage         |
-| `strain`            | string    | Strain type                    |
-| `effects`           | array     | Array of effect strings        |
-| `flavors`           | array     | Array of flavor strings        |
-| `isActive`          | boolean   | Product active status          |
-| `isFeatured`        | boolean   | Featured product flag          |
-| `createdAt`         | timestamp | Creation timestamp             |
-| `updatedAt`         | timestamp | Last update timestamp          |
-| `loyverseId`        | string    | Loyverse POS ID                |
-| `loyverseVariantId` | string    | Loyverse variant ID            |
+| Field              | Type      | Description                                              |
+| ------------------ | --------- | -------------------------------------------------------- |
+| `id`               | string    | Unique product ID                                        |
+| `productId`        | string    | Product identifier (same as id)                          |
+| `name`             | string    | Product name                                             |
+| `description`      | string    | Product description                                      |
+| `sku`              | string    | Stock Keeping Unit code                                  |
+| `categoryId`       | string    | Category ID reference                                    |
+| `categoryName`     | string    | Category display name                                    |
+| `categoryImage`    | string    | Category image URL                                       |
+| `subcategoryId`    | string    | Subcategory ID reference                                 |
+| `subcategoryName`  | string    | Subcategory display name                                 |
+| `subcategoryImage` | string    | Subcategory image URL                                    |
+| `hasVariants`      | boolean   | Whether product has variants                             |
+| `variants`         | array     | Array of variant objects (name, price, memberPrice, sku) |
+| `price`            | number    | Base price in THB (for non-variant products)             |
+| `memberPrice`      | number    | Member discount price (for non-variant products)         |
+| `mainImage`        | string    | Primary product image URL                                |
+| `images`           | array     | Array of image objects with url, path, name              |
+| `backgroundImage`  | string    | Background image URL for product display                 |
+| `backgroundFit`    | string    | CSS background-fit value (cover, contain, etc.)          |
+| `textColor`        | string    | Text color hex code for product display                  |
+| `modelUrl`         | string    | 3D model file URL (.glb format)                          |
+| `modelRotationX`   | number    | 3D model X-axis rotation value                           |
+| `modelRotationY`   | number    | 3D model Y-axis rotation value                           |
+| `modelRotationZ`   | number    | 3D model Z-axis rotation value                           |
+| `notes`            | string    | Additional product notes                                 |
+| `isActive`         | boolean   | Product active status                                    |
+| `isFeatured`       | boolean   | Featured product flag                                    |
+| `createdAt`        | timestamp | Creation timestamp                                       |
+| `updatedAt`        | timestamp | Last update timestamp                                    |
 
 ---
 

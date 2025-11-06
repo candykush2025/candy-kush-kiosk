@@ -132,7 +132,7 @@ export async function GET(request) {
       ...doc.data(),
     }));
 
-    // Format products with complete information
+    // Format products with complete information from Firebase
     const formattedProducts = products.map((product) => {
       const category = categories.find((c) => c.id === product.categoryId);
       const subcategory = subcategories.find(
@@ -140,9 +140,12 @@ export async function GET(request) {
       );
 
       return {
+        // Base product data
         id: product.id,
+        productId: product.productId,
         name: product.name,
         description: product.description || "",
+        sku: product.sku || "",
 
         // Category information
         categoryId: product.categoryId,
@@ -150,44 +153,39 @@ export async function GET(request) {
         categoryImage: category?.image || "",
 
         // Subcategory information
-        subcategoryId: product.subcategoryId,
+        subcategoryId: product.subcategoryId || null,
         subcategoryName: subcategory?.name || "",
         subcategoryImage: subcategory?.image || "",
 
-        // Pricing
-        price: product.price || 0,
-        thbPrice: product.thbPrice || product.price || 0,
-        memberPrice: product.memberPrice || product.price || 0,
+        // Variants
+        hasVariants: product.hasVariants || false,
+        variants: product.variants || [],
 
-        // Stock
-        stock: product.stock || 0,
-        stockUnit: product.stockUnit || "g",
-        minStock: product.minStock || 0,
+        // Pricing (for non-variant products)
+        price: product.price || 0,
+        memberPrice: product.memberPrice || 0,
 
         // Images
-        image: product.image || "",
+        mainImage: product.mainImage || "",
         images: product.images || [],
+        backgroundImage: product.backgroundImage || "",
+        backgroundFit: product.backgroundFit || "contain",
+        textColor: product.textColor || "#000000",
 
-        // THC/CBD info
-        thcPercentage: product.thcPercentage || 0,
-        cbdPercentage: product.cbdPercentage || 0,
-
-        // Product details
-        strain: product.strain || "",
-        effects: product.effects || [],
-        flavors: product.flavors || [],
+        // 3D Model
+        modelUrl: product.modelUrl || "",
+        modelRotationX: product.modelRotationX || 90,
+        modelRotationY: product.modelRotationY || 75,
+        modelRotationZ: product.modelRotationZ || 2.5,
 
         // Status
         isActive: product.isActive !== false,
         isFeatured: product.isFeatured || false,
+        notes: product.notes || "",
 
-        // Metadata
+        // Timestamps
         createdAt: product.createdAt,
         updatedAt: product.updatedAt,
-
-        // Loyverse integration
-        loyverseId: product.loyverseId || null,
-        loyverseVariantId: product.loyverseVariantId || null,
       };
     });
 
