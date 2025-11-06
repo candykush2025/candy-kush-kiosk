@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -18,6 +19,7 @@ import {
   CashbackService,
   NonMemberCategoriesService,
 } from "../../lib/productService";
+import { PrerollService } from "../../lib/prerollService";
 import { TransactionService } from "../../lib/transactionService";
 import { PendingPointsService } from "../../lib/pendingPointsService";
 import StockMovementService from "../../lib/stockMovementService";
@@ -68,6 +70,19 @@ export default function MenuPage() {
 
   // Selected size for preroll popup
   const [selectedSize, setSelectedSize] = useState(null);
+
+  // Prerolls dynamic data states
+  const [prerollsConfig, setPrerollsConfig] = useState(null);
+  const [prerollsQualityTypes, setPrerollsQualityTypes] = useState([]);
+  const [prerollsStrainTypes, setPrerollsStrainTypes] = useState([]);
+  const [prerollsProducts, setPrerollsProducts] = useState([]);
+  const [prerollsSizePrices, setPrerollsSizePrices] = useState({
+    small: 100,
+    normal: 150,
+    king: 200,
+  });
+  const [dataNotInitialized, setDataNotInitialized] = useState(false);
+  const [isLoadingPrerolls, setIsLoadingPrerolls] = useState(true);
 
   // Track previous section for cart navigation
   const [previousSection, setPreviousSection] = useState("main"); // 'main' or 'prerolls'
@@ -142,8 +157,8 @@ export default function MenuPage() {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [creatingPayment, setCreatingPayment] = useState(false);
 
-  // Personalized Joints product images mapping
-  const personalizedJointsImages = {
+  // Personalized Joints product images mapping (will be loaded from Firebase)
+  const [personalizedJointsImages, setPersonalizedJointsImages] = useState({
     outdoor: {
       sativa: "/Product/outdoor sativa king.png",
       hybrid: "/Product/outdoor hybrid king.png",
@@ -159,7 +174,7 @@ export default function MenuPage() {
       hybrid: "/Product/top HYBRID king.png",
       indica: "/Product/top indica king.png",
     },
-  };
+  });
   const [paymentError, setPaymentError] = useState(null);
 
   // Payment monitoring states
@@ -880,6 +895,112 @@ export default function MenuPage() {
     setIsDev(devParam === "true");
   }, []);
 
+  // Load prerolls dynamic data
+  const loadPrerollsData = async () => {
+    console.log("🔄 Loading prerolls data from Firebase...");
+
+    // Load config and products
+    const [config, products] = await Promise.all([
+      PrerollService.getConfiguration(),
+      PrerollService.getAllPrerolls(),
+    ]);
+
+    console.log("📦 Raw data from Firebase:");
+    console.log("- Config:", config);
+    console.log("- Products:", products);
+
+    // Check if data is initialized
+    if (!products || products.length === 0) {
+      setDataNotInitialized(true);
+      setIsLoadingPrerolls(false);
+      return;
+    }
+
+    setDataNotInitialized(false);
+
+    // Set config and products
+    setPrerollsConfig(config);
+    setPrerollsProducts(products);
+
+    // Extract unique quality types and strain types from products
+    const qualitySet = new Set();
+    const strainSet = new Set();
+    products.forEach((p) => {
+      qualitySet.add(p.quality);
+      strainSet.add(p.strain);
+    });
+
+    // Hardcoded quality/strain info for display (order matters for grid)
+    const qualityOrder = ["outdoor", "indoor", "top"];
+    const strainOrder = ["sativa", "hybrid", "indica"];
+
+    // Color mappings
+    const qualityColors = {
+      outdoor: "#06B6D4", // Cyan
+      indoor: "#6B7280", // Gray
+      top: "#000000", // Black
+    };
+
+    const strainColors = {
+      sativa: "#FDE047", // Yellow
+      hybrid: "#22C55E", // Green
+      indica: "#3B82F6", // Blue
+    };
+
+    const qualityTypes = qualityOrder
+      .filter((q) => qualitySet.has(q))
+      .map((q) => ({
+        id: q,
+        key: q,
+        name:
+          q === "top" ? "Top Quality" : q.charAt(0).toUpperCase() + q.slice(1),
+        color: qualityColors[q] || "#000000",
+      }));
+
+    const strainTypes = strainOrder
+      .filter((s) => strainSet.has(s))
+      .map((s) => ({
+        id: s,
+        key: s,
+        name: s.charAt(0).toUpperCase() + s.slice(1),
+        color: strainColors[s] || "#000000",
+      }));
+
+    setPrerollsQualityTypes(qualityTypes);
+    setPrerollsStrainTypes(strainTypes);
+
+    // Build personalizedJointsImages from products (use mainImage or fallback)
+    const imagesMap = {};
+    qualityTypes.forEach((quality) => {
+      if (!imagesMap[quality.key]) {
+        imagesMap[quality.key] = {};
+      }
+      strainTypes.forEach((strain) => {
+        // Find product for this combination
+        const product = products.find(
+          (p) => p.quality === quality.key && p.strain === strain.key
+        );
+
+        // Use product mainImage if exists, otherwise fallback to old path
+        if (product && product.mainImage) {
+          imagesMap[quality.key][strain.key] = product.mainImage;
+        } else {
+          // Fallback to old static path
+          imagesMap[quality.key][
+            strain.key
+          ] = `/Product/${quality.key} ${strain.key} king.png`;
+        }
+      });
+    });
+
+    setPersonalizedJointsImages(imagesMap);
+    console.log("✅ Prerolls data loaded successfully");
+    console.log("Quality types:", qualityTypes);
+    console.log("Strain types:", strainTypes);
+    console.log("Products:", products);
+    console.log("Images map:", imagesMap);
+  };
+
   // Ensure language is loaded from localStorage on page mount
   useEffect(() => {
     const storedLanguage = localStorage.getItem("i18nextLng");
@@ -1078,6 +1199,9 @@ export default function MenuPage() {
 
         // Fetch real-time POS stock for linked products
         await fetchPOSStock(productsWithCategoryId);
+
+        // Load prerolls dynamic data
+        await loadPrerollsData();
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -1556,19 +1680,22 @@ export default function MenuPage() {
 
     const [quality, strain] = selectedJointType.split("-");
 
-    // Get the appropriate image based on size
-    const sizeImageMap = {
-      small: `/Product/${quality} ${strain} small.png`,
-      normal: `/Product/${quality} ${strain} normal.png`,
-      king: `/Product/${quality} ${strain} king.png`,
-    };
+    // Find the product for this quality/strain combination
+    const product = prerollsProducts.find(
+      (p) => p.quality === quality && p.strain === strain
+    );
 
-    // Price mapping for different sizes
-    const priceMap = {
-      small: 100,
-      normal: 150,
-      king: 200,
-    };
+    if (!product) {
+      console.error("Product not found for:", quality, strain);
+      return;
+    }
+
+    // Get variant data (price and image)
+    const variant = product.variants?.[selectedSize];
+    if (!variant) {
+      console.error("Variant not found for size:", selectedSize);
+      return;
+    }
 
     const prerollItem = {
       id: `${selectedJointType}_${selectedSize}_${Date.now()}`,
@@ -1577,9 +1704,10 @@ export default function MenuPage() {
       } - ${strain.charAt(0).toUpperCase() + strain.slice(1)} - ${
         selectedSize.charAt(0).toUpperCase() + selectedSize.slice(1)
       }`,
-      price: priceMap[selectedSize],
+      price: variant.price || 100,
       quantity: 1,
-      image: sizeImageMap[selectedSize],
+      image:
+        variant.image || `/Product/${quality} ${strain} ${selectedSize}.png`,
       categoryId: "prerolls",
       size: selectedSize,
     };
@@ -3025,8 +3153,10 @@ export default function MenuPage() {
       <div
         className="h-screen flex flex-col bg-gray-50 font-['Poppins']"
         style={{
-          backgroundImage: "url(/background.jpg)",
-          backgroundSize: "cover",
+          backgroundImage: `url(${
+            prerollsConfig?.backgroundImage || "/background.jpg"
+          })`,
+          backgroundSize: prerollsConfig?.backgroundFit || "cover",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
         }}
@@ -3260,140 +3390,115 @@ export default function MenuPage() {
 
             {/* 4x4 Grid - header row 180px, image cells 270px */}
             <div className="flex-1 w-full flex justify-center items-center p-4">
-              <div
-                className="mx-auto"
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 270px)",
-                  gridTemplateRows: "180px repeat(3, 270px)",
-                  gap: "0px",
-                }}
-              >
-                {/* Empty corner */}
-                <div></div>
+              {prerollsQualityTypes.length === 0 ||
+              prerollsStrainTypes.length === 0 ? (
+                <div className="text-center">
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-8 max-w-2xl">
+                    <h3 className="text-2xl font-bold text-yellow-800 mb-4">
+                      ⚠️ Prerolls Data Not Initialized
+                    </h3>
+                    <p className="text-yellow-700 mb-4">
+                      The prerolls special page has not been set up yet.
+                    </p>
+                    <p className="text-yellow-700 mb-4">
+                      Please ask an administrator to:
+                    </p>
+                    <ol className="text-left text-yellow-700 mb-4 list-decimal list-inside space-y-2">
+                      <li>Go to Admin Panel → Prerolls Special tab</li>
+                      <li>Click &quot;Initialize Default Data&quot; button</li>
+                      <li>
+                        Configure quality types, strain types, and products
+                      </li>
+                    </ol>
+                    <p className="text-sm text-yellow-600">
+                      This will create the default prerolls grid with
+                      Outdoor/Indoor/Top Quality and Sativa/Hybrid/Indica
+                      options.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="mx-auto"
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${
+                      prerollsStrainTypes.length + 1
+                    }, 270px)`,
+                    gridTemplateRows: `180px repeat(${prerollsQualityTypes.length}, 270px)`,
+                    gap: "0px",
+                  }}
+                >
+                  {/* Empty corner */}
+                  <div></div>
 
-                {/* Header: Sativa, Hybrid, Indica */}
-                <div
-                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
-                  style={{ backgroundColor: "#FDE047" }}
-                >
-                  Sativa
-                </div>
-                <div
-                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center"
-                  style={{ backgroundColor: "#22C55E" }}
-                >
-                  Hybrid
-                </div>
-                <div
-                  className="w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center rounded-tr-[3rem]"
-                  style={{ backgroundColor: "#3B82F6" }}
-                >
-                  Indica
-                </div>
-
-                {/* Outdoor Row */}
-                <div
-                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center rounded-tl-[3rem]"
-                  style={{ backgroundColor: "#06B6D4" }}
-                >
-                  Outdoor
-                </div>
-                {["sativa", "hybrid", "indica"].map((strain) => {
-                  const itemKey = `outdoor-${strain}`;
-                  const isSelected = selectedJointType === itemKey;
-                  const isZoomed = zoomedImage === itemKey;
-                  return (
+                  {/* Header Row: Strain Types (Sativa, Hybrid, Indica) */}
+                  {prerollsStrainTypes.map((strain, index) => (
                     <div
-                      key={itemKey}
-                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
-                        isSelected || isZoomed
-                          ? "ring-4 ring-green-500 shadow-2xl z-10"
+                      key={strain.id}
+                      className={`w-[270px] h-[180px] text-3xl font-bold text-white flex items-center justify-center ${
+                        index === 0 ? "rounded-tl-[3rem]" : ""
+                      } ${
+                        index === prerollsStrainTypes.length - 1
+                          ? "rounded-tr-[3rem]"
                           : ""
-                      } ${isZoomed ? "scale-110" : "scale-100"}`}
-                      onClick={() => handleImageClick(itemKey)}
+                      }`}
+                      style={{ backgroundColor: strain.color || "#000000" }}
                     >
-                      <Image
-                        src={personalizedJointsImages["outdoor"][strain]}
-                        alt={`Outdoor ${
-                          strain.charAt(0).toUpperCase() + strain.slice(1)
-                        }`}
-                        width={245}
-                        height={245}
-                        className="w-full h-full object-contain"
-                      />
+                      {strain.name}
                     </div>
-                  );
-                })}
+                  ))}
 
-                {/* Indoor Row */}
-                <div
-                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center"
-                  style={{ backgroundColor: "#6B7280" }}
-                >
-                  Indoor
-                </div>
-                {["sativa", "hybrid", "indica"].map((strain) => {
-                  const itemKey = `indoor-${strain}`;
-                  const isSelected = selectedJointType === itemKey;
-                  const isZoomed = zoomedImage === itemKey;
-                  return (
-                    <div
-                      key={itemKey}
-                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
-                        isSelected || isZoomed
-                          ? "ring-4 ring-green-500 shadow-2xl z-10"
-                          : ""
-                      } ${isZoomed ? "scale-110" : "scale-100"}`}
-                      onClick={() => handleImageClick(itemKey)}
-                    >
-                      <Image
-                        src={personalizedJointsImages["indoor"][strain]}
-                        alt={`Indoor ${
-                          strain.charAt(0).toUpperCase() + strain.slice(1)
+                  {/* Quality Rows (Outdoor, Indoor, Top Quality) */}
+                  {prerollsQualityTypes.map((quality, qualityIndex) => (
+                    <React.Fragment key={`quality-row-${quality.id}`}>
+                      {/* Quality Label */}
+                      <div
+                        className={`w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center ${
+                          qualityIndex === 0 ? "rounded-tl-[3rem]" : ""
+                        } ${
+                          qualityIndex === prerollsQualityTypes.length - 1
+                            ? "rounded-bl-[3rem]"
+                            : ""
                         }`}
-                        width={245}
-                        height={245}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  );
-                })}
+                        style={{ backgroundColor: quality.color || "#000000" }}
+                      >
+                        {quality.name}
+                      </div>
 
-                {/* Top Quality Row */}
-                <div
-                  className="w-[270px] h-[270px] text-2xl font-bold text-white flex items-center justify-center rounded-bl-[3rem]"
-                  style={{ backgroundColor: "#000000" }}
-                >
-                  Top Quality
+                      {/* Product Images */}
+                      {prerollsStrainTypes.map((strain) => {
+                        const itemKey = `${quality.key}-${strain.key}`;
+                        const isSelected = selectedJointType === itemKey;
+                        const isZoomed = zoomedImage === itemKey;
+                        return (
+                          <div
+                            key={itemKey}
+                            className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
+                              isSelected || isZoomed
+                                ? "ring-4 ring-green-500 shadow-2xl z-10"
+                                : ""
+                            } ${isZoomed ? "scale-110" : "scale-100"}`}
+                            onClick={() => handleImageClick(itemKey)}
+                          >
+                            <Image
+                              src={
+                                personalizedJointsImages[quality.key]?.[
+                                  strain.key
+                                ] || "/Product/placeholder.png"
+                              }
+                              alt={`${quality.name} ${strain.name}`}
+                              width={245}
+                              height={245}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
                 </div>
-                {["sativa", "hybrid", "indica"].map((strain) => {
-                  const itemKey = `top-${strain}`;
-                  const isSelected = selectedJointType === itemKey;
-                  const isZoomed = zoomedImage === itemKey;
-                  return (
-                    <div
-                      key={itemKey}
-                      className={`w-[270px] h-[270px] relative cursor-pointer transition-all duration-300 flex items-center justify-center bg-white p-3 ${
-                        isSelected || isZoomed
-                          ? "ring-4 ring-green-500 shadow-2xl z-10"
-                          : ""
-                      } ${isZoomed ? "scale-110" : "scale-100"}`}
-                      onClick={() => handleImageClick(itemKey)}
-                    >
-                      <Image
-                        src={personalizedJointsImages["top"][strain]}
-                        alt={`Top Quality ${
-                          strain.charAt(0).toUpperCase() + strain.slice(1)
-                        }`}
-                        width={245}
-                        height={245}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+              )}
             </div>
           </div>
         </div>
@@ -3439,88 +3544,105 @@ export default function MenuPage() {
               <div className="flex flex-col justify-between flex-1 overflow-y-auto p-6">
                 {/* Size Selection */}
                 <div className="grid grid-cols-3 gap-0">
-                  {/* Small Size */}
-                  <div
-                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
-                      selectedSize === "small"
-                        ? "border-green-500 bg-green-50 transform scale-105"
-                        : "border-gray-200 hover:border-green-300"
-                    }`}
-                    onClick={() => handlePrerollSizeSelect("small")}
-                  >
-                    <div className="w-32 h-32 mx-auto mb-3 relative">
-                      {selectedJointType && (
-                        <Image
-                          src={`/Product/${selectedJointType.split("-")[0]} ${
-                            selectedJointType.split("-")[1]
-                          } small.png`}
-                          alt="Small"
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                    <div className="font-bold text-gray-800 text-xl">Small</div>
-                    <div className="text-green-600 font-semibold text-lg">
-                      ฿100
-                    </div>
-                  </div>
+                  {(() => {
+                    // Get current product prices based on selectedJointType
+                    const [quality, strain] = selectedJointType ? selectedJointType.split("-") : ["", ""];
+                    const currentProduct = prerollsProducts.find(
+                      (p) => p.quality === quality && p.strain === strain
+                    );
+                    const variantPrices = {
+                      small: currentProduct?.variants?.small?.price || prerollsSizePrices.small || 100,
+                      normal: currentProduct?.variants?.normal?.price || prerollsSizePrices.normal || 150,
+                      king: currentProduct?.variants?.king?.price || prerollsSizePrices.king || 200,
+                    };
 
-                  {/* Normal Size */}
-                  <div
-                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
-                      selectedSize === "normal"
-                        ? "border-green-500 bg-green-50 transform scale-105"
-                        : "border-gray-200 hover:border-green-300"
-                    }`}
-                    onClick={() => handlePrerollSizeSelect("normal")}
-                  >
-                    <div className="w-32 h-32 mx-auto mb-3 relative">
-                      {selectedJointType && (
-                        <Image
-                          src={`/Product/${selectedJointType.split("-")[0]} ${
-                            selectedJointType.split("-")[1]
-                          } normal.png`}
-                          alt="Normal"
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                    <div className="font-bold text-gray-800 text-xl">
-                      Normal
-                    </div>
-                    <div className="text-green-600 font-semibold text-lg">
-                      ฿150
-                    </div>
-                  </div>
+                    return (
+                      <>
+                        {/* Small Size */}
+                        <div
+                          className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                            selectedSize === "small"
+                              ? "border-green-500 bg-green-50 transform scale-105"
+                              : "border-gray-200 hover:border-green-300"
+                          }`}
+                          onClick={() => handlePrerollSizeSelect("small")}
+                        >
+                          <div className="w-32 h-32 mx-auto mb-3 relative">
+                            {selectedJointType && (
+                              <Image
+                                src={`/Product/${selectedJointType.split("-")[0]} ${
+                                  selectedJointType.split("-")[1]
+                                } small.png`}
+                                alt="Small"
+                                fill
+                                className="object-contain"
+                              />
+                            )}
+                          </div>
+                          <div className="font-bold text-gray-800 text-xl">Small</div>
+                          <div className="text-green-600 font-semibold text-lg">
+                            ฿{variantPrices.small}
+                          </div>
+                        </div>
 
-                  {/* King Size */}
-                  <div
-                    className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
-                      selectedSize === "king"
-                        ? "border-green-500 bg-green-50 transform scale-105"
-                        : "border-gray-200 hover:border-green-300"
-                    }`}
-                    onClick={() => handlePrerollSizeSelect("king")}
-                  >
-                    <div className="w-32 h-32 mx-auto mb-3 relative">
-                      {selectedJointType && (
-                        <Image
-                          src={`/Product/${selectedJointType.split("-")[0]} ${
-                            selectedJointType.split("-")[1]
-                          } king.png`}
-                          alt="King"
-                          fill
-                          className="object-contain"
-                        />
-                      )}
-                    </div>
-                    <div className="font-bold text-gray-800 text-xl">King</div>
-                    <div className="text-green-600 font-semibold text-lg">
-                      ฿200
-                    </div>
-                  </div>
+                        {/* Normal Size */}
+                        <div
+                          className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                            selectedSize === "normal"
+                              ? "border-green-500 bg-green-50 transform scale-105"
+                              : "border-gray-200 hover:border-green-300"
+                          }`}
+                          onClick={() => handlePrerollSizeSelect("normal")}
+                        >
+                          <div className="w-32 h-32 mx-auto mb-3 relative">
+                            {selectedJointType && (
+                              <Image
+                                src={`/Product/${selectedJointType.split("-")[0]} ${
+                                  selectedJointType.split("-")[1]
+                                } normal.png`}
+                                alt="Normal"
+                                fill
+                                className="object-contain"
+                              />
+                            )}
+                          </div>
+                          <div className="font-bold text-gray-800 text-xl">
+                            Normal
+                          </div>
+                          <div className="text-green-600 font-semibold text-lg">
+                            ฿{variantPrices.normal}
+                          </div>
+                        </div>
+
+                        {/* King Size */}
+                        <div
+                          className={`cursor-pointer border-2 p-6 text-center transition-all duration-200 ${
+                            selectedSize === "king"
+                              ? "border-green-500 bg-green-50 transform scale-105"
+                              : "border-gray-200 hover:border-green-300"
+                          }`}
+                          onClick={() => handlePrerollSizeSelect("king")}
+                        >
+                          <div className="w-32 h-32 mx-auto mb-3 relative">
+                            {selectedJointType && (
+                              <Image
+                                src={`/Product/${selectedJointType.split("-")[0]} ${
+                                  selectedJointType.split("-")[1]
+                                } king.png`}
+                                alt="King"
+                                fill
+                                className="object-contain"
+                              />
+                            )}
+                          </div>
+                          <div className="font-bold text-gray-800 text-xl">King</div>
+                          <div className="text-green-600 font-semibold text-lg">
+                            ฿{variantPrices.king}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Action Buttons */}

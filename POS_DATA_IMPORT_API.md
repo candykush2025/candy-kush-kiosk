@@ -168,26 +168,26 @@ GET /api/pos/categories?active=true
 
 ### Field Reference
 
-| Kiosk Field                | Type    | Description                         | Default |
-| -------------------------- | ------- | ----------------------------------- | ------- |
-| `id`                       | string  | Firebase document ID                | auto    |
-| `customerId`               | string  | Customer ID (CK-0001)               | auto    |
-| `memberId`                 | string  | Member ID                           | `""`    |
-| `name` / `firstName`       | string  | First name (**required**)           | `""`    |
-| `lastName`                 | string  | Last name                           | `""`    |
-| `nickname`                 | string  | Nickname                            | `""`    |
-| `nationality`              | string  | Nationality                         | `""`    |
-| `dateOfBirth` / `dob`      | string  | Date of birth (YYYY-MM-DD)          | `""`    |
-| `email`                    | string  | Email address                       | `""`    |
-| `phone` / `cell`           | string  | Phone number                        | `""`    |
-| `isNoMember`               | boolean | Is guest (non-member)               | `false` |
-| `isActive`                 | boolean | Account active                      | `true`  |
-| `customPoints` / `points`  | number  | Loyalty points balance              | `0`     |
-| `totalSpent`               | number  | Lifetime spending                   | `0`     |
-| `totalVisits`              | number  | Total visits count                  | `0`     |
-| `allowedCategories`        | array   | Category IDs customer can access    | `[]`    |
-| `createdAt`                | string  | Creation timestamp (ISO)            | auto    |
-| `updatedAt`                | string  | Last update timestamp (ISO)         | auto    |
+| Kiosk Field               | Type    | Description                      | Default |
+| ------------------------- | ------- | -------------------------------- | ------- |
+| `id`                      | string  | Firebase document ID             | auto    |
+| `customerId`              | string  | Customer ID (CK-0001)            | auto    |
+| `memberId`                | string  | Member ID                        | `""`    |
+| `name` / `firstName`      | string  | First name (**required**)        | `""`    |
+| `lastName`                | string  | Last name                        | `""`    |
+| `nickname`                | string  | Nickname                         | `""`    |
+| `nationality`             | string  | Nationality                      | `""`    |
+| `dateOfBirth` / `dob`     | string  | Date of birth (YYYY-MM-DD)       | `""`    |
+| `email`                   | string  | Email address                    | `""`    |
+| `phone` / `cell`          | string  | Phone number                     | `""`    |
+| `isNoMember`              | boolean | Is guest (non-member)            | `false` |
+| `isActive`                | boolean | Account active                   | `true`  |
+| `customPoints` / `points` | number  | Loyalty points balance           | `0`     |
+| `totalSpent`              | number  | Lifetime spending                | `0`     |
+| `totalVisits`             | number  | Total visits count               | `0`     |
+| `allowedCategories`       | array   | Category IDs customer can access | `[]`    |
+| `createdAt`               | string  | Creation timestamp (ISO)         | auto    |
+| `updatedAt`               | string  | Last update timestamp (ISO)      | auto    |
 
 ### Dual Field Names
 

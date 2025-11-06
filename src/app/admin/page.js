@@ -24,6 +24,7 @@ import ModelViewer from "../../components/ModelViewer";
 import StockLinking from "../../components/admin/StockLinking";
 import StockOverview from "../../components/admin/StockOverview";
 import JointBuilderManagement from "../../components/admin/JointBuilderManagement";
+import PrerollsManagement from "../../components/admin/PrerollsManagement";
 import { CustomerService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
@@ -35,6 +36,7 @@ import {
   CashbackService,
   NonMemberCategoriesService,
 } from "../../lib/productService";
+import { PrerollService } from "../../lib/prerollService";
 import { VisitService } from "../../lib/visitService";
 import {
   Users,
@@ -119,6 +121,19 @@ export default function AdminPage() {
   const [nonMemberCategories, setNonMemberCategories] = useState([]);
   const [savingNonMemberCategories, setSavingNonMemberCategories] =
     useState(false);
+
+  // Prerolls Management States
+  const [prerollsConfig, setPrerollsConfig] = useState(null);
+  const [prerollsProducts, setPrerollsProducts] = useState([]);
+  const [editingPrerollQuality, setEditingPrerollQuality] = useState(null);
+  const [editingPrerollStrain, setEditingPrerollStrain] = useState(null);
+  const [editingPrerollProduct, setEditingPrerollProduct] = useState(null);
+  const [prerollBackgroundImageFile, setPrerollBackgroundImageFile] =
+    useState(null);
+  const [prerollQualityImageFile, setPrerollQualityImageFile] = useState(null);
+  const [prerollStrainImageFile, setPrerollStrainImageFile] = useState(null);
+  const [prerollProductImageFile, setPrerollProductImageFile] = useState(null);
+  const [loadingPrerolls, setLoadingPrerolls] = useState(false);
 
   // Helper function to upload a single variant option image
   const uploadSingleVariantImage = async (
@@ -950,6 +965,29 @@ export default function AdminPage() {
     }
   };
 
+  // Load prerolls data
+  const loadPrerollsData = useCallback(async () => {
+    try {
+      setLoadingPrerolls(true);
+      const [config, products] = await Promise.all([
+        PrerollService.getConfiguration(),
+        PrerollService.getAllPrerolls(),
+      ]);
+
+      setPrerollsConfig(config);
+      setPrerollsProducts(products);
+
+      console.log("📦 Admin loaded prerolls data:");
+      console.log("- Config:", config);
+      console.log("- Products:", products);
+    } catch (error) {
+      console.error("Error loading prerolls data:", error);
+      alert("Failed to load prerolls data. Please try again.");
+    } finally {
+      setLoadingPrerolls(false);
+    }
+  }, []);
+
   const loadDashboardData = useCallback(async () => {
     try {
       const customersData = await CustomerService.getAllCustomers();
@@ -1067,6 +1105,13 @@ export default function AdminPage() {
       setActiveTab(tab);
     }
   }, []);
+
+  // Load prerolls data when prerolls tab is active
+  useEffect(() => {
+    if (activeTab === "prerolls") {
+      loadPrerollsData();
+    }
+  }, [activeTab, loadPrerollsData]);
 
   // Keep URL in sync when activeTab changes (replace state so history not polluted)
   useEffect(() => {
@@ -4100,6 +4145,30 @@ export default function AdminPage() {
                 </svg>
                 Joint Builder
               </button>
+
+              <button
+                onClick={() => setActiveTab("prerolls")}
+                className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  activeTab === "prerolls"
+                    ? "bg-green-100 text-green-700 border-r-4 border-green-500"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                <svg
+                  className="w-5 h-5 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+                Prerolls Special
+              </button>
             </div>
           </nav>
         </div>
@@ -4137,7 +4206,9 @@ export default function AdminPage() {
                       ? "Crypto Payments"
                       : activeTab === "jointBuilder"
                       ? "Joint Builder"
-                      : activeTab}
+                      : activeTab === "prerolls"
+                      ? "Prerolls Special Management"
+                      : "Dashboard"}
                   </h1>
                   <p className="text-gray-600 mt-1">
                     {activeTab === "dashboard"
@@ -12528,6 +12599,15 @@ export default function AdminPage() {
 
               {/* Joint Builder Tab */}
               {activeTab === "jointBuilder" && <JointBuilderManagement />}
+
+              {/* Prerolls Tab */}
+              {activeTab === "prerolls" && (
+                <PrerollsManagement
+                  prerollsConfig={prerollsConfig}
+                  prerollsProducts={prerollsProducts}
+                  onDataChange={loadPrerollsData}
+                />
+              )}
             </div>
           </main>
         </div>
