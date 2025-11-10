@@ -37,7 +37,11 @@ export async function GET(request) {
 
         if (!snap.exists()) {
           return NextResponse.json(
-            { success: false, error: "Not Found", message: "Category not found" },
+            {
+              success: false,
+              error: "Not Found",
+              message: "Category not found",
+            },
             { status: 404, headers: corsHeaders }
           );
         }
@@ -48,8 +52,6 @@ export async function GET(request) {
           categoryId: data.categoryId || snap.id,
           name: data.name,
           description: data.description || "",
-          isActive: data.isActive !== false,
-          order: data.order || 0,
         };
 
         return NextResponse.json(
@@ -59,7 +61,11 @@ export async function GET(request) {
       } catch (err) {
         console.error("Error fetching category by id:", err);
         return NextResponse.json(
-          { success: false, error: "Internal server error", message: err.message },
+          {
+            success: false,
+            error: "Internal server error",
+            message: err.message,
+          },
           { status: 500, headers: corsHeaders }
         );
       }
@@ -69,22 +75,35 @@ export async function GET(request) {
     const q = query(collection(db, CATEGORIES_COLLECTION));
 
     const querySnapshot = await getDocs(q);
-    let categories = querySnapshot.docs.map((doc) => ({
+    // Include isActive and order temporarily for filtering/sorting, then strip them
+    let categoriesWithMeta = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       categoryId: doc.data().categoryId || doc.id,
       name: doc.data().name,
       description: doc.data().description || "",
-      isActive: doc.data().isActive !== false,
-      order: doc.data().order || 0,
+      _isActive: doc.data().isActive !== false,
+      _order: doc.data().order || 0,
     }));
 
     // Filter active only if requested (client-side filtering)
     if (activeOnly) {
-      categories = categories.filter((cat) => cat.isActive === true);
+      categoriesWithMeta = categoriesWithMeta.filter(
+        (cat) => cat._isActive === true
+      );
     }
 
     // Sort by order field (client-side sorting)
-    categories.sort((a, b) => a.order - b.order);
+    categoriesWithMeta.sort((a, b) => a._order - b._order);
+
+    // Strip internal fields before returning to caller
+    const categories = categoriesWithMeta.map(
+      ({ id, categoryId, name, description }) => ({
+        id,
+        categoryId,
+        name,
+        description,
+      })
+    );
 
     console.log("📂 Categories fetched for POS:", categories.length);
 
