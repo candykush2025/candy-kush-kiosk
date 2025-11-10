@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs, query } from "firebase/firestore";
+import { collection, getDocs, query, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 const CATEGORIES_COLLECTION = "categories";
@@ -26,7 +26,44 @@ export async function OPTIONS() {
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id"); // Firestore document id support
     const activeOnly = searchParams.get("active") === "true";
+
+    // If an id is provided, return that single category (by document id)
+    if (id) {
+      try {
+        const docRef = doc(db, CATEGORIES_COLLECTION, id);
+        const snap = await getDoc(docRef);
+
+        if (!snap.exists()) {
+          return NextResponse.json(
+            { success: false, error: "Not Found", message: "Category not found" },
+            { status: 404, headers: corsHeaders }
+          );
+        }
+
+        const data = snap.data();
+        const category = {
+          id: snap.id,
+          categoryId: data.categoryId || snap.id,
+          name: data.name,
+          description: data.description || "",
+          isActive: data.isActive !== false,
+          order: data.order || 0,
+        };
+
+        return NextResponse.json(
+          { success: true, data: category },
+          { headers: corsHeaders }
+        );
+      } catch (err) {
+        console.error("Error fetching category by id:", err);
+        return NextResponse.json(
+          { success: false, error: "Internal server error", message: err.message },
+          { status: 500, headers: corsHeaders }
+        );
+      }
+    }
 
     // Build query - simplified to avoid Firestore index requirements
     const q = query(collection(db, CATEGORIES_COLLECTION));
