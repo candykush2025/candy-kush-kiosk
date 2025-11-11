@@ -35,12 +35,16 @@ export default function ModelPreview({
         src={modelUrl}
         alt="3D Model Preview"
         camera-controls
-        camera-orbit={`${rotationX}deg ${rotationY}deg ${rotationZ}m`}
+        camera-orbit={`${rotationX || 90}deg ${rotationY || 75}deg ${
+          rotationZ || 3.5
+        }m`}
         interaction-prompt="none"
         shadow-intensity="1"
         environment-image="neutral"
         exposure="1"
         auto-rotate={autoRotate}
+        min-camera-orbit="auto auto 0.5m"
+        max-camera-orbit="auto auto 50m"
         style={{
           width: "100%",
           height: "100%",

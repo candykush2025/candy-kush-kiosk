@@ -658,7 +658,7 @@ export default function AdminPage() {
     modelUrl: "",
     modelRotationX: 90,
     modelRotationY: 75,
-    modelRotationZ: 2.5,
+    modelRotationZ: 4.0,
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -725,7 +725,7 @@ export default function AdminPage() {
     modelUrl: "",
     modelRotationX: 90,
     modelRotationY: 75,
-    modelRotationZ: 2.5,
+    modelRotationZ: 4.0,
     isActive: true,
     isFeatured: false,
     tags: [],
@@ -2258,7 +2258,7 @@ export default function AdminPage() {
           modelUrl: "",
           modelRotationX: 90,
           modelRotationY: 75,
-          modelRotationZ: 2.5,
+          modelRotationZ: 4.0,
           isActive: true,
           isFeatured: false,
           tags: [],
@@ -16079,14 +16079,14 @@ export default function AdminPage() {
                           </div>
                           <div>
                             <label className="block text-xs text-gray-600 mb-1">
-                              Distance (0.1-10m)
+                              Distance (0.1-50m)
                             </label>
                             <input
                               type="number"
                               min="0.1"
-                              max="10"
-                              step="0.1"
-                              value={newProduct.modelRotationZ || 2.5}
+                              max="50"
+                              step="0.5"
+                              value={newProduct.modelRotationZ || 4.0}
                               onChange={(e) =>
                                 setNewProduct({
                                   ...newProduct,
@@ -16107,7 +16107,7 @@ export default function AdminPage() {
                             modelUrl={newProduct.modelUrl}
                             rotationX={newProduct.modelRotationX || 90}
                             rotationY={newProduct.modelRotationY || 75}
-                            rotationZ={newProduct.modelRotationZ || 2.5}
+                            rotationZ={newProduct.modelRotationZ || 4.0}
                             autoRotate={false}
                             className="w-full h-64 bg-white rounded-lg border-2 border-gray-200"
                           />
@@ -17239,14 +17239,14 @@ export default function AdminPage() {
                           </div>
                           <div>
                             <label className="block text-xs text-gray-600 mb-1">
-                              Distance (0.1-10m)
+                              Distance (0.1-50m)
                             </label>
                             <input
                               type="number"
                               min="0.1"
-                              max="10"
-                              step="0.1"
-                              value={productForm.modelRotationZ || 2.5}
+                              max="50"
+                              step="0.5"
+                              value={productForm.modelRotationZ || 4.0}
                               onChange={(e) =>
                                 setProductForm({
                                   ...productForm,
@@ -17267,7 +17267,7 @@ export default function AdminPage() {
                             modelUrl={productForm.modelUrl}
                             rotationX={productForm.modelRotationX || 90}
                             rotationY={productForm.modelRotationY || 75}
-                            rotationZ={productForm.modelRotationZ || 2.5}
+                            rotationZ={productForm.modelRotationZ || 4.0}
                             autoRotate={false}
                             className="w-full h-64 bg-white rounded-lg border-2 border-gray-200"
                           />

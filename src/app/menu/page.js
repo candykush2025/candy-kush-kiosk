@@ -4675,7 +4675,7 @@ export default function MenuPage() {
                 modelUrl={selectedProduct.modelUrl}
                 rotationX={selectedProduct.modelRotationX || 90}
                 rotationY={selectedProduct.modelRotationY || 75}
-                rotationZ={selectedProduct.modelRotationZ || 2.5}
+                rotationZ={selectedProduct.modelRotationZ || 4.0}
                 autoRotate={true}
                 className="w-full h-full"
               />

@@ -7,7 +7,7 @@ export default function ModelViewer({
   modelUrl,
   rotationX = 90,
   rotationY = 75,
-  rotationZ = 2.5,
+  rotationZ = 4.0,
   autoRotate = false,
   className = "",
   style = {},
@@ -153,13 +153,17 @@ export default function ModelViewer({
           alt="3D Model"
           camera-controls
           auto-rotate={autoRotate}
-          camera-orbit={`${rotationX}deg ${rotationY}deg ${rotationZ}m`}
+          camera-orbit={`${rotationX || 90}deg ${rotationY || 75}deg ${
+            rotationZ || 4.0
+          }m`}
           interaction-prompt="none"
           shadow-intensity="1"
           environment-image="neutral"
           exposure="1"
           loading="eager"
           reveal="auto"
+          min-camera-orbit="auto auto 0.5m"
+          max-camera-orbit="auto auto 50m"
           style={{
             width: "100%",
             height: "100%",
