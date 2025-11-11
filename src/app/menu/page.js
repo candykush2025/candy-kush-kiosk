@@ -4830,33 +4830,30 @@ export default function MenuPage() {
                             !customer.isNoMember &&
                             option.memberPrice &&
                             option.memberPrice < option.price ? (
-                              // Member with discount - show only member price (no promotional text)
+                              // Member with discount - show member price with crossed-out regular price
                               <>
                                 <span className="text-green-600 font-semibold text-lg">
                                   ฿{option.memberPrice}
                                 </span>
+                                <div className="text-gray-500 text-lg">
+                                  <span className="line-through">
+                                    ฿{option.price}
+                                  </span>
+                                </div>
                               </>
                             ) : (
-                              // No member or no discount - show regular price with membership promotion
+                              // No member or no discount - show regular price with member price info
                               <>
                                 <span className="text-green-600 font-semibold text-lg">
                                   ฿{option.price}
                                 </span>
                                 {option.memberPrice &&
                                   option.memberPrice < option.price && (
-                                    <>
-                                      <div className="text-lg text-gray-500 text-center">
-                                        <span className="line-through">
-                                          ฿{option.price}
-                                        </span>
-                                        <span className="ml-1">
-                                          → ฿{option.memberPrice}
-                                        </span>
-                                      </div>
-                                      <span className="text-base text-gray-500">
-                                        with membership
+                                    <div className="text-lg text-gray-500 text-center">
+                                      <span className="ml-1">
+                                        ฿{option.memberPrice} : MEMBER
                                       </span>
-                                    </>
+                                    </div>
                                   )}
                               </>
                             )}
