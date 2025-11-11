@@ -2851,9 +2851,22 @@ export default function MenuPage() {
 
     // Variant product - calculate price range
     let allPrices = [];
+    let allRegularPrices = [];
+    let hasMemberPrice = false;
+
     product.variants.forEach((variant) => {
       if (variant.options && variant.options.length > 0) {
         variant.options.forEach((option) => {
+          // Always collect regular prices
+          if (option.price) {
+            allRegularPrices.push(option.price);
+          }
+
+          // Check if member prices exist and are different
+          if (option.memberPrice && option.memberPrice !== option.price) {
+            hasMemberPrice = true;
+          }
+
           let priceToUse = option.price;
 
           // If customer is a member and member price is available and lower, use member price
@@ -2879,12 +2892,46 @@ export default function MenuPage() {
 
     const minPrice = Math.min(...allPrices);
     const maxPrice = Math.max(...allPrices);
+    const minRegularPrice = Math.min(...allRegularPrices);
+    const maxRegularPrice = Math.max(...allRegularPrices);
 
-    if (minPrice === maxPrice) {
-      return `฿${minPrice}`;
-    } else {
-      return `฿${minPrice} - ฿${maxPrice}`;
+    const priceRangeText =
+      minPrice === maxPrice ? `฿${minPrice}` : `฿${minPrice} - ฿${maxPrice}`;
+    const regularPriceRangeText =
+      minRegularPrice === maxRegularPrice
+        ? `฿${minRegularPrice}`
+        : `฿${minRegularPrice} - ฿${maxRegularPrice}`;
+
+    // If customer is a no-member and there are member prices
+    if (customer && customer.isNoMember && hasMemberPrice) {
+      return (
+        <div className="flex flex-col items-center">
+          <span className="text-green-600 font-semibold text-lg">
+            {regularPriceRangeText}
+          </span>
+          <div className="text-lg text-gray-500 text-center">
+            <span className="ml-1">{priceRangeText} : MEMBER</span>
+          </div>
+        </div>
+      );
     }
+
+    // If customer is a regular member and there are member prices
+    if (customer && !customer.isNoMember && hasMemberPrice) {
+      return (
+        <div className="flex flex-col items-center">
+          <span className="text-green-600 font-semibold text-lg">
+            {priceRangeText}
+          </span>
+          <div className="text-gray-500 text-lg">
+            <span className="line-through">{regularPriceRangeText}</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Fallback - just show the price range
+    return priceRangeText;
   };
 
   // Helper function to get cashback details for a specific cart item
