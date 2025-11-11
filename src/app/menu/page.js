@@ -4784,9 +4784,9 @@ export default function MenuPage() {
               selectedProduct.variants &&
               selectedProduct.variants.length > 0 ? (
                 // Variant Selection
-                <div className="flex-1">
-                  {/* Current Variant Options */}
-                  <div className="grid grid-cols-3 border border-gray-300 overflow-hidden">
+                <div className="flex-1 flex flex-col">
+                  {/* Current Variant Options - Scrollable */}
+                  <div className="grid grid-cols-3 border border-gray-300 overflow-y-auto max-h-[50vh]">
                     {selectedProduct.variants[
                       currentVariantIndex
                     ]?.options?.map((option, index) => (

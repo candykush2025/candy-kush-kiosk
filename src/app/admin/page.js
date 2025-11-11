@@ -99,6 +99,16 @@ export default function AdminPage() {
     unit: "",
     imageUrl: "",
   });
+  const [editingVariantGroup, setEditingVariantGroup] = useState(null); // groupIndex when editing group
+  const [editingGroupName, setEditingGroupName] = useState("");
+  const [addingOptionToGroup, setAddingOptionToGroup] = useState(null); // groupIndex when adding option
+  const [newOptionForGroup, setNewOptionForGroup] = useState({
+    name: "",
+    price: "",
+    memberPrice: "",
+    unit: "",
+    imageUrl: "",
+  });
   const [editingCashback, setEditingCashback] = useState(null);
 
   // Stock Overview filter states
@@ -16414,23 +16424,86 @@ export default function AdminPage() {
                               className="border border-gray-300 rounded-lg p-4 bg-white"
                             >
                               <div className="flex items-center justify-between mb-3">
-                                <h4 className="font-medium text-gray-900">
-                                  Step {groupIndex + 1}:{" "}
-                                  {variantGroup.variantName}
-                                </h4>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setVariants(
-                                      variants.filter(
-                                        (_, i) => i !== groupIndex
-                                      )
-                                    );
-                                  }}
-                                  className="text-red-600 hover:text-red-800 text-sm"
-                                >
-                                  Remove Group
-                                </button>
+                                {editingVariantGroup === groupIndex ? (
+                                  // Edit mode - show input for group name
+                                  <div className="flex items-center gap-2 flex-1">
+                                    <input
+                                      type="text"
+                                      value={editingGroupName}
+                                      onChange={(e) =>
+                                        setEditingGroupName(e.target.value)
+                                      }
+                                      className="px-3 py-1 border border-gray-300 rounded text-sm font-medium flex-1"
+                                      placeholder="Group Name"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        // Save the edited group name
+                                        const updatedVariants = [...variants];
+                                        updatedVariants[
+                                          groupIndex
+                                        ].variantName = editingGroupName;
+                                        setVariants(updatedVariants);
+                                        setEditingVariantGroup(null);
+                                        setEditingGroupName("");
+                                      }}
+                                      className="text-green-600 hover:text-green-800 text-sm px-2"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingVariantGroup(null);
+                                        setEditingGroupName("");
+                                      }}
+                                      className="text-gray-600 hover:text-gray-800 text-sm px-2"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  // View mode - show group name
+                                  <h4 className="font-medium text-gray-900">
+                                    Step {groupIndex + 1}:{" "}
+                                    {variantGroup.variantName}
+                                  </h4>
+                                )}
+                                <div className="flex items-center gap-2">
+                                  {editingVariantGroup !== groupIndex && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setEditingVariantGroup(groupIndex);
+                                        setEditingGroupName(
+                                          variantGroup.variantName
+                                        );
+                                      }}
+                                      className="text-blue-600 hover:text-blue-800 text-sm"
+                                    >
+                                      Edit Group
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setVariants(
+                                        variants.filter(
+                                          (_, i) => i !== groupIndex
+                                        )
+                                      );
+                                      // Reset edit state if this group was being edited
+                                      if (editingVariantGroup === groupIndex) {
+                                        setEditingVariantGroup(null);
+                                        setEditingGroupName("");
+                                      }
+                                    }}
+                                    className="text-red-600 hover:text-red-800 text-sm"
+                                  >
+                                    Remove Group
+                                  </button>
+                                </div>
                               </div>
                               <div className="space-y-2">
                                 {variantGroup.options.map(
@@ -16476,6 +16549,178 @@ export default function AdminPage() {
                                       </button>
                                     </div>
                                   )
+                                )}
+
+                                {/* Add Option to Existing Group */}
+                                {editingVariantGroup === groupIndex && (
+                                  <div className="mt-3 border-t pt-3">
+                                    {addingOptionToGroup === groupIndex ? (
+                                      // Show form to add new option
+                                      <div className="bg-white p-3 rounded border border-blue-200">
+                                        <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                          Add New Option
+                                        </h5>
+                                        <div className="grid grid-cols-4 gap-2 mb-2">
+                                          <div>
+                                            <label className="block text-xs text-gray-600 mb-1">
+                                              Name
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={newOptionForGroup.name}
+                                              onChange={(e) =>
+                                                setNewOptionForGroup({
+                                                  ...newOptionForGroup,
+                                                  name: e.target.value,
+                                                })
+                                              }
+                                              className="w-full px-2 py-1 text-sm border rounded"
+                                              placeholder="Option name"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-xs text-gray-600 mb-1">
+                                              Price (฿)
+                                            </label>
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              value={newOptionForGroup.price}
+                                              onChange={(e) =>
+                                                setNewOptionForGroup({
+                                                  ...newOptionForGroup,
+                                                  price: e.target.value,
+                                                })
+                                              }
+                                              className="w-full px-2 py-1 text-sm border rounded"
+                                              placeholder="0.00"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-xs text-gray-600 mb-1">
+                                              Member Price
+                                            </label>
+                                            <input
+                                              type="number"
+                                              step="0.01"
+                                              value={
+                                                newOptionForGroup.memberPrice
+                                              }
+                                              onChange={(e) =>
+                                                setNewOptionForGroup({
+                                                  ...newOptionForGroup,
+                                                  memberPrice: e.target.value,
+                                                })
+                                              }
+                                              className="w-full px-2 py-1 text-sm border rounded"
+                                              placeholder="0.00"
+                                            />
+                                          </div>
+                                          <div>
+                                            <label className="block text-xs text-gray-600 mb-1">
+                                              Unit
+                                            </label>
+                                            <input
+                                              type="text"
+                                              value={newOptionForGroup.unit}
+                                              onChange={(e) =>
+                                                setNewOptionForGroup({
+                                                  ...newOptionForGroup,
+                                                  unit: e.target.value,
+                                                })
+                                              }
+                                              className="w-full px-2 py-1 text-sm border rounded"
+                                              placeholder="e.g., g, pcs"
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              // Add the new option to the group
+                                              if (
+                                                newOptionForGroup.name &&
+                                                newOptionForGroup.price
+                                              ) {
+                                                const updatedVariants = [
+                                                  ...variants,
+                                                ];
+                                                const newOption = {
+                                                  id: `opt-${Date.now()}-${Math.random()
+                                                    .toString(36)
+                                                    .substr(2, 9)}`,
+                                                  name: newOptionForGroup.name,
+                                                  price: parseFloat(
+                                                    newOptionForGroup.price
+                                                  ),
+                                                  memberPrice:
+                                                    newOptionForGroup.memberPrice
+                                                      ? parseFloat(
+                                                          newOptionForGroup.memberPrice
+                                                        )
+                                                      : null,
+                                                  unit:
+                                                    newOptionForGroup.unit ||
+                                                    "",
+                                                  imageUrl:
+                                                    newOptionForGroup.imageUrl ||
+                                                    "",
+                                                };
+                                                updatedVariants[
+                                                  groupIndex
+                                                ].options.push(newOption);
+                                                setVariants(updatedVariants);
+                                                // Reset form
+                                                setNewOptionForGroup({
+                                                  name: "",
+                                                  price: "",
+                                                  memberPrice: "",
+                                                  unit: "",
+                                                  imageUrl: "",
+                                                });
+                                                setAddingOptionToGroup(null);
+                                              } else {
+                                                alert(
+                                                  "Please enter option name and price"
+                                                );
+                                              }
+                                            }}
+                                            className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                                          >
+                                            Add Option
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setAddingOptionToGroup(null);
+                                              setNewOptionForGroup({
+                                                name: "",
+                                                price: "",
+                                                memberPrice: "",
+                                                unit: "",
+                                                imageUrl: "",
+                                              });
+                                            }}
+                                            className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                                          >
+                                            Cancel
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      // Show button to start adding option
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setAddingOptionToGroup(groupIndex)
+                                        }
+                                        className="w-full py-2 border-2 border-dashed border-gray-300 rounded text-sm text-gray-600 hover:border-green-500 hover:text-green-600"
+                                      >
+                                        + Add Option to this Group
+                                      </button>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -17609,28 +17854,99 @@ export default function AdminPage() {
                                   className="border border-gray-300 rounded-lg p-4 bg-white"
                                 >
                                   <div className="flex items-center justify-between mb-3">
-                                    <h4 className="font-medium text-gray-900">
-                                      Step {groupIndex + 1}:{" "}
-                                      {variantGroup.variantName}
-                                    </h4>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const updatedVariants =
-                                          productForm.variants.filter(
-                                            (_, i) => i !== groupIndex
-                                          );
-                                        setProductForm({
-                                          ...productForm,
-                                          variants: updatedVariants,
-                                        });
-                                        // Sync with variants state
-                                        setVariants(updatedVariants);
-                                      }}
-                                      className="text-red-600 hover:text-red-800 text-sm"
-                                    >
-                                      Remove Group
-                                    </button>
+                                    {editingVariantGroup === groupIndex ? (
+                                      // Edit mode - show input for group name
+                                      <div className="flex items-center gap-2 flex-1">
+                                        <input
+                                          type="text"
+                                          value={editingGroupName}
+                                          onChange={(e) =>
+                                            setEditingGroupName(e.target.value)
+                                          }
+                                          className="px-3 py-1 border border-gray-300 rounded text-sm font-medium flex-1"
+                                          placeholder="Group Name"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            // Save the edited group name
+                                            const updatedVariants = [
+                                              ...productForm.variants,
+                                            ];
+                                            updatedVariants[
+                                              groupIndex
+                                            ].variantName = editingGroupName;
+                                            setProductForm({
+                                              ...productForm,
+                                              variants: updatedVariants,
+                                            });
+                                            setVariants(updatedVariants);
+                                            setEditingVariantGroup(null);
+                                            setEditingGroupName("");
+                                          }}
+                                          className="text-green-600 hover:text-green-800 text-sm px-2"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingVariantGroup(null);
+                                            setEditingGroupName("");
+                                          }}
+                                          className="text-gray-600 hover:text-gray-800 text-sm px-2"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      // View mode - show group name
+                                      <h4 className="font-medium text-gray-900">
+                                        Step {groupIndex + 1}:{" "}
+                                        {variantGroup.variantName}
+                                      </h4>
+                                    )}
+                                    <div className="flex items-center gap-2">
+                                      {editingVariantGroup !== groupIndex && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingVariantGroup(groupIndex);
+                                            setEditingGroupName(
+                                              variantGroup.variantName
+                                            );
+                                          }}
+                                          className="text-blue-600 hover:text-blue-800 text-sm"
+                                        >
+                                          Edit Group
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const updatedVariants =
+                                            productForm.variants.filter(
+                                              (_, i) => i !== groupIndex
+                                            );
+                                          setProductForm({
+                                            ...productForm,
+                                            variants: updatedVariants,
+                                          });
+                                          // Sync with variants state
+                                          setVariants(updatedVariants);
+                                          // Reset edit state if this group was being edited
+                                          if (
+                                            editingVariantGroup === groupIndex
+                                          ) {
+                                            setEditingVariantGroup(null);
+                                            setEditingGroupName("");
+                                          }
+                                        }}
+                                        className="text-red-600 hover:text-red-800 text-sm"
+                                      >
+                                        Remove Group
+                                      </button>
+                                    </div>
                                   </div>
                                   <div className="space-y-2">
                                     {variantGroup.options.map(
@@ -18021,6 +18337,277 @@ export default function AdminPage() {
                                           </div>
                                         </div>
                                       )
+                                    )}
+
+                                    {/* Add Option to Existing Group */}
+                                    {editingVariantGroup === groupIndex && (
+                                      <div className="mt-3 border-t pt-3">
+                                        {addingOptionToGroup === groupIndex ? (
+                                          // Show form to add new option
+                                          <div className="bg-white p-3 rounded border border-blue-200">
+                                            <h5 className="text-sm font-medium text-gray-700 mb-2">
+                                              Add New Option
+                                            </h5>
+                                            <div className="grid grid-cols-5 gap-2 mb-2">
+                                              <div>
+                                                <label className="block text-xs text-gray-600 mb-1">
+                                                  Name
+                                                </label>
+                                                <input
+                                                  type="text"
+                                                  value={newOptionForGroup.name}
+                                                  onChange={(e) =>
+                                                    setNewOptionForGroup({
+                                                      ...newOptionForGroup,
+                                                      name: e.target.value,
+                                                    })
+                                                  }
+                                                  className="w-full px-2 py-1 text-sm border rounded"
+                                                  placeholder="Option name"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs text-gray-600 mb-1">
+                                                  Price (฿)
+                                                </label>
+                                                <input
+                                                  type="number"
+                                                  step="0.01"
+                                                  value={
+                                                    newOptionForGroup.price
+                                                  }
+                                                  onChange={(e) =>
+                                                    setNewOptionForGroup({
+                                                      ...newOptionForGroup,
+                                                      price: e.target.value,
+                                                    })
+                                                  }
+                                                  className="w-full px-2 py-1 text-sm border rounded"
+                                                  placeholder="0.00"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs text-gray-600 mb-1">
+                                                  Member Price
+                                                </label>
+                                                <input
+                                                  type="number"
+                                                  step="0.01"
+                                                  value={
+                                                    newOptionForGroup.memberPrice
+                                                  }
+                                                  onChange={(e) =>
+                                                    setNewOptionForGroup({
+                                                      ...newOptionForGroup,
+                                                      memberPrice:
+                                                        e.target.value,
+                                                    })
+                                                  }
+                                                  className="w-full px-2 py-1 text-sm border rounded"
+                                                  placeholder="0.00"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs text-gray-600 mb-1">
+                                                  Unit
+                                                </label>
+                                                <input
+                                                  type="text"
+                                                  value={newOptionForGroup.unit}
+                                                  onChange={(e) =>
+                                                    setNewOptionForGroup({
+                                                      ...newOptionForGroup,
+                                                      unit: e.target.value,
+                                                    })
+                                                  }
+                                                  className="w-full px-2 py-1 text-sm border rounded"
+                                                  placeholder="e.g., g, pcs"
+                                                />
+                                              </div>
+                                              <div>
+                                                <label className="block text-xs text-gray-600 mb-1">
+                                                  Image
+                                                </label>
+                                                <div className="flex items-center gap-1">
+                                                  {/* Image Preview */}
+                                                  {newOptionForGroup.imageUrl && (
+                                                    <div className="relative flex-shrink-0">
+                                                      <Image
+                                                        src={
+                                                          newOptionForGroup.imageUrl
+                                                        }
+                                                        alt="Preview"
+                                                        width={32}
+                                                        height={32}
+                                                        className="w-8 h-8 object-cover rounded border"
+                                                      />
+                                                      <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                          setNewOptionForGroup({
+                                                            ...newOptionForGroup,
+                                                            imageUrl: "",
+                                                          })
+                                                        }
+                                                        className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600"
+                                                      >
+                                                        ×
+                                                      </button>
+                                                    </div>
+                                                  )}
+
+                                                  {/* Upload Button */}
+                                                  <div className="relative flex-1">
+                                                    <input
+                                                      type="file"
+                                                      accept="image/*"
+                                                      onChange={async (e) => {
+                                                        const file =
+                                                          e.target.files[0];
+                                                        if (file) {
+                                                          try {
+                                                            const imageUrl =
+                                                              await uploadSingleVariantImage(
+                                                                file,
+                                                                editingProduct.id,
+                                                                productForm
+                                                                  .variants[
+                                                                  groupIndex
+                                                                ].id,
+                                                                `opt-${Date.now()}`
+                                                              );
+                                                            setNewOptionForGroup(
+                                                              {
+                                                                ...newOptionForGroup,
+                                                                imageUrl:
+                                                                  imageUrl,
+                                                              }
+                                                            );
+                                                          } catch (error) {
+                                                            console.error(
+                                                              "Error uploading image:",
+                                                              error
+                                                            );
+                                                            alert(
+                                                              "Failed to upload image. Please try again."
+                                                            );
+                                                          }
+                                                        }
+                                                      }}
+                                                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                                      id={`add-option-image-upload-${groupIndex}`}
+                                                    />
+                                                    <label
+                                                      htmlFor={`add-option-image-upload-${groupIndex}`}
+                                                      className={`block w-full px-2 py-1 border border-dashed rounded text-center cursor-pointer text-xs transition-colors ${
+                                                        newOptionForGroup.imageUrl
+                                                          ? "border-green-300 bg-green-50 text-green-600"
+                                                          : "border-gray-300 bg-gray-50 text-gray-500 hover:border-gray-400"
+                                                      }`}
+                                                    >
+                                                      {newOptionForGroup.imageUrl
+                                                        ? "Change"
+                                                        : "Upload"}
+                                                    </label>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  // Add the new option to the group
+                                                  if (
+                                                    newOptionForGroup.name &&
+                                                    newOptionForGroup.price
+                                                  ) {
+                                                    const updatedVariants = [
+                                                      ...productForm.variants,
+                                                    ];
+                                                    const newOption = {
+                                                      id: `opt-${Date.now()}-${Math.random()
+                                                        .toString(36)
+                                                        .substr(2, 9)}`,
+                                                      name: newOptionForGroup.name,
+                                                      price: parseFloat(
+                                                        newOptionForGroup.price
+                                                      ),
+                                                      memberPrice:
+                                                        newOptionForGroup.memberPrice
+                                                          ? parseFloat(
+                                                              newOptionForGroup.memberPrice
+                                                            )
+                                                          : null,
+                                                      unit:
+                                                        newOptionForGroup.unit ||
+                                                        "",
+                                                      imageUrl:
+                                                        newOptionForGroup.imageUrl ||
+                                                        "",
+                                                    };
+                                                    updatedVariants[
+                                                      groupIndex
+                                                    ].options.push(newOption);
+                                                    setProductForm({
+                                                      ...productForm,
+                                                      variants: updatedVariants,
+                                                    });
+                                                    setVariants(
+                                                      updatedVariants
+                                                    );
+                                                    // Reset form
+                                                    setNewOptionForGroup({
+                                                      name: "",
+                                                      price: "",
+                                                      memberPrice: "",
+                                                      unit: "",
+                                                      imageUrl: "",
+                                                    });
+                                                    setAddingOptionToGroup(
+                                                      null
+                                                    );
+                                                  } else {
+                                                    alert(
+                                                      "Please enter option name and price"
+                                                    );
+                                                  }
+                                                }}
+                                                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                                              >
+                                                Add Option
+                                              </button>
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  setAddingOptionToGroup(null);
+                                                  setNewOptionForGroup({
+                                                    name: "",
+                                                    price: "",
+                                                    memberPrice: "",
+                                                    unit: "",
+                                                    imageUrl: "",
+                                                  });
+                                                }}
+                                                className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300"
+                                              >
+                                                Cancel
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          // Show button to start adding option
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setAddingOptionToGroup(groupIndex)
+                                            }
+                                            className="w-full py-2 border-2 border-dashed border-gray-300 rounded text-sm text-gray-600 hover:border-green-500 hover:text-green-600"
+                                          >
+                                            + Add Option to this Group
+                                          </button>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 </div>
