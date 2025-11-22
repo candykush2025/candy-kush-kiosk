@@ -38,6 +38,7 @@ import {
 } from "../../lib/productService";
 import { PrerollService } from "../../lib/prerollService";
 import { VisitService } from "../../lib/visitService";
+import { countries } from "../../lib/countries";
 import {
   Users,
   ShoppingBag,
@@ -13392,7 +13393,6 @@ export default function AdminPage() {
                                       ).toLowerCase()
                                     )
                                 )
-                                .slice(0, 10)
                                 .map((country, index) => (
                                   <div
                                     key={index}
@@ -13820,7 +13820,6 @@ export default function AdminPage() {
                                       ).toLowerCase()
                                     )
                                 )
-                                .slice(0, 10)
                                 .map((country, index) => (
                                   <div
                                     key={index}
@@ -18165,9 +18164,9 @@ export default function AdminPage() {
                                                     const updated = [
                                                       ...productForm.variants,
                                                     ];
-                                                    updated[groupIndex].options[
-                                                      optionIndex
-                                                    ] = {
+
+                                                    // Build option object without undefined values
+                                                    const optionData = {
                                                       ...updated[groupIndex]
                                                         .options[optionIndex],
                                                       name: editingVariantValues.name.trim(),
@@ -18175,17 +18174,27 @@ export default function AdminPage() {
                                                         parseFloat(
                                                           editingVariantValues.price
                                                         ) || 0,
-                                                      memberPrice:
-                                                        editingVariantValues.memberPrice ===
-                                                        ""
-                                                          ? undefined
-                                                          : parseFloat(
-                                                              editingVariantValues.memberPrice
-                                                            ) || 0,
                                                       unit: editingVariantValues.unit.trim(),
                                                       imageUrl:
                                                         editingVariantValues.imageUrl.trim(),
                                                     };
+
+                                                    // Only add memberPrice if it has a value
+                                                    if (
+                                                      editingVariantValues.memberPrice !==
+                                                        "" &&
+                                                      editingVariantValues.memberPrice !==
+                                                        null
+                                                    ) {
+                                                      optionData.memberPrice =
+                                                        parseFloat(
+                                                          editingVariantValues.memberPrice
+                                                        ) || 0;
+                                                    }
+
+                                                    updated[groupIndex].options[
+                                                      optionIndex
+                                                    ] = optionData;
                                                     const updatedProductForm = {
                                                       ...productForm,
                                                       variants: updated,
@@ -18202,7 +18211,41 @@ export default function AdminPage() {
                                                     // Auto-save to Firestore
                                                     try {
                                                       setIsProductSaving(true);
-                                                      const cleanProductData = {
+
+                                                      // Remove undefined values from variants
+                                                      const cleanVariants =
+                                                        updated.map(
+                                                          (group) => ({
+                                                            ...group,
+                                                            options:
+                                                              group.options.map(
+                                                                (opt) => {
+                                                                  const cleanOpt =
+                                                                    { ...opt };
+                                                                  // Remove undefined values
+                                                                  Object.keys(
+                                                                    cleanOpt
+                                                                  ).forEach(
+                                                                    (key) => {
+                                                                      if (
+                                                                        cleanOpt[
+                                                                          key
+                                                                        ] ===
+                                                                        undefined
+                                                                      ) {
+                                                                        delete cleanOpt[
+                                                                          key
+                                                                        ];
+                                                                      }
+                                                                    }
+                                                                  );
+                                                                  return cleanOpt;
+                                                                }
+                                                              ),
+                                                          })
+                                                        );
+
+                                                      const productData = {
                                                         name: updatedProductForm.name,
                                                         description:
                                                           updatedProductForm.description,
@@ -18219,7 +18262,7 @@ export default function AdminPage() {
                                                         price:
                                                           updatedProductForm.price ||
                                                           0,
-                                                        variants: updated,
+                                                        variants: cleanVariants,
                                                         sku: updatedProductForm.sku,
                                                         barcode:
                                                           updatedProductForm.barcode,
@@ -18241,6 +18284,23 @@ export default function AdminPage() {
                                                         backgroundFit:
                                                           updatedProductForm.backgroundFit,
                                                       };
+
+                                                      // Remove undefined values from top level
+                                                      const cleanProductData =
+                                                        {};
+                                                      Object.keys(
+                                                        productData
+                                                      ).forEach((key) => {
+                                                        if (
+                                                          productData[key] !==
+                                                          undefined
+                                                        ) {
+                                                          cleanProductData[
+                                                            key
+                                                          ] = productData[key];
+                                                        }
+                                                      });
+
                                                       await ProductService.updateProduct(
                                                         editingProduct.id,
                                                         cleanProductData

@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
-    const currencyFrom = searchParams.get('currency_from');
-    const currencyTo = searchParams.get('currency_to') || 'trx';
-    const fiatEquivalent = searchParams.get('fiat_equivalent') || 'usd';
-    const isFixedRate = searchParams.get('is_fixed_rate') || 'false';
-    const isFeePaidByUser = searchParams.get('is_fee_paid_by_user') || 'false';
+    const currencyFrom = searchParams.get("currency_from");
+    const currencyTo = searchParams.get("currency_to") || "trx";
+    const fiatEquivalent = searchParams.get("fiat_equivalent") || "usd";
+    const isFixedRate = searchParams.get("is_fixed_rate") || "false";
+    const isFeePaidByUser = searchParams.get("is_fee_paid_by_user") || "false";
 
     if (!currencyFrom) {
       return NextResponse.json(
-        { error: 'currency_from is required' },
+        { error: "currency_from is required" },
         { status: 400 }
       );
     }
@@ -20,8 +20,8 @@ export async function GET(request) {
 
     const response = await fetch(url, {
       headers: {
-        'x-api-key': process.env.NOWPAYMENT_API_KEY
-      }
+        "x-api-key": process.env.NOWPAYMENT_API_KEY,
+      },
     });
 
     if (!response.ok) {
@@ -31,9 +31,9 @@ export async function GET(request) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching minimum amount:', error);
+    console.error("Error fetching minimum amount:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch minimum amount' },
+      { error: "Failed to fetch minimum amount" },
       { status: 500 }
     );
   }

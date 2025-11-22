@@ -342,6 +342,7 @@ export default function MenuPage() {
   };
 
   const fetchMinimumAmount = async (currencyFrom, totalUsd) => {
+    console.log("fetchMinimumAmount called with:", { currencyFrom, type: typeof currencyFrom, totalUsd });
     try {
       const response = await fetch(
         `/api/crypto/min-amount?currency_from=${currencyFrom}&currency_to=trx&fiat_equivalent=usd&is_fixed_rate=false&is_fee_paid_by_user=false`
@@ -413,7 +414,9 @@ export default function MenuPage() {
       const minimums = {};
 
       for (const item of orderedCurrencies) {
-        const currency = item.code;
+        console.log("Processing item:", item, "item.code:", item.code, "type of item.code:", typeof item.code);
+        const currency = String(item.code).toLowerCase(); // Ensure it's always a string
+        console.log("currency set to:", currency, "type:", typeof currency);
         const currencyData = currencies.find(
           (c) =>
             (c.code && c.code.toLowerCase() === currency) ||
