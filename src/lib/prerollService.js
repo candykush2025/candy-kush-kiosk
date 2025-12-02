@@ -809,7 +809,7 @@ export class PrerollService {
           const productData = {
             quality: quality,
             strain: strain,
-            mainImage: `/Product/${imageQuality} ${imageStrain} king.png`, // Use king size as default main image
+            mainImage: `/Product/${imageQuality}-${imageStrain}-king.png`, // Use king size as default main image
             mainImagePath: "",
             cellBackgroundType: "color", // "color" or "image"
             cellBackgroundColor: "#ffffff", // White by default
@@ -822,18 +822,18 @@ export class PrerollService {
                 // Top quality products don't have small size images, use normal as fallback
                 image:
                   quality === "top"
-                    ? `/Product/${imageQuality} ${imageStrain} normal.png`
-                    : `/Product/${imageQuality} ${imageStrain} small.png`,
+                    ? `/Product/${imageQuality}-${imageStrain}-normal.png`
+                    : `/Product/${imageQuality}-${imageStrain}-small.png`,
                 imagePath: "",
               },
               normal: {
                 price: qualityPrices[quality].normal,
-                image: `/Product/${imageQuality} ${imageStrain} normal.png`,
+                image: `/Product/${imageQuality}-${imageStrain}-normal.png`,
                 imagePath: "",
               },
               king: {
                 price: qualityPrices[quality].king,
-                image: `/Product/${imageQuality} ${imageStrain} king.png`,
+                image: `/Product/${imageQuality}-${imageStrain}-king.png`,
                 imagePath: "",
               },
             },

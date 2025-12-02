@@ -407,7 +407,7 @@ export default function CustomJointBuilder() {
       name: "Custom Joint",
       price: jointConfig.totalPrice,
       quantity: 1,
-      image: "/Product/indoor hybrid normal.png", // Default joint image
+      image: "/Product/indoor-hybrid-normal.png", // Default joint image
       productId: `custom-joint-${Date.now()}`,
       categoryId: "custom-joint",
       cashbackEnabled: false, // Custom joints don't have cashback

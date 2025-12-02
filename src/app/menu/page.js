@@ -160,19 +160,19 @@ export default function MenuPage() {
   // Personalized Joints product images mapping (will be loaded from Firebase)
   const [personalizedJointsImages, setPersonalizedJointsImages] = useState({
     outdoor: {
-      sativa: "/Product/outdoor sativa king.png",
-      hybrid: "/Product/outdoor hybrid king.png",
-      indica: "/Product/outdoor indica king.png",
+      sativa: "/Product/outdoor-sativa-king.png",
+      hybrid: "/Product/outdoor-hybrid-king.png",
+      indica: "/Product/outdoor-indica-king.png",
     },
     indoor: {
-      sativa: "/Product/indoor sativa king.png",
-      hybrid: "/Product/indoor hybrid king.png",
-      indica: "/Product/indoor indica king.png",
+      sativa: "/Product/indoor-sativa-king.png",
+      hybrid: "/Product/indoor-hybrid-king.png",
+      indica: "/Product/indoor-indica-king.png",
     },
     top: {
-      sativa: "/Product/top sativa king.png",
-      hybrid: "/Product/top HYBRID king.png",
-      indica: "/Product/top indica king.png",
+      sativa: "/Product/top-sativa-king.png",
+      hybrid: "/Product/top-HYBRID-king.png",
+      indica: "/Product/top-indica-king.png",
     },
   });
   const [paymentError, setPaymentError] = useState(null);
@@ -342,7 +342,6 @@ export default function MenuPage() {
   };
 
   const fetchMinimumAmount = async (currencyFrom, totalUsd) => {
-    console.log("fetchMinimumAmount called with:", { currencyFrom, type: typeof currencyFrom, totalUsd });
     try {
       const response = await fetch(
         `/api/crypto/min-amount?currency_from=${currencyFrom}&currency_to=trx&fiat_equivalent=usd&is_fixed_rate=false&is_fee_paid_by_user=false`
@@ -414,9 +413,7 @@ export default function MenuPage() {
       const minimums = {};
 
       for (const item of orderedCurrencies) {
-        console.log("Processing item:", item, "item.code:", item.code, "type of item.code:", typeof item.code);
-        const currency = String(item.code).toLowerCase(); // Ensure it's always a string
-        console.log("currency set to:", currency, "type:", typeof currency);
+        const currency = item.code;
         const currencyData = currencies.find(
           (c) =>
             (c.code && c.code.toLowerCase() === currency) ||
@@ -988,10 +985,10 @@ export default function MenuPage() {
         if (product && product.mainImage) {
           imagesMap[quality.key][strain.key] = product.mainImage;
         } else {
-          // Fallback to old static path
+          // Fallback to old static path (with dashes)
           imagesMap[quality.key][
             strain.key
-          ] = `/Product/${quality.key} ${strain.key} king.png`;
+          ] = `/Product/${quality.key}-${strain.key}-king.png`;
         }
       });
     });
@@ -1710,7 +1707,7 @@ export default function MenuPage() {
       price: variant.price || 100,
       quantity: 1,
       image:
-        variant.image || `/Product/${quality} ${strain} ${selectedSize}.png`,
+        variant.image || `/Product/${quality}-${strain}-${selectedSize}.png`,
       categoryId: "prerolls",
       size: selectedSize,
     };

@@ -13,6 +13,7 @@ import {
   limit,
   where,
   serverTimestamp,
+  arrayUnion,
 } from "firebase/firestore";
 import {
   ref,
@@ -112,9 +113,77 @@ export class CategoryService {
         updatedAt: serverTimestamp(),
       });
 
+      // Auto-apply new category to all existing customers (members)
+      try {
+        const customersSnapshot = await getDocs(collection(db, "customers"));
+        const updatePromises = customersSnapshot.docs.map((customerDoc) => {
+          return updateDoc(doc(db, "customers", customerDoc.id), {
+            allowedCategories: arrayUnion(docRef.id),
+          });
+        });
+        await Promise.all(updatePromises);
+      } catch (customerError) {
+        console.warn(
+          "Could not auto-apply category to customers:",
+          customerError
+        );
+      }
+
+      // Auto-apply new category to non-member categories list
+      try {
+        const currentNonMemberCategories =
+          await NonMemberCategoriesService.getNonMemberCategories();
+        if (!currentNonMemberCategories.includes(docRef.id)) {
+          await NonMemberCategoriesService.updateNonMemberCategories([
+            ...currentNonMemberCategories,
+            docRef.id,
+          ]);
+        }
+      } catch (nonMemberError) {
+        console.warn(
+          "Could not auto-apply category to non-members:",
+          nonMemberError
+        );
+      }
+
       return { id: docRef.id, categoryId };
     } catch (error) {
       console.error("Error creating category:", error);
+      throw error;
+    }
+  }
+
+  // Apply a category to all users (members and non-members)
+  // This can be used to retroactively apply existing categories
+  static async applyCategoryToAllUsers(categoryDocId) {
+    try {
+      let membersUpdated = 0;
+      let nonMembersUpdated = false;
+
+      // Apply to all member customers
+      const customersSnapshot = await getDocs(collection(db, "customers"));
+      const updatePromises = customersSnapshot.docs.map((customerDoc) => {
+        return updateDoc(doc(db, "customers", customerDoc.id), {
+          allowedCategories: arrayUnion(categoryDocId),
+        });
+      });
+      await Promise.all(updatePromises);
+      membersUpdated = customersSnapshot.size;
+
+      // Apply to non-member categories list
+      const currentNonMemberCategories =
+        await NonMemberCategoriesService.getNonMemberCategories();
+      if (!currentNonMemberCategories.includes(categoryDocId)) {
+        await NonMemberCategoriesService.updateNonMemberCategories([
+          ...currentNonMemberCategories,
+          categoryDocId,
+        ]);
+        nonMembersUpdated = true;
+      }
+
+      return { membersUpdated, nonMembersUpdated };
+    } catch (error) {
+      console.error("Error applying category to all users:", error);
       throw error;
     }
   }

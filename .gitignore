@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Firebase Admin SDK (sensitive credentials)
+serviceAccountKey.json
+
 # Large media files (stored in Firebase)
 *.MOV
 *.mov
