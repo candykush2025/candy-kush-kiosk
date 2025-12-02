@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { videoCache } from "@/lib/videoCache";
 
 export default function CachedVideo({
@@ -21,8 +21,164 @@ export default function CachedVideo({
   const [error, setError] = useState(null);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [videoKey, setVideoKey] = useState(0); // Force re-mount video element
   const videoRef = useRef(null);
   const blobUrlRef = useRef(null); // Keep track of blob URL for cleanup
+  const healthCheckIntervalRef = useRef(null);
+  const stallTimeoutRef = useRef(null);
+  const lastPlaybackTimeRef = useRef(0);
+  const maxRetries = 10; // Max retries before full page reload
+  const retryDelayMs = 2000; // Wait 2 seconds before retry
+
+  // Function to restart video playback
+  const restartVideo = useCallback(() => {
+    // Clear any existing timeouts
+    if (stallTimeoutRef.current) {
+      clearTimeout(stallTimeoutRef.current);
+      stallTimeoutRef.current = null;
+    }
+
+    if (videoRef.current) {
+      try {
+        // Reset video to beginning
+        videoRef.current.currentTime = 0;
+        videoRef.current.load();
+
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              setError(null);
+              lastPlaybackTimeRef.current = 0;
+            })
+            .catch(() => {
+              // Try muted play
+              if (videoRef.current) {
+                videoRef.current.muted = true;
+                videoRef.current.play().catch(() => {
+                  // Force re-mount
+                  setVideoKey((prev) => prev + 1);
+                });
+              }
+            });
+        }
+      } catch (err) {
+        // Force re-mount video element
+        setVideoKey((prev) => prev + 1);
+      }
+    }
+  }, []);
+
+  // Function to handle video recovery
+  const recoverVideo = useCallback(() => {
+    setError(null);
+    setLoading(true);
+    setVideoReady(false);
+
+    if (retryCount >= maxRetries) {
+      // Full page reload as last resort for kiosk stability
+      window.location.reload();
+      return;
+    }
+
+    setRetryCount((prev) => prev + 1);
+
+    // Force re-mount video element with new key
+    setTimeout(() => {
+      setVideoKey((prev) => prev + 1);
+    }, retryDelayMs);
+  }, [retryCount, maxRetries]);
+
+  // Health check - monitor video playback progress
+  useEffect(() => {
+    if (!videoReady || !videoRef.current) return;
+
+    // Clear any existing interval
+    if (healthCheckIntervalRef.current) {
+      clearInterval(healthCheckIntervalRef.current);
+    }
+
+    // Check every 5 seconds if video is progressing
+    healthCheckIntervalRef.current = setInterval(() => {
+      if (videoRef.current) {
+        const currentTime = videoRef.current.currentTime;
+        const isPaused = videoRef.current.paused;
+        const isEnded = videoRef.current.ended;
+
+        // If video should be playing but hasn't progressed
+        if (!isPaused && !isEnded && autoPlay) {
+          if (currentTime === lastPlaybackTimeRef.current && currentTime > 0) {
+            restartVideo();
+          }
+        }
+
+        lastPlaybackTimeRef.current = currentTime;
+
+        // Also check if video is paused when it shouldn't be
+        if (isPaused && autoPlay && !isEnded) {
+          videoRef.current.play().catch(() => {
+            restartVideo();
+          });
+        }
+      }
+    }, 5000);
+
+    return () => {
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+      }
+    };
+  }, [videoReady, autoPlay, restartVideo]);
+
+  // Auto-recover from error state
+  useEffect(() => {
+    if (error) {
+      const recoveryTimer = setTimeout(() => {
+        recoverVideo();
+      }, retryDelayMs);
+
+      return () => clearTimeout(recoveryTimer);
+    }
+  }, [error, recoverVideo]);
+
+  // Visibility change handler - restart video when tab becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        videoRef.current &&
+        autoPlay
+      ) {
+        if (videoRef.current.paused) {
+          videoRef.current.play().catch(() => {
+            restartVideo();
+          });
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [autoPlay, restartVideo]);
+
+  // Memory management - periodically clean up and refresh video source
+  useEffect(() => {
+    // Every 30 minutes, refresh the video to prevent memory buildup
+    const memoryRefreshInterval = setInterval(() => {
+      if (videoRef.current && !videoRef.current.paused) {
+        const currentTime = videoRef.current.currentTime;
+        videoRef.current.load();
+        videoRef.current.currentTime = currentTime;
+        videoRef.current.play().catch(() => {
+          restartVideo();
+        });
+      }
+    }, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(memoryRefreshInterval);
+  }, [restartVideo]);
 
   useEffect(() => {
     let isMounted = true;
@@ -37,14 +193,11 @@ export default function CachedVideo({
         setError(null);
         setLoadingProgress(0);
 
-        console.log("🎬 Loading video:", src);
-
         // Check if video is already cached
         const cachedUrl = await videoCache.getVideo(src);
 
         if (cachedUrl) {
           // Video is cached, use it immediately
-          console.log("✅ Using cached video");
           if (isMounted) {
             if (blobUrlRef.current && blobUrlRef.current.startsWith("blob:")) {
               URL.revokeObjectURL(blobUrlRef.current);
@@ -55,7 +208,6 @@ export default function CachedVideo({
           }
         } else {
           // Not cached - use original URL immediately for streaming while downloading in background
-          console.log("📡 Streaming video from URL while caching...");
           if (isMounted) {
             setCachedSrc(src); // Use original URL for immediate streaming
             setLoadingProgress(0);
@@ -66,18 +218,16 @@ export default function CachedVideo({
             .downloadAndCache(src, name, (progress) => {
               if (isMounted) {
                 setLoadingProgress(progress);
-                console.log(`📥 Caching progress: ${progress}%`);
               }
             })
             .then(() => {
-              console.log("✅ Video cached for next time");
+              // Video cached for next time
             })
-            .catch((err) => {
-              console.warn("⚠️ Background caching failed:", err);
+            .catch(() => {
+              // Background caching failed - will retry next time
             });
         }
       } catch (err) {
-        console.error("Error loading cached video:", err);
         if (isMounted) {
           setError("Failed to load video");
           // Fallback to original URL
@@ -95,8 +245,18 @@ export default function CachedVideo({
         URL.revokeObjectURL(blobUrlRef.current);
         blobUrlRef.current = null;
       }
+      // Cleanup stall timeout
+      if (stallTimeoutRef.current) {
+        clearTimeout(stallTimeoutRef.current);
+        stallTimeoutRef.current = null;
+      }
+      // Cleanup health check interval
+      if (healthCheckIntervalRef.current) {
+        clearInterval(healthCheckIntervalRef.current);
+        healthCheckIntervalRef.current = null;
+      }
     };
-  }, [src, name]);
+  }, [src, name, videoKey]); // Added videoKey to re-run when video element is remounted
 
   if (!src) {
     return null;
@@ -151,24 +311,15 @@ export default function CachedVideo({
         </div>
       )}
 
-      {/* Error State */}
+      {/* Error State - Now shows recovery message */}
       {error && !loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
+        <div className="absolute inset-0 flex items-center justify-center bg-black">
           <div className="text-center p-4">
-            <svg
-              className="w-16 h-16 text-red-500 mx-auto mb-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-              />
-            </svg>
-            <p className="text-white text-sm">{error}</p>
+            <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white text-lg">Recovering video...</p>
+            <p className="text-gray-400 text-sm mt-2">
+              Attempt {retryCount}/{maxRetries}
+            </p>
           </div>
         </div>
       )}
@@ -176,6 +327,7 @@ export default function CachedVideo({
       {/* Video */}
       {cachedSrc && (
         <video
+          key={videoKey}
           ref={videoRef}
           src={cachedSrc}
           autoPlay={false}
@@ -192,11 +344,9 @@ export default function CachedVideo({
             ...style,
           }}
           onLoadedMetadata={() => {
-            console.log("📹 Video metadata loaded - can start buffering");
+            // Video metadata loaded - can start buffering
           }}
           onCanPlay={() => {
-            console.log("✅ Video can play - enough buffered");
-
             // Video has enough data to start playing
             if (!videoReady) {
               setVideoReady(true);
@@ -209,17 +359,14 @@ export default function CachedVideo({
                 if (playPromise !== undefined) {
                   playPromise
                     .then(() => {
-                      console.log(
-                        "✅ Autoplay successful - playing while buffering"
-                      );
+                      // Autoplay successful
                     })
-                    .catch((err) => {
-                      console.error("❌ Autoplay failed:", err);
+                    .catch(() => {
                       // Try playing muted on iOS
                       if (videoRef.current) {
                         videoRef.current.muted = true;
-                        videoRef.current.play().catch((e) => {
-                          console.error("❌ Muted autoplay also failed:", e);
+                        videoRef.current.play().catch(() => {
+                          // Muted autoplay also failed - will recover automatically
                         });
                       }
                     });
@@ -228,43 +375,53 @@ export default function CachedVideo({
             }
           }}
           onLoadedData={() => {
-            console.log("✅ Video data loaded - first frame ready");
+            // Video data loaded - first frame ready
           }}
-          onError={(e) => {
-            console.error("❌ Video error:", e);
-            console.error("Video src:", cachedSrc);
-            setError("Video playback error - check console for details");
+          onError={() => {
+            setError("Video playback error - recovering...");
             setLoading(false);
+            // Don't need to call recoverVideo here - the useEffect watching error state will handle it
+          }}
+          onStalled={() => {
+            // Set a timeout to recover if stall persists
+            if (stallTimeoutRef.current) {
+              clearTimeout(stallTimeoutRef.current);
+            }
+            stallTimeoutRef.current = setTimeout(() => {
+              restartVideo();
+            }, 5000);
           }}
           onCanPlayThrough={() => {
-            console.log("✅ Video can play through without buffering");
+            // Clear stall timeout if video can play through
+            if (stallTimeoutRef.current) {
+              clearTimeout(stallTimeoutRef.current);
+              stallTimeoutRef.current = null;
+            }
+          }}
+          onEnded={() => {
+            // If loop is enabled but video ended, restart it manually as backup
+            if (loop && videoRef.current) {
+              videoRef.current.currentTime = 0;
+              videoRef.current.play().catch(() => {
+                restartVideo();
+              });
+            }
           }}
           onPlay={() => {
-            console.log("▶️ Video started playing");
+            // Reset retry count on successful play
+            setRetryCount(0);
           }}
           onPause={() => {
-            console.log("⏸️ Video paused");
+            // Video paused
           }}
           onWaiting={() => {
-            console.log("⏳ Video waiting/buffering");
+            // Video waiting/buffering
           }}
           onPlaying={() => {
-            console.log("▶️ Video is now playing");
+            // Video is now playing
           }}
           onProgress={() => {
-            // Track buffering progress
-            if (videoRef.current && videoRef.current.buffered.length > 0) {
-              const bufferedEnd = videoRef.current.buffered.end(
-                videoRef.current.buffered.length - 1
-              );
-              const duration = videoRef.current.duration;
-              if (duration > 0) {
-                const bufferedPercent = (bufferedEnd / duration) * 100;
-                console.log(
-                  `📊 Video buffered: ${bufferedPercent.toFixed(0)}%`
-                );
-              }
-            }
+            // Track buffering progress - no logging for stability
           }}
           {...props}
         >

@@ -38,7 +38,7 @@ class VideoCache {
 
     // Check if we already have a blob URL cached in memory
     if (this.blobUrlCache.has(url)) {
-      console.log("✅ Video blob URL from memory cache:", url);
+      
       return this.blobUrlCache.get(url);
     }
 
@@ -51,13 +51,13 @@ class VideoCache {
       request.onsuccess = () => {
         const result = request.result;
         if (result && result.blob) {
-          console.log("✅ Video loaded from IndexedDB:", url);
+          
           const blobUrl = URL.createObjectURL(result.blob);
           // Cache the blob URL in memory to avoid recreating it
           this.blobUrlCache.set(url, blobUrl);
           resolve(blobUrl);
         } else {
-          console.log("❌ Video not in cache:", url);
+          
           resolve(null);
         }
       };
@@ -83,11 +83,7 @@ class VideoCache {
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        console.log(
-          "✅ Video saved to cache:",
-          url,
-          `(${(blob.size / 1024 / 1024).toFixed(2)} MB)`
-        );
+
         resolve();
       };
     });
@@ -96,7 +92,6 @@ class VideoCache {
   // Download and cache video from URL with progress callback
   async downloadAndCache(url, name = "video", onProgress = null) {
     try {
-      console.log("📥 Downloading video from Firebase:", url);
 
       const response = await fetch(url);
 
@@ -183,7 +178,7 @@ class VideoCache {
           deletedCount++;
           cursor.continue();
         } else {
-          console.log(`🗑️ Cleared ${deletedCount} old cached videos`);
+          
           resolve(deletedCount);
         }
       };
@@ -228,7 +223,7 @@ class VideoCache {
       URL.revokeObjectURL(blobUrl);
     }
     this.blobUrlCache.clear();
-    console.log("🗑️ All blob URLs revoked");
+    
   }
 
   // Clear all cached videos
@@ -245,7 +240,7 @@ class VideoCache {
 
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        console.log("🗑️ All cached videos cleared");
+        
         resolve();
       };
     });

@@ -36,7 +36,6 @@ export default function Home() {
         );
         if (success) {
           setVisitRecorded(true);
-          console.log("Page visit recorded successfully");
         }
       }
     };
@@ -49,13 +48,9 @@ export default function Home() {
     const checkInactivity = () => {
       if (Date.now() - lastInteraction > 60000) {
         // 60 seconds
-        console.log("🛌 Switching to idle mode");
         setIsIdle(true);
 
         // Reset language to English when going idle
-        console.log(
-          "🔄 Idle: Resetting language to English for new customer session"
-        );
         i18n.changeLanguage("en");
         setSelectedLanguage("en");
         setLanguageChangeTime(null);
@@ -72,7 +67,6 @@ export default function Home() {
     const handleInteraction = () => {
       setLastInteraction(Date.now());
       if (isIdle) {
-        console.log("🔄 Exiting idle mode");
         setIsIdle(false);
       }
     };
@@ -102,9 +96,6 @@ export default function Home() {
       const timeSinceLanguageChange = Date.now() - languageChangeTime;
       if (timeSinceLanguageChange > 60000) {
         // 1 minute = 60000ms
-        console.log(
-          "🔄 Homepage: Auto-resetting language to English after 1 minute"
-        );
         i18n.changeLanguage("en");
         setSelectedLanguage("en");
         setLanguageChangeTime(null);
@@ -124,45 +115,25 @@ export default function Home() {
 
   // Barcode scanner processing function (hidden from UI) - Works like scanner page
   const processBarcodeScn = async (value) => {
-    console.log("🔍 Homepage: Barcode scan detected:", value);
-
     // Same validation as scanner page
     if (!(value && value.startsWith("CK-") && value.length >= 7)) {
-      console.log("❌ Homepage: Invalid barcode format:", value);
       return;
     }
-
-    console.log(
-      "✅ Homepage: Valid barcode format, checking customer in database..."
-    );
 
     try {
       // Same database check as scanner page
       const customer = await CustomerService.getCustomerByMemberId(value);
       if (customer) {
-        console.log("🎉 Homepage: Customer found in database:", {
-          name: customer.name,
-          id: customer.customerId,
-          points: customer.totalPoints || 0,
-        });
-
         // Same session storage as scanner page
         sessionStorage.setItem("customerCode", value);
-        console.log("� Homepage: Customer code saved to session storage");
 
         // Same navigation delay as scanner page
         setTimeout(() => {
-          console.log("🚀 Homepage: Navigating to categories page...");
           router.push("/menu");
         }, 600);
-      } else {
-        console.log(
-          "❌ Homepage: Customer not found in database for barcode:",
-          value
-        );
       }
     } catch (err) {
-      console.error("💥 Homepage: Error validating customer in database:", err);
+      // Silent error handling for kiosk stability
     }
   };
 
@@ -173,19 +144,12 @@ export default function Home() {
 
       // If long pause, reset buffer (same as scanner page)
       if (now - lastKeyTimeRef.current > 200) {
-        if (bufferRef.current) {
-          console.log(
-            "🔄 Homepage: Buffer reset due to timeout, was:",
-            bufferRef.current
-          );
-        }
         bufferRef.current = "";
       }
       lastKeyTimeRef.current = now;
 
       if (e.key === "Enter") {
         const value = bufferRef.current;
-        console.log("⏎ Homepage: Enter pressed, processing buffer:", value);
         bufferRef.current = "";
         if (value.trim()) {
           processBarcodeScn(value.trim());
@@ -196,17 +160,12 @@ export default function Home() {
       // Ignore control keys, only capture single characters (same as scanner page)
       if (e.key.length === 1) {
         bufferRef.current += e.key.toUpperCase();
-        console.log("📝 Homepage: Buffer updated:", bufferRef.current);
 
         // Auto-process if pattern matches expected length (same logic as scanner page)
         if (
           bufferRef.current.startsWith("CK-") &&
           bufferRef.current.length >= 7
         ) {
-          console.log(
-            "🔄 Homepage: Auto-processing buffer (length match):",
-            bufferRef.current
-          );
           clearTimeout(processTimer);
           processTimer = setTimeout(() => {
             processBarcodeScn(bufferRef.current);
@@ -217,13 +176,9 @@ export default function Home() {
     };
 
     let processTimer;
-    console.log(
-      "👂 Homepage: Barcode scanner listener activated (same as scanner page)"
-    );
     window.addEventListener("keydown", handleBarcodeKey);
 
     return () => {
-      console.log("🔇 Homepage: Barcode scanner listener deactivated");
       window.removeEventListener("keydown", handleBarcodeKey);
       clearTimeout(processTimer);
     };
@@ -234,7 +189,6 @@ export default function Home() {
     await VisitService.recordOrderStart(
       Math.random().toString(36).substr(2, 9)
     );
-    console.log("Order start recorded");
 
     // Navigate to scanner for customer verification
     router.push("/scanner");
@@ -252,14 +206,8 @@ export default function Home() {
     // Track language change time for auto-reset timer
     if (lng !== "en") {
       setLanguageChangeTime(Date.now());
-      console.log(
-        "🕐 Homepage: Language changed to",
-        lng,
-        "- Starting 1-minute timer for auto-reset"
-      );
     } else {
       setLanguageChangeTime(null); // Clear timer if switching to English
-      console.log("🔄 Homepage: Language changed to English - Timer cleared");
     }
 
     // Persist language selection to localStorage

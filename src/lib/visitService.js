@@ -28,7 +28,6 @@ export class VisitService {
         });
       }
 
-      console.log("Visit recorded successfully for date:", today);
       return true;
     } catch (error) {
       console.error("Error recording visit:", error);
@@ -63,7 +62,6 @@ export class VisitService {
         });
       }
 
-      console.log("Order start recorded successfully for date:", today);
       return true;
     } catch (error) {
       console.error("Error recording order start:", error);
