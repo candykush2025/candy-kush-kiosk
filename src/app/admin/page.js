@@ -2371,9 +2371,9 @@ export default function AdminPage() {
     try {
       const result = await CategoryService.applyCategoryToAllUsers(categoryId);
       alert(
-        `Category "${categoryName}" applied to ${result.membersUpdated} members${
-          result.nonMembersUpdated ? " and non-members" : ""
-        }.`
+        `Category "${categoryName}" applied to ${
+          result.membersUpdated
+        } members${result.nonMembersUpdated ? " and non-members" : ""}.`
       );
     } catch (error) {
       console.error("Failed to apply category to all users:", error);
