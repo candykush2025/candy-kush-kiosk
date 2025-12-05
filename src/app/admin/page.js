@@ -25,7 +25,7 @@ import StockLinking from "../../components/admin/StockLinking";
 import StockOverview from "../../components/admin/StockOverview";
 import JointBuilderManagement from "../../components/admin/JointBuilderManagement";
 import PrerollsManagement from "../../components/admin/PrerollsManagement";
-import { CustomerService } from "../../lib/customerService";
+import { CustomerService, MemberCategoriesService } from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
 import { AdminAuth } from "../../lib/adminAuth";
@@ -132,6 +132,10 @@ export default function AdminPage() {
   const [nonMemberCategories, setNonMemberCategories] = useState([]);
   const [savingNonMemberCategories, setSavingNonMemberCategories] =
     useState(false);
+
+  // Member Categories state (bulk update for all members)
+  const [memberCategories, setMemberCategories] = useState([]);
+  const [savingMemberCategories, setSavingMemberCategories] = useState(false);
 
   // Prerolls Management States
   const [prerollsConfig, setPrerollsConfig] = useState(null);
@@ -1074,6 +1078,22 @@ export default function AdminPage() {
           // Default to all categories on error
           setNonMemberCategories(categoriesData.map((cat) => cat.id));
         }
+
+        // Load member categories template
+        try {
+          const memberCategoryIds =
+            await MemberCategoriesService.getMemberCategoriesTemplate();
+          if (memberCategoryIds.length === 0) {
+            // Default to all categories if none set
+            setMemberCategories(categoriesData.map((cat) => cat.id));
+          } else {
+            setMemberCategories(memberCategoryIds);
+          }
+        } catch (error) {
+          console.error("Error loading member categories template:", error);
+          // Default to all categories on error
+          setMemberCategories(categoriesData.map((cat) => cat.id));
+        }
       }
 
       // Calculate transaction stats from all transactions
@@ -1867,6 +1887,50 @@ export default function AdminPage() {
 
   const clearAllNonMemberCategories = () => {
     setNonMemberCategories([]);
+  };
+
+  // Member Categories handlers (bulk update for all members)
+  const handleSaveMemberCategories = async () => {
+    if (!checkEditPermission()) return;
+
+    const confirmed = confirm(
+      `This will update categories for ALL members. Are you sure you want to apply these ${memberCategories.length} categories to all members?`
+    );
+    if (!confirmed) return;
+
+    try {
+      setSavingMemberCategories(true);
+      const result = await MemberCategoriesService.updateAllMembersCategories(
+        memberCategories
+      );
+      alert(`Successfully updated ${result.updatedCount} members with the selected categories!`);
+      // Refresh customers list
+      const customersData = await CustomerService.getAllCustomers();
+      setCustomers(customersData);
+    } catch (error) {
+      console.error("Error saving member categories:", error);
+      alert("Error saving member categories. Please try again.");
+    } finally {
+      setSavingMemberCategories(false);
+    }
+  };
+
+  const toggleMemberCategory = (categoryId) => {
+    setMemberCategories((prev) => {
+      if (prev.includes(categoryId)) {
+        return prev.filter((id) => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
+      }
+    });
+  };
+
+  const selectAllMemberCategories = () => {
+    setMemberCategories(categories.map((cat) => cat.id));
+  };
+
+  const clearAllMemberCategories = () => {
+    setMemberCategories([]);
   };
 
   // Payment method update handlers
@@ -4783,6 +4847,117 @@ export default function AdminPage() {
                               No categories available
                             </div>
                           )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Member Categories - Bulk Update for All Members */}
+                    {AdminAuth.hasPermission("edit") && (
+                      <div className="bg-white p-4 rounded-lg shadow-sm border border-green-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Member Categories{" "}
+                            <span className="text-xs font-normal text-green-600">
+                              (Apply to ALL Members)
+                            </span>
+                          </h3>
+                          <button
+                            onClick={handleSaveMemberCategories}
+                            disabled={savingMemberCategories}
+                            className={`px-4 py-2 text-sm font-medium text-white rounded-md flex items-center ${
+                              savingMemberCategories
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-green-600 hover:bg-green-700"
+                            }`}
+                          >
+                            {savingMemberCategories ? (
+                              <>
+                                <svg
+                                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <circle
+                                    className="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    strokeWidth="4"
+                                  ></circle>
+                                  <path
+                                    className="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                  ></path>
+                                </svg>
+                                Applying to All...
+                              </>
+                            ) : (
+                              "Apply to All Members"
+                            )}
+                          </button>
+                        </div>
+
+                        <div className="max-h-32 overflow-y-auto">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-gray-600">
+                              {memberCategories.length} of {categories.length}{" "}
+                              selected
+                            </span>
+                            <div className="space-x-2">
+                              <button
+                                type="button"
+                                onClick={selectAllMemberCategories}
+                                className="text-xs text-green-600 hover:text-green-800"
+                              >
+                                All
+                              </button>
+                              <button
+                                type="button"
+                                onClick={clearAllMemberCategories}
+                                className="text-xs text-red-600 hover:text-red-800"
+                              >
+                                None
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+                            {categories.map((category) => (
+                              <label
+                                key={category.id}
+                                className="flex items-center space-x-2 p-1 rounded hover:bg-green-50 cursor-pointer"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={memberCategories.includes(
+                                    category.id
+                                  )}
+                                  onChange={() =>
+                                    toggleMemberCategory(category.id)
+                                  }
+                                  className="h-3 w-3 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                                />
+                                <span className="text-xs text-gray-700">
+                                  {category.name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+
+                          {categories.length === 0 && (
+                            <div className="text-center py-2 text-gray-500 text-xs">
+                              No categories available
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-2 text-xs text-gray-500 bg-yellow-50 p-2 rounded">
+                          <strong>Note:</strong> Clicking "Apply to All Members"
+                          will update the allowed categories for ALL existing
+                          members at once.
                         </div>
                       </div>
                     )}

@@ -557,6 +557,54 @@ export class AnalyticsService {
   }
 }
 
+// Bulk update all members' allowed categories
+export class MemberCategoriesService {
+  // Update all members with the selected categories
+  static async updateAllMembersCategories(categoryIds) {
+    try {
+      const customersSnapshot = await getDocs(collection(db, CUSTOMERS_COLLECTION));
+      const updatePromises = [];
+
+      customersSnapshot.forEach((docSnapshot) => {
+        const docRef = doc(db, CUSTOMERS_COLLECTION, docSnapshot.id);
+        updatePromises.push(
+          updateDoc(docRef, {
+            allowedCategories: categoryIds,
+            updatedAt: serverTimestamp(),
+          })
+        );
+      });
+
+      await Promise.all(updatePromises);
+      console.log(`Updated ${updatePromises.length} members with new categories`);
+      return { success: true, updatedCount: updatePromises.length };
+    } catch (error) {
+      console.error("Error updating all members categories:", error);
+      throw error;
+    }
+  }
+
+  // Get current member categories (from the first member or default)
+  static async getMemberCategoriesTemplate() {
+    try {
+      const q = query(
+        collection(db, CUSTOMERS_COLLECTION),
+        limit(1)
+      );
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const data = querySnapshot.docs[0].data();
+        return data.allowedCategories || [];
+      }
+      return [];
+    } catch (error) {
+      console.error("Error getting member categories template:", error);
+      return [];
+    }
+  }
+}
+
 // Utility functions
 export const getTierColor = (tier) => {
   switch (tier) {

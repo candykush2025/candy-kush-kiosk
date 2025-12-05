@@ -695,6 +695,8 @@ useEffect(() => {
 - View points history
 - Adjust points (add/reduce)
 - Nationality dropdown (searchable)
+- Non-Member Categories: Categories visible to non-members
+- Member Categories (Bulk Update): Apply categories to ALL members at once
 
 **Key Functions:**
 
@@ -705,6 +707,22 @@ useEffect(() => {
 - `handleToggleCustomerStatus()` - Activate/deactivate
 - `handleViewPointsHistory()` - Show points transactions
 - `handleDeletePointTransaction()` - Remove point entry
+- `handleSaveNonMemberCategories()` - Save non-member category visibility
+- `handleSaveMemberCategories()` - Apply selected categories to ALL members
+
+**Non-Member Categories Section:**
+
+- Controls which categories are visible to non-members
+- Checkbox list with All/None quick select
+- Saves to Firestore `settings/nonMemberCategories`
+
+**Member Categories Section (Bulk Update):**
+
+- Apply categories to ALL members at once
+- Checkbox list with All/None quick select
+- Confirmation prompt before applying
+- Updates `allowedCategories` field for all customers
+- Uses `MemberCategoriesService.updateAllMembersCategories()`
 
 **Member ID Validation:**
 
