@@ -28,7 +28,7 @@ export class CustomerService {
   static async generateCustomerId() {
     try {
       const customersSnapshot = await getDocs(
-        collection(db, CUSTOMERS_COLLECTION)
+        collection(db, CUSTOMERS_COLLECTION),
       );
       const customerCount = customersSnapshot.size + 1;
       return `CK-${customerCount.toString().padStart(4, "0")}`;
@@ -75,7 +75,7 @@ export class CustomerService {
     try {
       const q = query(
         collection(db, CUSTOMERS_COLLECTION),
-        orderBy("updatedAt", "desc")
+        orderBy("updatedAt", "desc"),
       );
       const querySnapshot = await getDocs(q);
 
@@ -118,14 +118,14 @@ export class CustomerService {
   static async getCustomerByMemberId(memberId) {
     try {
       console.log(
-        `🔄 Fetching fresh customer data from server for: ${memberId}`
+        `🔄 Fetching fresh customer data from server for: ${memberId}`,
       );
 
       // Search by customerId field only (Member ID is stored as customerId)
       const q = query(
         collection(db, CUSTOMERS_COLLECTION),
         where("customerId", "==", memberId),
-        limit(1)
+        limit(1),
       );
 
       // Use getDocsFromServer to bypass cache and always fetch fresh data from server
@@ -321,7 +321,7 @@ export class CustomerService {
 
       // Sort by timestamp descending (newest first)
       return pointsArray.sort(
-        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp),
       );
     } catch (error) {
       console.error("Error getting customer points history:", error);
@@ -342,7 +342,7 @@ export class CustomerService {
           paymentMethod: transactionData.paymentMethod || "cash",
           cashbackPoints: transactionData.cashbackPoints || 0,
           createdAt: serverTimestamp(),
-        }
+        },
       );
 
       const transactionId = transactionRef.id;
@@ -435,7 +435,7 @@ export class AnalyticsService {
   static async getTotalRevenue() {
     try {
       const querySnapshot = await getDocs(
-        collection(db, TRANSACTIONS_COLLECTION)
+        collection(db, TRANSACTIONS_COLLECTION),
       );
       let total = 0;
 
@@ -456,7 +456,7 @@ export class AnalyticsService {
       const q = query(
         collection(db, CUSTOMERS_COLLECTION),
         orderBy("totalSpent", "desc"),
-        limit(limitCount)
+        limit(limitCount),
       );
 
       const querySnapshot = await getDocs(q);
@@ -478,7 +478,7 @@ export class AnalyticsService {
       const q = query(
         collection(db, TRANSACTIONS_COLLECTION),
         orderBy("createdAt", "desc"),
-        limit(limitCount)
+        limit(limitCount),
       );
 
       const querySnapshot = await getDocs(q);
@@ -487,7 +487,7 @@ export class AnalyticsService {
       for (const doc of querySnapshot.docs) {
         const transactionData = doc.data();
         const customer = await CustomerService.getCustomerById(
-          transactionData.customerId
+          transactionData.customerId,
         );
 
         transactions.push({
@@ -513,7 +513,7 @@ export class AnalyticsService {
 
       const q = query(
         collection(db, VISITS_COLLECTION),
-        where("timestamp", ">=", Timestamp.fromDate(today))
+        where("timestamp", ">=", Timestamp.fromDate(today)),
       );
 
       const querySnapshot = await getDocs(q);
@@ -535,7 +535,7 @@ export class AnalyticsService {
         collection(db, TRANSACTIONS_COLLECTION),
         where("createdAt", ">=", Timestamp.fromDate(startDate)),
         where("createdAt", "<=", Timestamp.fromDate(endDate)),
-        orderBy("createdAt", "asc")
+        orderBy("createdAt", "asc"),
       );
 
       const querySnapshot = await getDocs(q);
@@ -562,7 +562,9 @@ export class MemberCategoriesService {
   // Update all members with the selected categories
   static async updateAllMembersCategories(categoryIds) {
     try {
-      const customersSnapshot = await getDocs(collection(db, CUSTOMERS_COLLECTION));
+      const customersSnapshot = await getDocs(
+        collection(db, CUSTOMERS_COLLECTION),
+      );
       const updatePromises = [];
 
       customersSnapshot.forEach((docSnapshot) => {
@@ -571,12 +573,14 @@ export class MemberCategoriesService {
           updateDoc(docRef, {
             allowedCategories: categoryIds,
             updatedAt: serverTimestamp(),
-          })
+          }),
         );
       });
 
       await Promise.all(updatePromises);
-      console.log(`Updated ${updatePromises.length} members with new categories`);
+      console.log(
+        `Updated ${updatePromises.length} members with new categories`,
+      );
       return { success: true, updatedCount: updatePromises.length };
     } catch (error) {
       console.error("Error updating all members categories:", error);
@@ -587,12 +591,9 @@ export class MemberCategoriesService {
   // Get current member categories (from the first member or default)
   static async getMemberCategoriesTemplate() {
     try {
-      const q = query(
-        collection(db, CUSTOMERS_COLLECTION),
-        limit(1)
-      );
+      const q = query(collection(db, CUSTOMERS_COLLECTION), limit(1));
       const querySnapshot = await getDocs(q);
-      
+
       if (!querySnapshot.empty) {
         const data = querySnapshot.docs[0].data();
         return data.allowedCategories || [];

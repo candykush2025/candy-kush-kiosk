@@ -1023,18 +1023,15 @@ useEffect(() => {
 ### Product Creation Flow
 
 1. **Open Add Product Modal**
-
    - Click "Add Product" button
    - `setShowAddProduct(true)`
 
 2. **Fill Basic Info**
-
    - Name, description
    - Select category & subcategory
    - Enter SKU, barcode, supplier (optional)
 
 3. **Choose Product Type**
-
    - **Simple Product:**
      - Enter price & member price
      - Upload images
@@ -1044,18 +1041,15 @@ useEffect(() => {
      - For each group, add options with prices
 
 4. **Upload Media (Optional)**
-
    - Main image (required)
    - Background image
    - 3D model (.glb file)
 
 5. **Configure Styling**
-
    - Text color (color picker)
    - Background fit (contain/cover)
 
 6. **Set Cashback Rules** ⭐
-
    - Toggle "Enable Product Cashback"
    - Select type: Percentage or Fixed Amount
    - Enter value
@@ -1071,12 +1065,10 @@ useEffect(() => {
 ### Product Edit Flow
 
 1. **Click Edit Button**
-
    - `setEditingProduct(product)`
    - useEffect loads product into `productForm`
 
 2. **Modify Fields**
-
    - Any field can be changed
    - **Cashback fields are now properly loaded** ✅
 
@@ -1275,22 +1267,18 @@ Current Stock = Starting Stock + Purchases + Stock In + Adjustments - Sales
 **Advanced Filters:**
 
 1. **Search Filter**
-
    - Search by product name, SKU, or barcode
    - Real-time filtering as you type
 
 2. **Category Filter**
-
    - Filter by specific category
    - Cascading subcategory filter
 
 3. **Subcategory Filter**
-
    - Only shows subcategories from selected category
    - Disabled if no category selected
 
 4. **Stock Status Filter**
-
    - **All Status** - Show all products
    - **In Stock** - Only products with stock > 0
    - **Out of Stock** - Only products with stock = 0
@@ -1298,7 +1286,6 @@ Current Stock = Starting Stock + Purchases + Stock In + Adjustments - Sales
    - **Critical** - Products at or below admin alert level
 
 5. **Hide Zero Stock Toggle**
-
    - Checkbox to hide all products with 0 stock
    - Useful for focusing on available inventory
 
@@ -1711,7 +1698,7 @@ if (!checkDeletePermission()) return;
 
 ```javascript
 alert(
-  "You don't have permission to perform this action. Contact an administrator."
+  "You don't have permission to perform this action. Contact an administrator.",
 );
 ```
 

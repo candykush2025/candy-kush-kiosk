@@ -1,0 +1,214 @@
+# Joint Animation Layout Guide
+
+## Visual Structure
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Joint Preview Container                   │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │                                                       │   │
+│  │    ┌──────────┐  [Decorative Wraps]                │   │
+│  │    │ Spiral   │     (Z-30)                          │   │
+│  │    └──────────┘                                      │   │
+│  │         ↓                                            │   │
+│  │    ┌──────────┐                                      │   │
+│  │    │    M     │                                      │   │
+│  │    └──────────┘                                      │   │
+│  │                                                       │   │
+│  │  ┌──────┐  ┌──────────────────────────────┐        │   │
+│  │  │Filter│  │     Joint Base Image          │        │   │
+│  │  │(Z-20)│  │         (Z-10)                │        │   │
+│  │  └──────┘  │  ┌─────────────────────┐     │        │   │
+│  │            │  │  Coating Wrap Image  │     │        │   │
+│  │            │  │      (Z-20)          │     │        │   │
+│  │            │  └─────────────────────┘     │        │   │
+│  │            └──────────────────────────────┘        │   │
+│  │                                                       │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Image Positioning Details
+
+### 1. Filter Image (200x150px → 80x60px)
+
+```javascript
+Position: absolute
+Left: 40px (left-[40px])
+Top: 50% (top-1/2)
+Transform: -translate-y-1/2
+Z-Index: 20
+Effect: Blue gradient glow
+```
+
+**Placement:** Left end of the joint, vertically centered
+**Purpose:** Shows the selected filter type (paper, slim glass, wide glass)
+
+### 2. Coating Wrap Image (750x150px → 300x60px)
+
+```javascript
+Position: absolute
+Left: 50% (left-1/2)
+Top: 50% (top-1/2)
+Transform: -translate-x-1/2 -translate-y-1/2
+Z-Index: 20
+Effect: Green-yellow gradient glow
+```
+
+**Placement:** Centered on top of the joint body
+**Purpose:** Shows the selected coating (kief, oil, rosin, combo)
+
+### 3. Decorative Wraps (Existing)
+
+#### Spiral Wrap (50x50px)
+
+```javascript
+Position: absolute
+Right: 20px (right-[20px])
+Top: 20px (top-[20px])
+Z-Index: 30
+Effect: Orange gradient glow
+```
+
+#### M Wrap (50x50px)
+
+```javascript
+Position: absolute
+Right: 20px (right-[20px])
+Top: 70px (top-[70px])
+Z-Index: 30
+Effect: Purple gradient glow
+```
+
+**Placement:** Right side of the joint, stacked vertically
+**Purpose:** Decorative hash/rosin letter designs
+
+## Dynamic Behavior
+
+### Coating Changes
+
+When user selects different coating:
+
+1. `config.external.coating.id` updates
+2. `getCoatingImage()` returns new image path
+3. React re-renders with new coating image
+4. Smooth transition (React handles)
+
+**Example Flow:**
+
+```
+User clicks "Kief Coating"
+  ↓
+config.external.coating = { id: "kief-coating", ... }
+  ↓
+getCoatingImage() → "/CustomJoint/kief_coating.png"
+  ↓
+Image component updates src
+  ↓
+Kief coating displays on joint
+```
+
+### Filter Changes
+
+When user selects different filter:
+
+1. `config.filter.id` updates
+2. `getFilterImage()` returns new image path
+3. React re-renders with new filter image
+4. Smooth transition (React handles)
+
+**Example Flow:**
+
+```
+User clicks "Slim Glass Filter"
+  ↓
+config.filter = { id: "slim-glass", ... }
+  ↓
+getFilterImage() → "/CustomJoint/slim_glass_filter.png"
+  ↓
+Image component updates src
+  ↓
+Slim glass filter displays at joint tip
+```
+
+## Glow Effects
+
+### Coating Glow
+
+```css
+Class: "absolute inset-0 bg-gradient-to-r from-green-500/30 via-yellow-500/30 to-green-500/30 blur-lg rounded-full scale-110"
+Color: Green → Yellow → Green
+Intensity: 30% opacity
+Blur: Large (blur-lg)
+Size: 110% scale
+```
+
+### Filter Glow
+
+```css
+Class: "absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent blur-lg rounded-full scale-90"
+Color: Blue → Transparent
+Intensity: 20% opacity
+Blur: Large (blur-lg)
+Size: 90% scale
+```
+
+### Decorative Wrap Glows
+
+**Spiral:** Orange 30% → Transparent
+**M Wrap:** Purple 30% → Transparent
+
+## Responsive Considerations
+
+### Container
+
+- Width: 100% of preview area
+- Height: 360px (h-[360px])
+- Display: Flex (centered)
+
+### Images Scale
+
+All images use `objectFit: "contain"` to maintain aspect ratio
+
+### Positioning
+
+All absolute positions are relative to the joint preview container
+
+## Image Quality Settings
+
+### Next.js Image Component
+
+```javascript
+<Image
+  src={imagePath}
+  alt="description"
+  width={scaledWidth}
+  height={scaledHeight}
+  style={{ objectFit: "contain" }}
+  className="relative z-10"
+  priority // For above-the-fold images
+/>
+```
+
+### Optimization
+
+- WebP format automatically generated by Next.js
+- Lazy loading (except priority images)
+- Responsive srcset generated
+- Blur placeholder for loading states
+
+## Z-Index Hierarchy
+
+```
+Layer 40: Smoke effects (top)
+Layer 30: Decorative wraps (spiral, M)
+Layer 20: Filter & Coating images
+Layer 10: Joint base image
+Layer 0:  Background ambient effects (bottom)
+```
+
+This ensures proper visual stacking and prevents overlap issues.
+
+---
+
+**Note:** All positioning values are in pixels or Tailwind classes. Adjust as needed for different screen sizes or joint dimensions.

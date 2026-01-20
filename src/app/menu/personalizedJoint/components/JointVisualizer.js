@@ -63,6 +63,109 @@ export default function JointVisualizer({ config }) {
     return null;
   };
 
+  // Get wrap image based on coating selection OR paper type - ALWAYS return an image
+  const getCoatingImage = () => {
+    // If coating is selected, use coating-specific wrap
+    if (config.external?.coating) {
+      const coatingId = config.external.coating.id;
+
+      // Map coating IDs to their respective wrap images
+      const coatingMap = {
+        "kief-coating": "/CustomJoint/kief_coating.png",
+        "oil-coating": "/CustomJoint/hemp_wrap.png",
+        "rosin-full-dip": "/CustomJoint/preroll_wrap.png",
+        "rosin-kief-combo": "/CustomJoint/kief_coating.png",
+      };
+
+      return coatingMap[coatingId] || "/CustomJoint/hemp_wrap.png";
+    }
+
+    // No coating selected - use paper type to determine wrap
+    if (config.paper) {
+      const paperId = config.paper.id || config.paper.type || "";
+
+      // Map paper types to wrap images
+      const paperWrapMap = {
+        "pre-rolled-ck": "/CustomJoint/preroll_wrap.png",
+        "pre-rolled-cone": "/CustomJoint/preroll_wrap.png",
+        "standard-rolling-paper": "/CustomJoint/paper_wrap.png",
+        "rolling-paper-custom": "/CustomJoint/paper_wrap.png",
+        "golden-paper": "/CustomJoint/gold_wrap.png",
+        "golden-rolling-paper": "/CustomJoint/gold_wrap.png",
+        "blunt-hemp-wrap": "/CustomJoint/hemp_wrap.png",
+        "hemp-wrap": "/CustomJoint/hemp_wrap.png",
+        "hemp-cone": "/CustomJoint/hemp_wrap.png",
+        "glass-cone": "/CustomJoint/paper_wrap.png",
+        glasscode: "/CustomJoint/paper_wrap.png",
+      };
+
+      if (paperWrapMap[paperId]) return paperWrapMap[paperId];
+
+      // Fallback based on paper type string
+      if (paperId.includes("preroll") || paperId.includes("pre-rolled"))
+        return "/CustomJoint/preroll_wrap.png";
+      if (paperId.includes("gold") || paperId.includes("golden"))
+        return "/CustomJoint/gold_wrap.png";
+      if (paperId.includes("hemp")) return "/CustomJoint/hemp_wrap.png";
+      if (paperId.includes("paper") || paperId.includes("glasscode"))
+        return "/CustomJoint/paper_wrap.png";
+    }
+
+    // Final fallback
+    return "/CustomJoint/hemp_wrap.png";
+  }; // Get filter image based on filter selection - ALWAYS return an image (default to candykush_filter)
+  const getFilterImage = () => {
+    if (!config.filter) return "/CustomJoint/candykush_filter.png"; // Default filter
+
+    const filterId = config.filter.id;
+
+    // Map filter IDs to their respective images
+    const filterMap = {
+      "paper-filter": "/CustomJoint/tip_paper_filter.png",
+      "paper-small": "/CustomJoint/tip_paper_filter.png",
+      "paper-medium": "/CustomJoint/tip_paper_filter.png",
+      "paper-large": "/CustomJoint/tip_paper_filter.png",
+      "slim-glass": "/CustomJoint/slim_glass_filter.png",
+      "glass-10mm": "/CustomJoint/slim_glass_filter.png",
+      "wide-glass": "/CustomJoint/tip_glass_filter.png",
+      "glass-12mm": "/CustomJoint/tip_glass_filter.png",
+      "candykush-filter": "/CustomJoint/candykush_filter.png",
+    };
+
+    return filterMap[filterId] || "/CustomJoint/candykush_filter.png"; // Default fallback
+  };
+  const coatingImage = getCoatingImage();
+  const filterImage = getFilterImage(); // Now always returns an image
+
+  // Get paper image from provided assets only (do NOT use mockups)
+  const getPaperImage = () => {
+    if (!config.paper) return null;
+
+    // Prefer explicit id if present
+    const pid = config.paper.id || config.paper.type || "";
+    const map = {
+      "pre-rolled-ck": "/CustomJoint/preroll_coating.png",
+      "blunt-hemp-wrap": "/CustomJoint/hemp_coating.png",
+      "hemp-wrap": "/CustomJoint/hemp_coating.png",
+      "golden-paper": "/CustomJoint/paper_coating.png",
+      "rolling-paper-custom": "/CustomJoint/paper_coating.png",
+      "standard-rolling-paper": "/CustomJoint/paper_coating.png",
+    };
+
+    if (map[pid]) return map[pid];
+
+    // Fallback based on paperType string, but still using only provided images
+    if (paperType.includes("hemp")) return "/CustomJoint/hemp_coating.png";
+    if (paperType.includes("gold") || paperType.includes("golden"))
+      return "/CustomJoint/paper_coating.png";
+    if (paperType.includes("custom")) return "/CustomJoint/paper_coating.png";
+
+    // Final fallback to a provided image (preroll)
+    return "/CustomJoint/preroll_coating.png";
+  };
+
+  const paperImage = getPaperImage();
+
   return (
     <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-6 border border-white/20 shadow-2xl">
       <h3 className="text-xl font-bold mb-4 text-center">Live Preview</h3>
@@ -77,112 +180,90 @@ export default function JointVisualizer({ config }) {
             </div>
           )}
 
-          {/* Spiral Tip Image - Absolute Top Right Corner */}
-          {config.external?.wrap?.id === "rosin-spiral" && (
-            <div className="absolute right-[10px] top-[10px] z-30">
-              <div className="relative">
-                {/* Gold/orange glow for spiral */}
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/30 to-transparent blur-md rounded-full scale-90"></div>
-                <Image
-                  src="/CustomJoint/tip-spiral.png"
-                  alt="spiral rosin wrap"
-                  width={50}
-                  height={50}
-                  style={{
-                    objectFit: "contain",
-                  }}
-                  className="relative z-10"
-                  priority
-                />
-              </div>
-            </div>
-          )}
-
-          {/* M Tip Image - Absolute Top Right Corner (slightly lower if spiral exists) */}
-          {(config.external?.wrap?.id === "hash-M" ||
-            config.external?.wrap?.id === "rosin-M") && (
-            <div
-              className={`absolute right-[10px] z-30 ${
-                config.external?.wrap?.id === "rosin-spiral"
-                  ? "top-[70px]"
-                  : "top-[10px]"
-              }`}
-            >
-              <div className="relative">
-                {/* Purple glow for M wrap */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-transparent blur-md rounded-full scale-90"></div>
-                <Image
-                  src="/CustomJoint/tip-M.png"
-                  alt="M wrap"
-                  width={50}
-                  height={50}
-                  style={{
-                    objectFit: "contain",
-                  }}
-                  className="relative z-10"
-                  priority
-                />
-              </div>
-            </div>
-          )}
-
           {config.paper ? (
             <div className="relative flex items-center justify-center">
               {(() => {
-                // Select image based on paper type
-                let src = "/CustomJoint/preroll1.png"; // default
-                if (paperType.includes("hemp")) src = "/CustomJoint/hemp1.png";
-                else if (
-                  paperType.includes("gold") ||
-                  paperType.includes("golden")
-                )
-                  src = encodeURI("/CustomJoint/gold foil.png");
-                else if (paperType.includes("custom"))
-                  src = encodeURI("/CustomJoint/custom paperfinal.png");
-
-                // Select tip image based on filter type
-                let tipSrc = null;
-                if (
-                  filterType.includes("glass") &&
-                  filterType.includes("slim")
-                ) {
-                  tipSrc = "/CustomJoint/tip-slim-glass.png";
-                } else if (filterType.includes("glass")) {
-                  tipSrc = "/CustomJoint/tip-glass.png";
-                } else if (
-                  filterType.includes("paper") ||
-                  filterType !== "none"
-                ) {
-                  tipSrc = "/CustomJoint/tip-paper.png";
-                }
-
                 return (
                   <div className="relative">
-                    {/* Real Joint Image */}
-                    <Image
-                      src={src}
-                      alt="joint preview"
-                      width={350}
-                      height={200}
-                      style={{ objectFit: "contain" }}
-                      priority
-                    />
+                    {/* Full Joint - Wrap + Filter Combined */}
+                    <div className="relative flex items-center justify-center">
+                      {/* Wrap Image (Left side of joint) - Always shown */}
+                      <div className="relative">
+                        <Image
+                          src={coatingImage}
+                          alt="joint wrap"
+                          width={320}
+                          height={64}
+                          style={{
+                            objectFit: "contain",
+                          }}
+                          className="relative z-10"
+                          priority
+                        />
+                      </div>
 
-                    {/* Filter Tip Image - Rotated and styled */}
-                    {tipSrc && (
-                      <div className="absolute right-[50px] top-[30%] -translate-y-1/2">
+                      {/* Smoke effect positioned in front of the wrap */}
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 z-20">
+                        <SmokeEffect />
+                      </div>
+
+                      {/* Filter Image (Right side of joint) - Always shown */}
+                      <div className="relative">
+                        <Image
+                          src={filterImage}
+                          alt="joint filter"
+                          width={85}
+                          height={64}
+                          style={{
+                            objectFit: "contain",
+                          }}
+                          className="relative z-10"
+                          priority
+                        />
+                      </div>
+                    </div>
+
+                    {/* Glow effects for the combined joint */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[320px] h-[64px] bg-gradient-to-r from-green-500/20 via-yellow-500/20 to-transparent blur-md rounded-l-full"></div>
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[86px] h-[64px] bg-gradient-to-l from-blue-500/15 to-transparent blur-md rounded-r-full"></div>
+                    </div>
+
+                    {/* Spiral Wrap Image for decorative wraps */}
+                    {config.external?.wrap?.id === "rosin-spiral" && (
+                      <div className="absolute right-[-40px] top-1/2 -translate-y-1/2 z-30">
                         <div className="relative">
-                          {/* Green gradient glow - smaller and more subtle */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-transparent blur-lg rounded-full scale-75"></div>
-                          {/* Tip image rotated horizontal */}
+                          {/* Gold/orange glow for spiral */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-orange-500/30 to-transparent blur-md rounded-full scale-90"></div>
                           <Image
-                            src={tipSrc}
-                            alt="filter tip"
-                            width={60}
-                            height={60}
+                            src="/CustomJoint/tip-spiral.png"
+                            alt="spiral rosin wrap"
+                            width={50}
+                            height={50}
                             style={{
                               objectFit: "contain",
-                              transform: "rotate(-90deg)",
+                            }}
+                            className="relative z-10"
+                            priority
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* M Wrap Image for decorative wraps */}
+                    {(config.external?.wrap?.id === "hash-M" ||
+                      config.external?.wrap?.id === "rosin-M") && (
+                      <div className="absolute right-[-40px] top-[30%] z-30">
+                        <div className="relative">
+                          {/* Purple glow for M wrap */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/30 to-transparent blur-md rounded-full scale-90"></div>
+                          <Image
+                            src="/CustomJoint/tip-M.png"
+                            alt="M wrap"
+                            width={50}
+                            height={50}
+                            style={{
+                              objectFit: "contain",
                             }}
                             className="relative z-10"
                             priority
@@ -192,7 +273,7 @@ export default function JointVisualizer({ config }) {
                     )}
 
                     {/* Professional smoke effect using tsparticles library */}
-                    <SmokeEffect />
+                    {/* <SmokeEffect /> */}
                   </div>
                 );
               })()}

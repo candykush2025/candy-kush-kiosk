@@ -39,9 +39,9 @@ export default function SmokeEffect() {
       <style jsx>{`
         .smoke-effect-container {
           position: absolute;
-          left: 0;
-          top: 25%;
-          transform: translate(-50px, -50%);
+          left: 25%;
+          top: 50%;
+          transform: translate(-60%, -90%);
           pointer-events: none;
           width: 150px;
           height: 200px;

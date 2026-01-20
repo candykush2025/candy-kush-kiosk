@@ -264,6 +264,7 @@ export const filterOptions = [
     active: true,
     glassSize: null,
     selectionType: "variant",
+    image: "/CustomJoint/tip_paper_filter.png",
     variants: [
       { id: "small", name: "Small", price: 5, label: "Small", sortOrder: 1 },
       { id: "medium", name: "Medium", price: 5, label: "Medium", sortOrder: 2 },
@@ -282,6 +283,7 @@ export const filterOptions = [
     active: true,
     glassSize: "10mm",
     selectionType: "direct",
+    image: "/CustomJoint/slim_glass_filter.png",
   },
   {
     id: "wide-glass",
@@ -295,6 +297,7 @@ export const filterOptions = [
     active: true,
     glassSize: "12mm",
     selectionType: "direct",
+    image: "/CustomJoint/tip_glass_filter.png",
   },
 ];
 
@@ -450,6 +453,7 @@ export const externalCoatingOptions = [
     price: 100,
     active: true,
     color: "linear-gradient(135deg, #10b981 0%, #34d399 100%)",
+    image: "/CustomJoint/kief_coating.png",
   },
   {
     id: "oil-coating",
@@ -461,6 +465,7 @@ export const externalCoatingOptions = [
     price: 150,
     active: true,
     color: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
+    image: "/CustomJoint/hemp_coating.png",
   },
   {
     id: "rosin-full-dip",
@@ -472,6 +477,7 @@ export const externalCoatingOptions = [
     price: 200,
     active: true,
     color: "linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%)",
+    image: "/CustomJoint/preroll_coating.png",
   },
   {
     id: "rosin-kief-combo",
@@ -483,6 +489,7 @@ export const externalCoatingOptions = [
     price: 250,
     active: true,
     color: "linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #fbbf24 100%)",
+    image: "/CustomJoint/kief_coating.png",
   },
 ];
 

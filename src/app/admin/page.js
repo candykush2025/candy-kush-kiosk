@@ -25,7 +25,10 @@ import StockLinking from "../../components/admin/StockLinking";
 import StockOverview from "../../components/admin/StockOverview";
 import JointBuilderManagement from "../../components/admin/JointBuilderManagement";
 import PrerollsManagement from "../../components/admin/PrerollsManagement";
-import { CustomerService, MemberCategoriesService } from "../../lib/customerService";
+import {
+  CustomerService,
+  MemberCategoriesService,
+} from "../../lib/customerService";
 import { TransactionService } from "../../lib/transactionService";
 import { AdminService } from "../../lib/adminService";
 import { AdminAuth } from "../../lib/adminAuth";
@@ -155,7 +158,7 @@ export default function AdminPage() {
     file,
     productId,
     variantId,
-    optionId
+    optionId,
   ) => {
     try {
       const imagePath = `products/${productId}/variants/${variantId}/${optionId}_${file.name}`;
@@ -330,7 +333,7 @@ export default function AdminPage() {
       }),
       useSensor(KeyboardSensor, {
         coordinateGetter: sortableKeyboardCoordinates,
-      })
+      }),
     );
     if (ordering)
       return <div className="text-sm text-gray-500">Loading categories...</div>;
@@ -619,10 +622,10 @@ export default function AdminPage() {
   const [purchasingSupplier, setPurchasingSupplier] = useState("");
   const [purchasingNotes, setPurchasingNotes] = useState("");
   const [purchasingDate, setPurchasingDate] = useState(
-    new Date().toISOString().split("T")[0]
+    new Date().toISOString().split("T")[0],
   ); // YYYY-MM-DD format
   const [purchasingTime, setPurchasingTime] = useState(
-    new Date().toTimeString().slice(0, 5)
+    new Date().toTimeString().slice(0, 5),
   ); // HH:MM format
 
   // Complex Product Form States
@@ -885,7 +888,7 @@ export default function AdminPage() {
     });
 
     return allTransactions.sort(
-      (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
     );
   };
 
@@ -893,7 +896,7 @@ export default function AdminPage() {
   const checkEditPermission = () => {
     if (!AdminAuth.hasPermission("edit")) {
       alert(
-        "You do not have permission to edit. Please contact your administrator."
+        "You do not have permission to edit. Please contact your administrator.",
       );
       return false;
     }
@@ -903,7 +906,7 @@ export default function AdminPage() {
   const checkDeletePermission = () => {
     if (!AdminAuth.hasPermission("delete")) {
       alert(
-        "You do not have permission to delete. Please contact your administrator."
+        "You do not have permission to delete. Please contact your administrator.",
       );
       return false;
     }
@@ -913,7 +916,7 @@ export default function AdminPage() {
   const checkInputPermission = () => {
     if (!AdminAuth.hasPermission("input")) {
       alert(
-        "You do not have permission to create new entries. Please contact your administrator."
+        "You do not have permission to create new entries. Please contact your administrator.",
       );
       return false;
     }
@@ -924,15 +927,14 @@ export default function AdminPage() {
   const loadTransactionsCollection = async () => {
     try {
       // Import Firestore functions
-      const { collection, getDocs, orderBy, query } = await import(
-        "firebase/firestore"
-      );
+      const { collection, getDocs, orderBy, query } =
+        await import("firebase/firestore");
       const { db } = await import("../../lib/firebase");
 
       // Query the transactions collection directly
       const q = query(
         collection(db, "transactions"),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getDocs(q);
 
@@ -1040,10 +1042,10 @@ export default function AdminPage() {
       // Populate categoryName and subcategoryName in products
       const enrichedProducts = productsData.map((product) => {
         const category = categoriesData.find(
-          (cat) => cat.id === product.categoryId
+          (cat) => cat.id === product.categoryId,
         );
         const subcategory = subcategoriesData.find(
-          (sub) => sub.id === product.subcategoryId
+          (sub) => sub.id === product.subcategoryId,
         );
 
         return {
@@ -1067,7 +1069,7 @@ export default function AdminPage() {
             // Initialize with all categories if empty
             const allCategoryIds = categoriesData.map((cat) => cat.id);
             await NonMemberCategoriesService.updateNonMemberCategories(
-              allCategoryIds
+              allCategoryIds,
             );
             setNonMemberCategories(allCategoryIds);
           } else {
@@ -1325,9 +1327,8 @@ export default function AdminPage() {
     try {
       if (!memberId.trim()) return false;
 
-      const existingCustomer = await CustomerService.getCustomerByMemberId(
-        memberId
-      );
+      const existingCustomer =
+        await CustomerService.getCustomerByMemberId(memberId);
 
       // If editing, exclude the current customer from the check
       if (
@@ -1357,12 +1358,12 @@ export default function AdminPage() {
     if (newMemberId.trim()) {
       const exists = await checkMemberIdExists(
         newMemberId,
-        editingCustomer?.id
+        editingCustomer?.id,
       );
 
       if (exists) {
         setMemberIdError(
-          "This Member ID already exists. Please choose a different one."
+          "This Member ID already exists. Please choose a different one.",
         );
       } else {
         setMemberIdError("");
@@ -1406,12 +1407,12 @@ export default function AdminPage() {
       if (customerForm.memberId.trim()) {
         const exists = await checkMemberIdExists(
           customerForm.memberId,
-          editingCustomer?.id
+          editingCustomer?.id,
         );
 
         if (exists) {
           alert(
-            "This Member ID already exists. Please choose a different one."
+            "This Member ID already exists. Please choose a different one.",
           );
           return;
         }
@@ -1465,7 +1466,7 @@ export default function AdminPage() {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete customer "${customer.name} ${
         customer.lastName || ""
-      }"?\n\nThis action cannot be undone and will:\n- Delete all customer data\n- Remove transaction history\n- Remove points history\n\nThis is permanent!`
+      }"?\n\nThis action cannot be undone and will:\n- Delete all customer data\n- Remove transaction history\n- Remove points history\n\nThis is permanent!`,
     );
 
     if (!confirmDelete) {
@@ -1481,7 +1482,7 @@ export default function AdminPage() {
       alert(
         `Customer "${customer.name} ${
           customer.lastName || ""
-        }" has been successfully deleted.`
+        }" has been successfully deleted.`,
       );
     } catch (error) {
       console.error("Error deleting customer:", error);
@@ -1523,7 +1524,7 @@ export default function AdminPage() {
               await CashbackService.getCashbackPercentage(item.categoryId);
             const itemTotal = (item.price || 0) * (item.quantity || 1);
             const itemPoints = Math.floor(
-              (itemTotal * cashbackPercentage) / 100
+              (itemTotal * cashbackPercentage) / 100,
             );
 
             breakdown.push({
@@ -1539,7 +1540,7 @@ export default function AdminPage() {
           } catch (error) {
             console.error(
               `Error calculating cashback for category ${item.categoryId}:`,
-              error
+              error,
             );
             // If we can't get cashback percentage, assume 0
             breakdown.push({
@@ -1627,13 +1628,13 @@ export default function AdminPage() {
         await CustomerService.addPoints(
           selectedCustomerForPoints.id,
           amount,
-          transactionDetails
+          transactionDetails,
         );
       } else {
         await CustomerService.subtractPoints(
           selectedCustomerForPoints.id,
           amount,
-          transactionDetails
+          transactionDetails,
         );
       }
 
@@ -1642,14 +1643,14 @@ export default function AdminPage() {
 
       // Update the selected customer data
       const updatedCustomer = await CustomerService.getCustomerById(
-        selectedCustomerForPoints.id
+        selectedCustomerForPoints.id,
       );
       setSelectedCustomerForPoints(updatedCustomer);
 
       alert(
         `Successfully ${
           pointAdjustmentType === "add" ? "added" : "subtracted"
-        } ${amount} points`
+        } ${amount} points`,
       );
       closePointAdjustmentModal();
     } catch (error) {
@@ -1709,7 +1710,7 @@ export default function AdminPage() {
 
     if (
       !confirm(
-        `Are you sure you want to delete transaction ${transactionId}?\n\nThis action cannot be undone and will:\n- Remove the transaction from the customer's history\n- Remove earned points from the customer\n- Update the customer's total spent amount`
+        `Are you sure you want to delete transaction ${transactionId}?\n\nThis action cannot be undone and will:\n- Remove the transaction from the customer's history\n- Remove earned points from the customer\n- Update the customer's total spent amount`,
       )
     ) {
       return;
@@ -1723,7 +1724,7 @@ export default function AdminPage() {
         (c) =>
           c.name === transaction.customerName ||
           c.customerName === transaction.customerName ||
-          c.customerId === transaction.customerId
+          c.customerId === transaction.customerId,
       );
 
       if (!customer) {
@@ -1734,7 +1735,7 @@ export default function AdminPage() {
       // Remove the transaction from customer's points array
       if (customer.points && Array.isArray(customer.points)) {
         const transactionIndex = customer.points.findIndex(
-          (p) => p.transactionId === transactionId
+          (p) => p.transactionId === transactionId,
         );
 
         if (transactionIndex !== -1) {
@@ -1743,7 +1744,7 @@ export default function AdminPage() {
 
           // Remove the transaction from the points array
           const updatedPoints = customer.points.filter(
-            (p) => p.transactionId !== transactionId
+            (p) => p.transactionId !== transactionId,
           );
 
           // Update customer data
@@ -1752,7 +1753,7 @@ export default function AdminPage() {
             points: updatedPoints,
             totalEarned: Math.max(
               0,
-              (customer.totalEarned || 0) - pointsToSubtract
+              (customer.totalEarned || 0) - pointsToSubtract,
             ),
             // Recalculate total points from remaining transactions
             points: (customer.points || 0) - pointsToSubtract,
@@ -1767,7 +1768,7 @@ export default function AdminPage() {
           } catch (transactionServiceError) {
             console.log(
               "Transaction not found in TransactionService (this is okay):",
-              transactionServiceError
+              transactionServiceError,
             );
           }
 
@@ -1860,7 +1861,7 @@ export default function AdminPage() {
     try {
       setSavingNonMemberCategories(true);
       await NonMemberCategoriesService.updateNonMemberCategories(
-        nonMemberCategories
+        nonMemberCategories,
       );
       alert("Non-member categories updated successfully!");
     } catch (error) {
@@ -1894,16 +1895,19 @@ export default function AdminPage() {
     if (!checkEditPermission()) return;
 
     const confirmed = confirm(
-      `This will update categories for ALL members. Are you sure you want to apply these ${memberCategories.length} categories to all members?`
+      `This will update categories for ALL members. Are you sure you want to apply these ${memberCategories.length} categories to all members?`,
     );
     if (!confirmed) return;
 
     try {
       setSavingMemberCategories(true);
-      const result = await MemberCategoriesService.updateAllMembersCategories(
-        memberCategories
+      const result =
+        await MemberCategoriesService.updateAllMembersCategories(
+          memberCategories,
+        );
+      alert(
+        `Successfully updated ${result.updatedCount} members with the selected categories!`,
       );
-      alert(`Successfully updated ${result.updatedCount} members with the selected categories!`);
       // Refresh customers list
       const customersData = await CustomerService.getAllCustomers();
       setCustomers(customersData);
@@ -1983,8 +1987,8 @@ export default function AdminPage() {
         prev.map((t) =>
           t.id === transactionToUpdate.id
             ? { ...t, paymentMethod: newPaymentMethod }
-            : t
-        )
+            : t,
+        ),
       );
 
       setEditingPaymentMethod(false);
@@ -2049,14 +2053,14 @@ export default function AdminPage() {
                 const file = new File(
                   [blob],
                   `${option.name || "option"}_${option.id}.jpg`,
-                  { type: "image/jpeg" }
+                  { type: "image/jpeg" },
                 );
 
                 // Upload to Firebase Storage
                 const imagePath = `products/${productId}/variants/${variant.id}/${file.name}`;
                 imageUrl = await CategoryService.uploadImage(file, imagePath);
                 console.log(
-                  `Uploaded variant image: ${imagePath} -> ${imageUrl}`
+                  `Uploaded variant image: ${imagePath} -> ${imageUrl}`,
                 );
               } catch (uploadError) {
                 console.error("Error uploading variant image:", uploadError);
@@ -2089,7 +2093,7 @@ export default function AdminPage() {
           // Upload variant images before saving
           processedVariants = await uploadVariantImages(
             variants,
-            editingProduct.productId
+            editingProduct.productId,
           );
           productForm.variants = processedVariants;
         } else {
@@ -2181,7 +2185,7 @@ export default function AdminPage() {
           imageFiles, // New image files
           productBackgroundImageFile, // Background image
           shouldRemoveMainImages, // Flag to remove existing images
-          productModelFile || null // 3D model file
+          productModelFile || null, // 3D model file
         );
 
         console.log("✅ EDIT MODE SUCCESS - Product updated successfully:", {
@@ -2234,7 +2238,7 @@ export default function AdminPage() {
           // Upload variant images before saving
           processedVariants = await uploadVariantImages(
             variants,
-            tempProductId
+            tempProductId,
           );
           productDataToSave.variants = processedVariants;
         } else {
@@ -2300,7 +2304,7 @@ export default function AdminPage() {
           cleanProductData,
           imageFiles,
           productBackgroundImageFile || null,
-          productModelFile || null
+          productModelFile || null,
         );
 
         // Debug: Confirm product was saved successfully
@@ -2400,7 +2404,7 @@ export default function AdminPage() {
       await CategoryService.createCategory(
         newCategory,
         categoryImageFile,
-        categoryBackgroundImageFile
+        categoryBackgroundImageFile,
       );
       await loadDashboardData();
       setNewCategory({
@@ -2427,7 +2431,7 @@ export default function AdminPage() {
   const handleApplyCategoryToAllUsers = async (categoryId, categoryName) => {
     if (
       !confirm(
-        `Apply category "${categoryName}" to all users? This will enable this category for all members and non-members.`
+        `Apply category "${categoryName}" to all users? This will enable this category for all members and non-members.`,
       )
     ) {
       return;
@@ -2437,7 +2441,7 @@ export default function AdminPage() {
       alert(
         `Category "${categoryName}" applied to ${
           result.membersUpdated
-        } members${result.nonMembersUpdated ? " and non-members" : ""}.`
+        } members${result.nonMembersUpdated ? " and non-members" : ""}.`,
       );
     } catch (error) {
       console.error("Failed to apply category to all users:", error);
@@ -2451,7 +2455,7 @@ export default function AdminPage() {
 
     if (
       confirm(
-        "Are you sure you want to delete this category? All products in this category will need to be reassigned."
+        "Are you sure you want to delete this category? All products in this category will need to be reassigned.",
       )
     ) {
       try {
@@ -2485,7 +2489,7 @@ export default function AdminPage() {
       }
 
       const selectedCategory = categories.find(
-        (cat) => cat.id === newSubcategory.categoryId
+        (cat) => cat.id === newSubcategory.categoryId,
       );
       if (selectedCategory) {
         newSubcategory.categoryName = selectedCategory.name;
@@ -2494,7 +2498,7 @@ export default function AdminPage() {
       await SubcategoryService.createSubcategory(
         newSubcategory,
         subcategoryImageFile,
-        subcategoryBackgroundImageFile
+        subcategoryBackgroundImageFile,
       );
       await loadDashboardData();
       setNewSubcategory({
@@ -2524,7 +2528,7 @@ export default function AdminPage() {
 
     if (
       confirm(
-        "Are you sure you want to delete this subcategory? All products in this subcategory will need to be reassigned."
+        "Are you sure you want to delete this subcategory? All products in this subcategory will need to be reassigned.",
       )
     ) {
       try {
@@ -2556,7 +2560,7 @@ export default function AdminPage() {
         categoryImageFile,
         categoryBackgroundImageFile,
         removeExistingCategoryImage,
-        removeExistingCategoryBackground
+        removeExistingCategoryBackground,
       );
       await loadDashboardData();
       setEditingCategory(null);
@@ -2597,7 +2601,7 @@ export default function AdminPage() {
       }
 
       const selectedCategory = categories.find(
-        (cat) => cat.id === subcategoryForm.categoryId
+        (cat) => cat.id === subcategoryForm.categoryId,
       );
       if (selectedCategory) {
         subcategoryForm.categoryName = selectedCategory.name;
@@ -2609,7 +2613,7 @@ export default function AdminPage() {
         subcategoryImageFile,
         subcategoryBackgroundImageFile,
         removeExistingSubcategoryImage,
-        removeExistingSubcategoryBackground
+        removeExistingSubcategoryBackground,
       );
       await loadDashboardData();
       setEditingSubcategory(null);
@@ -2666,11 +2670,11 @@ export default function AdminPage() {
       // Check if category already exists (only for new rules, not editing)
       if (!editingCashback) {
         const existingRule = cashbackRules.find(
-          (rule) => rule.categoryId === cashbackForm.categoryId
+          (rule) => rule.categoryId === cashbackForm.categoryId,
         );
         if (existingRule) {
           alert(
-            "This category already has a cashback rule. Each category can only have one rule."
+            "This category already has a cashback rule. Each category can only have one rule.",
           );
           return;
         }
@@ -2678,7 +2682,7 @@ export default function AdminPage() {
 
       // Find category name from selected categoryId
       const selectedCategory = categories.find(
-        (cat) => cat.id === cashbackForm.categoryId
+        (cat) => cat.id === cashbackForm.categoryId,
       );
       const cashbackData = {
         ...cashbackForm,
@@ -2688,7 +2692,7 @@ export default function AdminPage() {
       if (editingCashback?.id) {
         await CashbackService.updateCashbackRule(
           editingCashback.id,
-          cashbackData
+          cashbackData,
         );
       } else {
         await CashbackService.createCashbackRule(cashbackData);
@@ -2801,7 +2805,7 @@ export default function AdminPage() {
     }
 
     const hasAnyPermission = Object.values(newAdminData.permissions).some(
-      (permission) => permission
+      (permission) => permission,
     );
     if (!hasAnyPermission) {
       alert("Please select at least one permission");
@@ -2862,7 +2866,7 @@ export default function AdminPage() {
       setUpdatingAdminPermissions(true);
       await AdminService.updateAdminPermissions(
         editingAdminId,
-        editingAdminPermissions
+        editingAdminPermissions,
       );
 
       setEditingAdminId(null);
@@ -2886,7 +2890,7 @@ export default function AdminPage() {
       confirm(
         `Are you sure you want to ${
           admin.isActive ? "deactivate" : "activate"
-        } this admin?`
+        } this admin?`,
       )
     ) {
       try {
@@ -2904,7 +2908,7 @@ export default function AdminPage() {
 
     if (
       confirm(
-        `Are you sure you want to permanently delete admin "${admin.email}"?\n\nThis action cannot be undone.`
+        `Are you sure you want to permanently delete admin "${admin.email}"?\n\nThis action cannot be undone.`,
       )
     ) {
       try {
@@ -2954,7 +2958,7 @@ export default function AdminPage() {
       setChangingPassword(true);
       await AdminService.changeAdminPassword(
         changingPasswordAdminId,
-        newPassword
+        newPassword,
       );
 
       setShowChangePasswordModal(false);
@@ -3111,7 +3115,7 @@ export default function AdminPage() {
         "Deleting transaction at index:",
         pointIndex,
         "for customer:",
-        customer.name
+        customer.name,
       );
 
       // Create a new points array without the selected point
@@ -3124,7 +3128,7 @@ export default function AdminPage() {
         "Original points:",
         Array.isArray(customer.points) ? customer.points.length : 0,
         "Updated points:",
-        updatedPoints.length
+        updatedPoints.length,
       );
 
       // Update the customer with the filtered points
@@ -3210,7 +3214,7 @@ export default function AdminPage() {
         if (inventoryMap.has(inv.variant_id)) {
           inventoryMap.set(
             inv.variant_id,
-            inventoryMap.get(inv.variant_id) + inv.in_stock
+            inventoryMap.get(inv.variant_id) + inv.in_stock,
           );
         } else {
           inventoryMap.set(inv.variant_id, inv.in_stock);
@@ -3221,7 +3225,7 @@ export default function AdminPage() {
         uniqueVariants: inventoryMap.size,
         totalStock: Array.from(inventoryMap.values()).reduce(
           (sum, qty) => sum + qty,
-          0
+          0,
         ),
       });
 
@@ -3286,7 +3290,7 @@ export default function AdminPage() {
       const hiddenCount = itemsWithStock.length - filteredItems.length;
       const totalStock = filteredItems.reduce(
         (sum, item) => sum + (item.stock_quantity || 0),
-        0
+        0,
       );
       const message = hideZeroStockLoyverse
         ? `✓ Successfully fetched ${itemsWithStock.length} items from Loyverse! Showing ${filteredItems.length} with stock (${totalStock} units total, ${hiddenCount} items with 0 stock hidden).`
@@ -3298,7 +3302,7 @@ export default function AdminPage() {
       showLinkingToast(
         `✗ Failed to fetch from Loyverse: ${error.message}. Please check your API token.`,
         "error",
-        5000
+        5000,
       );
     } finally {
       setFetchingLoyverse(false);
@@ -3398,7 +3402,7 @@ export default function AdminPage() {
       showLinkingToast(
         "⚠ No products linked yet. Please link products first.",
         "warning",
-        3000
+        3000,
       );
       return;
     }
@@ -3407,7 +3411,7 @@ export default function AdminPage() {
     showLinkingToast(
       `🔄 Starting sync for ${linkedTodos.length} linked products...`,
       "info",
-      2000
+      2000,
     );
 
     setSyncingStock(true);
@@ -3418,15 +3422,15 @@ export default function AdminPage() {
       for (const todo of linkedTodos) {
         try {
           const loyverseItem = loyverseItems.find(
-            (item) => item.id === todo.loyverseId
+            (item) => item.id === todo.loyverseId,
           );
           const localProduct = products.find(
-            (p) => p.id === todo.localProductId
+            (p) => p.id === todo.localProductId,
           );
 
           if (!loyverseItem || !localProduct) {
             console.warn(
-              `[Stock Linking] Skipping ${todo.loyverseName}: Product not found`
+              `[Stock Linking] Skipping ${todo.loyverseName}: Product not found`,
             );
             errorCount++;
             continue;
@@ -3435,12 +3439,12 @@ export default function AdminPage() {
           const stockQuantity = loyverseItem.stock_quantity || 0;
 
           console.log(
-            `[Stock Linking] Processing ${todo.loyverseName}: Loyverse stock = ${stockQuantity}`
+            `[Stock Linking] Processing ${todo.loyverseName}: Loyverse stock = ${stockQuantity}`,
           );
 
           if (stockQuantity === 0) {
             console.log(
-              `[Stock Linking] Skipping ${todo.loyverseName}: Zero stock in Loyverse`
+              `[Stock Linking] Skipping ${todo.loyverseName}: Zero stock in Loyverse`,
             );
             continue;
           }
@@ -3465,24 +3469,23 @@ export default function AdminPage() {
           };
 
           console.log(
-            `[Stock Linking] ${todo.loyverseName} (${todo.localProductId}): Adding ${stockQuantity} units via StockMovementService`
+            `[Stock Linking] ${todo.loyverseName} (${todo.localProductId}): Adding ${stockQuantity} units via StockMovementService`,
           );
           console.log(`[Stock Linking] Purchasing Data:`, purchasingData);
 
           // Use StockMovementService.addPurchasing (creates StockPurchasing + StockMovement records)
-          const result = await StockMovementService.addPurchasing(
-            purchasingData
-          );
+          const result =
+            await StockMovementService.addPurchasing(purchasingData);
 
           console.log(
-            `[Stock Linking] ✓ Successfully added ${stockQuantity} units to ${todo.loyverseName} (Purchase Order: ${result.purchaseOrderId})`
+            `[Stock Linking] ✓ Successfully added ${stockQuantity} units to ${todo.loyverseName} (Purchase Order: ${result.purchaseOrderId})`,
           );
 
           successCount++;
         } catch (error) {
           console.error(
             `[Stock Linking] Error syncing ${todo.loyverseName}:`,
-            error
+            error,
           );
           errorCount++;
         }
@@ -3493,13 +3496,13 @@ export default function AdminPage() {
         showLinkingToast(
           `🎉 Stock sync complete! ✓ ${successCount} products synced successfully`,
           "success",
-          5000
+          5000,
         );
       } else {
         showLinkingToast(
           `⚠ Stock sync finished with warnings: ✓ ${successCount} synced, ✗ ${errorCount} errors`,
           "warning",
-          6000
+          6000,
         );
       }
 
@@ -3517,7 +3520,7 @@ export default function AdminPage() {
       showLinkingToast(
         `✗ Failed to sync stock: ${error.message}`,
         "error",
-        5000
+        5000,
       );
     } finally {
       setSyncingStock(false);
@@ -3614,7 +3617,7 @@ export default function AdminPage() {
 
         // Check if product has variants and validate variant selection
         const selectedProduct = products.find(
-          (p) => p.id === product.productId
+          (p) => p.id === product.productId,
         );
         if (
           selectedProduct?.hasVariants &&
@@ -3716,7 +3719,7 @@ export default function AdminPage() {
     // If variantId is selected, auto-fill variantName
     if (field === "variantId" && value) {
       const selectedProduct = products.find(
-        (p) => p.id === newProducts[index].productId
+        (p) => p.id === newProducts[index].productId,
       );
       if (selectedProduct && selectedProduct.variants) {
         // Handle Firebase variant structure with options
@@ -3726,11 +3729,11 @@ export default function AdminPage() {
         if (value.includes("-")) {
           const [variantId, optionId] = value.split("-");
           const selectedVariant = selectedProduct.variants.find(
-            (v) => v.id === variantId
+            (v) => v.id === variantId,
           );
           if (selectedVariant && selectedVariant.options) {
             const selectedOption = selectedVariant.options.find(
-              (o) => o.id === optionId
+              (o) => o.id === optionId,
             );
             if (selectedOption) {
               variantDisplay = `${selectedVariant.variantName}: ${selectedOption.name}`;
@@ -3739,14 +3742,14 @@ export default function AdminPage() {
         } else {
           // Fallback for old variant structure
           const selectedVariant = selectedProduct.variants.find(
-            (v) => v.id === value
+            (v) => v.id === value,
           );
           if (selectedVariant) {
             variantDisplay =
               selectedProduct.variantGroups
                 ?.map((group) => {
                   const selection = selectedVariant.selections?.find(
-                    (s) => s.groupId === group.id
+                    (s) => s.groupId === group.id,
                   );
                   return selection
                     ? `${group.variantName}: ${selection.name}`
@@ -3791,14 +3794,13 @@ export default function AdminPage() {
   const loadCryptoPayments = async () => {
     setLoadingCryptoPayments(true);
     try {
-      const { collection, getDocs, query, orderBy, where } = await import(
-        "firebase/firestore"
-      );
+      const { collection, getDocs, query, orderBy, where } =
+        await import("firebase/firestore");
       const { db } = await import("../../lib/firebase");
 
       let paymentsQuery = query(
         collection(db, "crypto_payments"),
-        orderBy("created_at", "desc")
+        orderBy("created_at", "desc"),
       );
 
       // Apply status filter
@@ -3806,7 +3808,7 @@ export default function AdminPage() {
         paymentsQuery = query(
           collection(db, "crypto_payments"),
           where("payment_status", "==", cryptoPaymentStatusFilter),
-          orderBy("created_at", "desc")
+          orderBy("created_at", "desc"),
         );
       }
 
@@ -3827,8 +3829,8 @@ export default function AdminPage() {
           expiration_date: data.expiration_date?.toDate
             ? data.expiration_date.toDate()
             : data.expiration_date
-            ? new Date(data.expiration_date)
-            : null,
+              ? new Date(data.expiration_date)
+              : null,
         });
       });
 
@@ -3886,7 +3888,7 @@ export default function AdminPage() {
 
       // Show success message
       alert(
-        `✅ Payment Status Refresh Complete!\n\nTotal checked: ${result.results.total}\nUpdated: ${result.results.updated}\nNo changes: ${result.results.skipped}\nErrors: ${result.results.errors}`
+        `✅ Payment Status Refresh Complete!\n\nTotal checked: ${result.results.total}\nUpdated: ${result.results.updated}\nNo changes: ${result.results.skipped}\nErrors: ${result.results.errors}`,
       );
     } catch (error) {
       console.error("Error refreshing all payment statuses:", error);
@@ -3907,7 +3909,7 @@ export default function AdminPage() {
         const transactionDate = new Date(
           transaction.createdAt?.toDate
             ? transaction.createdAt.toDate()
-            : transaction.createdAt
+            : transaction.createdAt,
         );
         return transactionDate >= fromDate;
       });
@@ -3920,7 +3922,7 @@ export default function AdminPage() {
         const transactionDate = new Date(
           transaction.createdAt?.toDate
             ? transaction.createdAt.toDate()
-            : transaction.createdAt
+            : transaction.createdAt,
         );
         return transactionDate <= toDate;
       });
@@ -3931,7 +3933,7 @@ export default function AdminPage() {
       filtered = filtered.filter((transaction) =>
         transaction.customerName
           ?.toLowerCase()
-          .includes(transactionFilters.customer.toLowerCase())
+          .includes(transactionFilters.customer.toLowerCase()),
       );
     }
 
@@ -3939,7 +3941,7 @@ export default function AdminPage() {
     if (transactionFilters.paymentMethod) {
       filtered = filtered.filter(
         (transaction) =>
-          transaction.paymentMethod === transactionFilters.paymentMethod
+          transaction.paymentMethod === transactionFilters.paymentMethod,
       );
     }
 
@@ -3948,7 +3950,7 @@ export default function AdminPage() {
       const minAmount = parseFloat(transactionFilters.minAmount);
       filtered = filtered.filter(
         (transaction) =>
-          (transaction.total || transaction.amount || 0) >= minAmount
+          (transaction.total || transaction.amount || 0) >= minAmount,
       );
     }
 
@@ -3956,7 +3958,7 @@ export default function AdminPage() {
       const maxAmount = parseFloat(transactionFilters.maxAmount);
       filtered = filtered.filter(
         (transaction) =>
-          (transaction.total || transaction.amount || 0) <= maxAmount
+          (transaction.total || transaction.amount || 0) <= maxAmount,
       );
     }
 
@@ -3968,8 +3970,8 @@ export default function AdminPage() {
             item.categoryName
               ?.toLowerCase()
               .includes(transactionFilters.category.toLowerCase()) ||
-            item.categoryId === transactionFilters.category
-        )
+            item.categoryId === transactionFilters.category,
+        ),
       );
     }
 
@@ -3979,8 +3981,8 @@ export default function AdminPage() {
         transaction.items?.some((item) =>
           item.name
             ?.toLowerCase()
-            .includes(transactionFilters.product.toLowerCase())
-        )
+            .includes(transactionFilters.product.toLowerCase()),
+        ),
       );
     }
 
@@ -4280,61 +4282,61 @@ export default function AdminPage() {
                     {activeTab === "dashboard"
                       ? "Dashboard"
                       : activeTab === "customers"
-                      ? "Customer Management"
-                      : activeTab === "products"
-                      ? "Product Management"
-                      : activeTab === "transactions"
-                      ? "Transaction History"
-                      : activeTab === "cashback"
-                      ? "Cashback Management"
-                      : activeTab === "pendingPoints"
-                      ? "Pending Points"
-                      : activeTab === "stock"
-                      ? stockActiveSubTab === "overview"
-                        ? "Stock Overview"
-                        : "Stock Linking"
-                      : activeTab === "categoryOrder"
-                      ? "Category Order"
-                      : activeTab === "adminManagement"
-                      ? "Admin Management"
-                      : activeTab === "settings"
-                      ? "Settings"
-                      : activeTab === "cryptoPayments"
-                      ? "Crypto Payments"
-                      : activeTab === "jointBuilder"
-                      ? "Joint Builder"
-                      : activeTab === "prerolls"
-                      ? "Prerolls Special Management"
-                      : "Dashboard"}
+                        ? "Customer Management"
+                        : activeTab === "products"
+                          ? "Product Management"
+                          : activeTab === "transactions"
+                            ? "Transaction History"
+                            : activeTab === "cashback"
+                              ? "Cashback Management"
+                              : activeTab === "pendingPoints"
+                                ? "Pending Points"
+                                : activeTab === "stock"
+                                  ? stockActiveSubTab === "overview"
+                                    ? "Stock Overview"
+                                    : "Stock Linking"
+                                  : activeTab === "categoryOrder"
+                                    ? "Category Order"
+                                    : activeTab === "adminManagement"
+                                      ? "Admin Management"
+                                      : activeTab === "settings"
+                                        ? "Settings"
+                                        : activeTab === "cryptoPayments"
+                                          ? "Crypto Payments"
+                                          : activeTab === "jointBuilder"
+                                            ? "Joint Builder"
+                                            : activeTab === "prerolls"
+                                              ? "Prerolls Special Management"
+                                              : "Dashboard"}
                   </h1>
                   <p className="text-gray-600 mt-1">
                     {activeTab === "dashboard"
                       ? "Overview of your business metrics"
                       : activeTab === "customers"
-                      ? "Manage customer accounts and information"
-                      : activeTab === "products"
-                      ? "Manage your product inventory and pricing"
-                      : activeTab === "transactions"
-                      ? "Transaction history and details"
-                      : activeTab === "cashback"
-                      ? "Configure cashback rules and percentages"
-                      : activeTab === "pendingPoints"
-                      ? "Review and approve customer point requests"
-                      : activeTab === "stock"
-                      ? stockActiveSubTab === "overview"
-                        ? "Real-time stock levels from POS system"
-                        : "Link kiosk products with POS inventory system"
-                      : activeTab === "categoryOrder"
-                      ? "Organize and reorder product categories"
-                      : activeTab === "adminManagement"
-                      ? "Manage admin accounts and permissions"
-                      : activeTab === "settings"
-                      ? "System configuration and preferences"
-                      : activeTab === "cryptoPayments"
-                      ? "Monitor and manage cryptocurrency payments from kiosk"
-                      : activeTab === "jointBuilder"
-                      ? "Manage custom joint builder options, pricing, and selections"
-                      : "Admin management"}
+                        ? "Manage customer accounts and information"
+                        : activeTab === "products"
+                          ? "Manage your product inventory and pricing"
+                          : activeTab === "transactions"
+                            ? "Transaction history and details"
+                            : activeTab === "cashback"
+                              ? "Configure cashback rules and percentages"
+                              : activeTab === "pendingPoints"
+                                ? "Review and approve customer point requests"
+                                : activeTab === "stock"
+                                  ? stockActiveSubTab === "overview"
+                                    ? "Real-time stock levels from POS system"
+                                    : "Link kiosk products with POS inventory system"
+                                  : activeTab === "categoryOrder"
+                                    ? "Organize and reorder product categories"
+                                    : activeTab === "adminManagement"
+                                      ? "Manage admin accounts and permissions"
+                                      : activeTab === "settings"
+                                        ? "System configuration and preferences"
+                                        : activeTab === "cryptoPayments"
+                                          ? "Monitor and manage cryptocurrency payments from kiosk"
+                                          : activeTab === "jointBuilder"
+                                            ? "Manage custom joint builder options, pricing, and selections"
+                                            : "Admin management"}
                   </p>
                 </div>
 
@@ -4348,7 +4350,7 @@ export default function AdminPage() {
                       {AdminAuth.isRootAdmin()
                         ? "Root Administrator - Full Access"
                         : `Permissions: ${AdminAuth.getPermissionsList().join(
-                            ", "
+                            ", ",
                           )}`}
                     </p>
                   </div>
@@ -4481,7 +4483,7 @@ export default function AdminPage() {
                                       c.name === transaction.customerName ||
                                       c.customerName ===
                                         transaction.customerName ||
-                                      c.customerId === transaction.customerId
+                                      c.customerId === transaction.customerId,
                                   );
 
                                   if (customer) {
@@ -4489,7 +4491,7 @@ export default function AdminPage() {
                                       customer.points?.find(
                                         (p) =>
                                           p.transactionId ===
-                                          transaction.transactionId
+                                          transaction.transactionId,
                                       );
 
                                     if (transactionDetail) {
@@ -4511,7 +4513,7 @@ export default function AdminPage() {
                                 }
 
                                 setSelectedTransactionDetails(
-                                  transactionToShow
+                                  transactionToShow,
                                 );
                                 setShowTransactionDetails(true);
                               }}
@@ -4559,7 +4561,7 @@ export default function AdminPage() {
                                                 item.quantity || 1;
                                               return sum + price * quantity;
                                             },
-                                            0
+                                            0,
                                           );
 
                                         if (calculatedTotal > 0) {
@@ -4568,7 +4570,7 @@ export default function AdminPage() {
                                             {
                                               minimumFractionDigits: 2,
                                               maximumFractionDigits: 2,
-                                            }
+                                            },
                                           );
                                         }
                                       }
@@ -4578,7 +4580,7 @@ export default function AdminPage() {
                                         (c) =>
                                           c.name === transaction.customerName ||
                                           c.customerName ===
-                                            transaction.customerName
+                                            transaction.customerName,
                                       );
 
                                       if (customer) {
@@ -4586,7 +4588,7 @@ export default function AdminPage() {
                                           customer.points?.find(
                                             (p) =>
                                               p.transactionId ===
-                                              transaction.transactionId
+                                              transaction.transactionId,
                                           );
 
                                         if (
@@ -4602,7 +4604,7 @@ export default function AdminPage() {
                                                     (item.quantity || 1)
                                                 );
                                               },
-                                              0
+                                              0,
                                             );
 
                                           if (total > 0) {
@@ -4611,7 +4613,7 @@ export default function AdminPage() {
                                               {
                                                 minimumFractionDigits: 2,
                                                 maximumFractionDigits: 2,
-                                              }
+                                              },
                                             );
                                           }
                                         }
@@ -4636,7 +4638,8 @@ export default function AdminPage() {
                                       if (transaction.createdAt) {
                                         if (transaction.createdAt.seconds) {
                                           return new Date(
-                                            transaction.createdAt.seconds * 1000
+                                            transaction.createdAt.seconds *
+                                              1000,
                                           ).toLocaleDateString();
                                         } else if (
                                           transaction.createdAt instanceof Date
@@ -4647,7 +4650,7 @@ export default function AdminPage() {
                                           "string"
                                         ) {
                                           return new Date(
-                                            transaction.createdAt
+                                            transaction.createdAt,
                                           ).toLocaleDateString();
                                         }
                                       }
@@ -4828,7 +4831,7 @@ export default function AdminPage() {
                                 <input
                                   type="checkbox"
                                   checked={nonMemberCategories.includes(
-                                    category.id
+                                    category.id,
                                   )}
                                   onChange={() =>
                                     toggleNonMemberCategory(category.id)
@@ -4933,7 +4936,7 @@ export default function AdminPage() {
                                 <input
                                   type="checkbox"
                                   checked={memberCategories.includes(
-                                    category.id
+                                    category.id,
                                   )}
                                   onChange={() =>
                                     toggleMemberCategory(category.id)
@@ -5004,7 +5007,7 @@ export default function AdminPage() {
                                   .includes(searchTerm.toLowerCase()) ||
                                 customer.customerId
                                   ?.toLowerCase()
-                                  .includes(searchTerm.toLowerCase())
+                                  .includes(searchTerm.toLowerCase()),
                             )
                             .map((customer) => (
                               <tr
@@ -5035,14 +5038,14 @@ export default function AdminPage() {
                                     {(() => {
                                       const totalFromTransactions =
                                         calculateTotalSpentFromTransactions(
-                                          customer
+                                          customer,
                                         );
                                       return totalFromTransactions.toLocaleString(
                                         "en-US",
                                         {
                                           minimumFractionDigits: 2,
                                           maximumFractionDigits: 2,
-                                        }
+                                        },
                                       );
                                     })()}
                                   </span>
@@ -5449,10 +5452,10 @@ export default function AdminPage() {
                         <div className="space-y-4">
                           {categories.map((category) => {
                             const categorySubcategories = subcategories.filter(
-                              (sub) => sub.categoryId === category.id
+                              (sub) => sub.categoryId === category.id,
                             );
                             const isExpanded = expandedCategories.has(
-                              category.id
+                              category.id,
                             );
 
                             return (
@@ -5558,7 +5561,7 @@ export default function AdminPage() {
                                         </svg>
                                         {
                                           products.filter(
-                                            (p) => p.categoryId === category.id
+                                            (p) => p.categoryId === category.id,
                                           ).length
                                         }{" "}
                                         products
@@ -5604,7 +5607,7 @@ export default function AdminPage() {
                                         e.stopPropagation();
                                         handleApplyCategoryToAllUsers(
                                           category.id,
-                                          category.name
+                                          category.name,
                                         );
                                       }}
                                       className="p-2 rounded-lg transition-colors duration-200 text-gray-400 hover:text-green-600 hover:bg-green-50"
@@ -5687,11 +5690,11 @@ export default function AdminPage() {
                                               products.filter(
                                                 (prod) =>
                                                   prod.subcategoryId ===
-                                                  subcategory.id
+                                                  subcategory.id,
                                               );
                                             const isSubExpanded =
                                               expandedSubcategories.has(
-                                                subcategory.id
+                                                subcategory.id,
                                               );
 
                                             return (
@@ -5705,7 +5708,7 @@ export default function AdminPage() {
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     toggleSubcategoryExpansion(
-                                                      subcategory.id
+                                                      subcategory.id,
                                                     );
                                                   }}
                                                 >
@@ -5804,7 +5807,7 @@ export default function AdminPage() {
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         setEditingSubcategory(
-                                                          subcategory
+                                                          subcategory,
                                                         );
                                                       }}
                                                       className="p-1.5 rounded-lg transition-colors duration-200 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
@@ -5827,7 +5830,7 @@ export default function AdminPage() {
                                                       onClick={(e) => {
                                                         e.stopPropagation();
                                                         handleDeleteSubcategory(
-                                                          subcategory.id
+                                                          subcategory.id,
                                                         );
                                                       }}
                                                       disabled={
@@ -5910,10 +5913,10 @@ export default function AdminPage() {
                                                           onClick={(e) => {
                                                             e.stopPropagation();
                                                             setPrefilledCategory(
-                                                              category
+                                                              category,
                                                             );
                                                             setPrefilledSubcategory(
-                                                              subcategory
+                                                              subcategory,
                                                             );
                                                             setNewProduct(
                                                               (prev) => ({
@@ -5926,10 +5929,10 @@ export default function AdminPage() {
                                                                   subcategory.id,
                                                                 subcategoryName:
                                                                   subcategory.name,
-                                                              })
+                                                              }),
                                                             );
                                                             setShowAddProduct(
-                                                              true
+                                                              true,
                                                             );
                                                           }}
                                                           className="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-medium rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
@@ -5956,11 +5959,11 @@ export default function AdminPage() {
                                                           (product) => {
                                                             const isProductExpanded =
                                                               expandedProducts.has(
-                                                                product.id
+                                                                product.id,
                                                               );
                                                             const isVariantExpanded =
                                                               expandedVariants.has(
-                                                                product.id
+                                                                product.id,
                                                               );
 
                                                             return (
@@ -5976,14 +5979,14 @@ export default function AdminPage() {
                                                                       : ""
                                                                   }`}
                                                                   onClick={(
-                                                                    e
+                                                                    e,
                                                                   ) => {
                                                                     if (
                                                                       product.hasVariants
                                                                     ) {
                                                                       e.stopPropagation();
                                                                       toggleVariantExpansion(
-                                                                        product.id
+                                                                        product.id,
                                                                       );
                                                                     }
                                                                   }}
@@ -6138,7 +6141,7 @@ export default function AdminPage() {
                                                                               product.price ||
                                                                               0
                                                                             ).toFixed(
-                                                                              2
+                                                                              2,
                                                                             )}
                                                                           </span>
                                                                           {product.memberPrice && (
@@ -6164,7 +6167,7 @@ export default function AdminPage() {
                                                                                 product.memberPrice ||
                                                                                 0
                                                                               ).toFixed(
-                                                                                2
+                                                                                2,
                                                                               )}
                                                                             </span>
                                                                           )}
@@ -6175,11 +6178,11 @@ export default function AdminPage() {
                                                                   <div className="flex items-center space-x-2">
                                                                     <button
                                                                       onClick={(
-                                                                        e
+                                                                        e,
                                                                       ) => {
                                                                         e.stopPropagation();
                                                                         handleToggleProductStatus(
-                                                                          product
+                                                                          product,
                                                                         );
                                                                       }}
                                                                       disabled={
@@ -6237,11 +6240,11 @@ export default function AdminPage() {
                                                                     </button>
                                                                     <button
                                                                       onClick={(
-                                                                        e
+                                                                        e,
                                                                       ) => {
                                                                         e.stopPropagation();
                                                                         setEditingProduct(
-                                                                          product
+                                                                          product,
                                                                         );
                                                                       }}
                                                                       className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
@@ -6264,11 +6267,11 @@ export default function AdminPage() {
                                                                     </button>
                                                                     <button
                                                                       onClick={(
-                                                                        e
+                                                                        e,
                                                                       ) => {
                                                                         e.stopPropagation();
                                                                         handleDeleteProduct(
-                                                                          product.id
+                                                                          product.id,
                                                                         );
                                                                       }}
                                                                       className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
@@ -6335,12 +6338,12 @@ export default function AdminPage() {
                                                                           {product.variants.map(
                                                                             (
                                                                               variant,
-                                                                              variantIndex
+                                                                              variantIndex,
                                                                             ) => {
                                                                               // Debug the variant structure
                                                                               console.log(
                                                                                 "Variant data:",
-                                                                                variant
+                                                                                variant,
                                                                               );
 
                                                                               // Handle different possible data structures for variant name
@@ -6379,11 +6382,11 @@ export default function AdminPage() {
                                                                                       variant.options.map(
                                                                                         (
                                                                                           option,
-                                                                                          optionIndex
+                                                                                          optionIndex,
                                                                                         ) => {
                                                                                           console.log(
                                                                                             "Option data:",
-                                                                                            option
+                                                                                            option,
                                                                                           );
 
                                                                                           const optionName =
@@ -6447,7 +6450,7 @@ export default function AdminPage() {
                                                                                                           optionPrice ||
                                                                                                           0
                                                                                                         ).toFixed(
-                                                                                                          2
+                                                                                                          2,
                                                                                                         )}
                                                                                                       </div>
                                                                                                       {optionMemberPrice !==
@@ -6456,7 +6459,7 @@ export default function AdminPage() {
                                                                                                           Member:
                                                                                                           ฿
                                                                                                           {optionMemberPrice.toFixed(
-                                                                                                            2
+                                                                                                            2,
                                                                                                           )}
                                                                                                         </div>
                                                                                                       )}
@@ -6466,7 +6469,7 @@ export default function AdminPage() {
                                                                                               </div>
                                                                                             </div>
                                                                                           );
-                                                                                        }
+                                                                                        },
                                                                                       )
                                                                                     ) : (
                                                                                       // Fallback: show variant itself if no options
@@ -6502,7 +6505,7 @@ export default function AdminPage() {
                                                                                                   variant.price ||
                                                                                                   0
                                                                                                 ).toFixed(
-                                                                                                  2
+                                                                                                  2,
                                                                                                 )}
                                                                                               </span>
                                                                                             </div>
@@ -6513,7 +6516,7 @@ export default function AdminPage() {
                                                                                   </div>
                                                                                 </div>
                                                                               );
-                                                                            }
+                                                                            },
                                                                           )}
                                                                         </div>
                                                                       </div>
@@ -6521,7 +6524,7 @@ export default function AdminPage() {
                                                                   )}
                                                               </div>
                                                             );
-                                                          }
+                                                          },
                                                         )}
                                                       </div>
                                                     )}
@@ -6529,7 +6532,7 @@ export default function AdminPage() {
                                                 )}
                                               </div>
                                             );
-                                          }
+                                          },
                                         )}
                                       </div>
                                     )}
@@ -6614,11 +6617,11 @@ export default function AdminPage() {
                                                 (product) => {
                                                   const isProductExpanded =
                                                     expandedProducts.has(
-                                                      product.id
+                                                      product.id,
                                                     );
                                                   const isVariantExpanded =
                                                     expandedVariants.has(
-                                                      product.id
+                                                      product.id,
                                                     );
 
                                                   return (
@@ -6639,7 +6642,7 @@ export default function AdminPage() {
                                                           ) {
                                                             e.stopPropagation();
                                                             toggleVariantExpansion(
-                                                              product.id
+                                                              product.id,
                                                             );
                                                           }
                                                         }}
@@ -6688,11 +6691,12 @@ export default function AdminPage() {
                                                                 height={48}
                                                                 className="w-12 h-12 object-cover rounded-lg border-2 border-gray-200 shadow-sm"
                                                                 onError={(
-                                                                  e
+                                                                  e,
                                                                 ) => {
                                                                   console.log(
                                                                     "Image failed to load:",
-                                                                    e.target.src
+                                                                    e.target
+                                                                      .src,
                                                                   );
                                                                   e.target.style.display =
                                                                     "none";
@@ -6850,7 +6854,7 @@ export default function AdminPage() {
                                                                       product.memberPrice ||
                                                                       0
                                                                     ).toFixed(
-                                                                      2
+                                                                      2,
                                                                     )}
                                                                   </span>
                                                                 )}
@@ -6863,7 +6867,7 @@ export default function AdminPage() {
                                                             onClick={(e) => {
                                                               e.stopPropagation();
                                                               setEditingProduct(
-                                                                product
+                                                                product,
                                                               );
                                                             }}
                                                             className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
@@ -6886,7 +6890,7 @@ export default function AdminPage() {
                                                             onClick={(e) => {
                                                               e.stopPropagation();
                                                               handleDeleteProduct(
-                                                                product.id
+                                                                product.id,
                                                               );
                                                             }}
                                                             className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
@@ -6909,7 +6913,7 @@ export default function AdminPage() {
                                                       </div>
                                                     </div>
                                                   );
-                                                }
+                                                },
                                               )}
                                             </div>
                                           </div>
@@ -6997,14 +7001,14 @@ export default function AdminPage() {
                                   .includes(productSearchTerm.toLowerCase()) ||
                                 product.categoryName
                                   ?.toLowerCase()
-                                  .includes(productSearchTerm.toLowerCase())
+                                  .includes(productSearchTerm.toLowerCase()),
                             )
                             .map((product) => {
                               const category = categories.find(
-                                (c) => c.id === product.categoryId
+                                (c) => c.id === product.categoryId,
                               );
                               const subcategory = subcategories.find(
-                                (s) => s.id === product.subcategoryId
+                                (s) => s.id === product.subcategoryId,
                               );
 
                               return (
@@ -7099,7 +7103,7 @@ export default function AdminPage() {
                                         setShouldRemoveMainImages(false);
                                         setVariants(product.variants || []);
                                         setHasVariants(
-                                          product.hasVariants || false
+                                          product.hasVariants || false,
                                         );
                                       }}
                                       className="text-green-600 hover:text-green-900"
@@ -7139,7 +7143,7 @@ export default function AdminPage() {
                                         onClick={() => {
                                           if (
                                             confirm(
-                                              `Are you sure you want to delete "${product.name}"? This action cannot be undone.`
+                                              `Are you sure you want to delete "${product.name}"? This action cannot be undone.`,
                                             )
                                           ) {
                                             handleDeleteProduct(product.id);
@@ -7264,7 +7268,7 @@ export default function AdminPage() {
                               (alert) =>
                                 alert.productId ===
                                   selectedStockDetail.product.id &&
-                                alert.isActive
+                                alert.isActive,
                             );
                             let modalStockStatus = null;
 
@@ -7290,8 +7294,8 @@ export default function AdminPage() {
                                   modalStockStatus === "good"
                                     ? "bg-green-50 border border-green-200"
                                     : modalStockStatus === "warning"
-                                    ? "bg-yellow-50 border border-yellow-200"
-                                    : "bg-red-50 border border-red-200"
+                                      ? "bg-yellow-50 border border-yellow-200"
+                                      : "bg-red-50 border border-red-200"
                                 }`}
                               >
                                 <div className="flex items-center space-x-3 mb-4">
@@ -7300,8 +7304,8 @@ export default function AdminPage() {
                                       modalStockStatus === "good"
                                         ? "bg-green-500"
                                         : modalStockStatus === "warning"
-                                        ? "bg-yellow-500"
-                                        : "bg-red-500"
+                                          ? "bg-yellow-500"
+                                          : "bg-red-500"
                                     }`}
                                   ></div>
                                   <h4
@@ -7309,15 +7313,15 @@ export default function AdminPage() {
                                       modalStockStatus === "good"
                                         ? "text-green-800"
                                         : modalStockStatus === "warning"
-                                        ? "text-yellow-800"
-                                        : "text-red-800"
+                                          ? "text-yellow-800"
+                                          : "text-red-800"
                                     }`}
                                   >
                                     {modalStockStatus === "good"
                                       ? "Well Stocked"
                                       : modalStockStatus === "warning"
-                                      ? "Low Stock"
-                                      : "Critical Stock"}
+                                        ? "Low Stock"
+                                        : "Critical Stock"}
                                   </h4>
                                 </div>
                                 <div className="text-3xl font-bold mb-2 text-gray-900">
@@ -7328,15 +7332,15 @@ export default function AdminPage() {
                                     modalStockStatus === "good"
                                       ? "text-green-700"
                                       : modalStockStatus === "warning"
-                                      ? "text-yellow-700"
-                                      : "text-red-700"
+                                        ? "text-yellow-700"
+                                        : "text-red-700"
                                   }`}
                                 >
                                   {modalStockStatus === "good"
                                     ? "Stock levels are healthy"
                                     : modalStockStatus === "warning"
-                                    ? "Consider restocking soon"
-                                    : "Immediate restocking required"}
+                                      ? "Consider restocking soon"
+                                      : "Immediate restocking required"}
                                 </p>
                               </div>
                             ) : (
@@ -7359,7 +7363,7 @@ export default function AdminPage() {
                               (alert) =>
                                 alert.productId ===
                                   selectedStockDetail.product.id &&
-                                alert.isActive
+                                alert.isActive,
                             );
                             return stockAlert ? (
                               <div className="bg-blue-50 border border-blue-200 rounded-xl p-6">
@@ -7466,14 +7470,14 @@ export default function AdminPage() {
                                               const variantStock =
                                                 getCurrentStock(
                                                   selectedStockDetail.product,
-                                                  variantId
+                                                  variantId,
                                                 );
                                               const variantStatus =
                                                 variantStock > 10
                                                   ? "high"
                                                   : variantStock > 0
-                                                  ? "low"
-                                                  : "out";
+                                                    ? "low"
+                                                    : "out";
 
                                               return (
                                                 <tr
@@ -7503,9 +7507,9 @@ export default function AdminPage() {
                                                         variantStatus === "high"
                                                           ? "bg-green-100 text-green-800"
                                                           : variantStatus ===
-                                                            "low"
-                                                          ? "bg-yellow-100 text-yellow-800"
-                                                          : "bg-red-100 text-red-800"
+                                                              "low"
+                                                            ? "bg-yellow-100 text-yellow-800"
+                                                            : "bg-red-100 text-red-800"
                                                       }`}
                                                     >
                                                       <div
@@ -7514,34 +7518,34 @@ export default function AdminPage() {
                                                           "high"
                                                             ? "bg-green-500"
                                                             : variantStatus ===
-                                                              "low"
-                                                            ? "bg-yellow-500"
-                                                            : "bg-red-500"
+                                                                "low"
+                                                              ? "bg-yellow-500"
+                                                              : "bg-red-500"
                                                         }`}
                                                       ></div>
                                                       {variantStatus === "high"
                                                         ? "In Stock"
                                                         : variantStatus ===
-                                                          "low"
-                                                        ? "Low Stock"
-                                                        : "Out of Stock"}
+                                                            "low"
+                                                          ? "Low Stock"
+                                                          : "Out of Stock"}
                                                     </span>
                                                   </td>
                                                 </tr>
                                               );
-                                            }
+                                            },
                                           );
                                         } else {
                                           const variantStock = getCurrentStock(
                                             selectedStockDetail.product,
-                                            variant.id
+                                            variant.id,
                                           );
                                           const variantStatus =
                                             variantStock > 10
                                               ? "high"
                                               : variantStock > 0
-                                              ? "low"
-                                              : "out";
+                                                ? "low"
+                                                : "out";
 
                                           return (
                                             <tr
@@ -7571,8 +7575,8 @@ export default function AdminPage() {
                                                     variantStatus === "high"
                                                       ? "bg-green-100 text-green-800"
                                                       : variantStatus === "low"
-                                                      ? "bg-yellow-100 text-yellow-800"
-                                                      : "bg-red-100 text-red-800"
+                                                        ? "bg-yellow-100 text-yellow-800"
+                                                        : "bg-red-100 text-red-800"
                                                   }`}
                                                 >
                                                   <div
@@ -7580,22 +7584,22 @@ export default function AdminPage() {
                                                       variantStatus === "high"
                                                         ? "bg-green-500"
                                                         : variantStatus ===
-                                                          "low"
-                                                        ? "bg-yellow-500"
-                                                        : "bg-red-500"
+                                                            "low"
+                                                          ? "bg-yellow-500"
+                                                          : "bg-red-500"
                                                     }`}
                                                   ></div>
                                                   {variantStatus === "high"
                                                     ? "In Stock"
                                                     : variantStatus === "low"
-                                                    ? "Low Stock"
-                                                    : "Out of Stock"}
+                                                      ? "Low Stock"
+                                                      : "Out of Stock"}
                                                 </span>
                                               </td>
                                             </tr>
                                           );
                                         }
-                                      }
+                                      },
                                     )}
                                   </tbody>
                                 </table>
@@ -7636,7 +7640,7 @@ export default function AdminPage() {
                                   .filter(
                                     (movement) =>
                                       movement.productId ===
-                                      selectedStockDetail.product.id
+                                      selectedStockDetail.product.id,
                                   )
                                   .slice(0, 10)
                                   .map((movement) => (
@@ -7682,7 +7686,7 @@ export default function AdminPage() {
                                 {stockMovements.filter(
                                   (movement) =>
                                     movement.productId ===
-                                    selectedStockDetail.product.id
+                                    selectedStockDetail.product.id,
                                 ).length === 0 && (
                                   <div className="text-center py-8 text-gray-500">
                                     <svg
@@ -7762,7 +7766,7 @@ export default function AdminPage() {
                             onClick={() => {
                               const today = new Date();
                               const lastWeek = new Date(
-                                today.getTime() - 7 * 24 * 60 * 60 * 1000
+                                today.getTime() - 7 * 24 * 60 * 60 * 1000,
                               );
                               setTransactionFilters((prev) => ({
                                 ...prev,
@@ -7780,7 +7784,7 @@ export default function AdminPage() {
                               const lastMonth = new Date(
                                 today.getFullYear(),
                                 today.getMonth() - 1,
-                                today.getDate()
+                                today.getDate(),
                               );
                               setTransactionFilters((prev) => ({
                                 ...prev,
@@ -7974,7 +7978,7 @@ export default function AdminPage() {
                               {filteredTransactions
                                 .reduce(
                                   (sum, t) => sum + (t.total || t.amount || 0),
-                                  0
+                                  0,
                                 )
                                 .toLocaleString("en-US", {
                                   minimumFractionDigits: 2,
@@ -8047,7 +8051,7 @@ export default function AdminPage() {
                                     {
                                       minimumFractionDigits: 2,
                                       maximumFractionDigits: 2,
-                                    }
+                                    },
                                   )}
                                 </td>
                                 <td className="px-6 py-5 whitespace-nowrap text-base font-semibold text-blue-600">
@@ -8056,7 +8060,7 @@ export default function AdminPage() {
                                 <td className="px-6 py-5 whitespace-nowrap text-base text-gray-900">
                                   {transaction.createdAt
                                     ? new Date(
-                                        transaction.createdAt
+                                        transaction.createdAt,
                                       ).toLocaleDateString("en-US", {
                                         year: "numeric",
                                         month: "short",
@@ -8071,7 +8075,7 @@ export default function AdminPage() {
                                     <button
                                       onClick={() => {
                                         setSelectedTransactionDetails(
-                                          transaction
+                                          transaction,
                                         );
                                         setShowTransactionDetails(true);
                                       }}
@@ -8083,7 +8087,7 @@ export default function AdminPage() {
                                       onClick={() =>
                                         deleteTransaction(
                                           transaction.transactionId,
-                                          transaction
+                                          transaction,
                                         )
                                       }
                                       disabled={
@@ -8145,7 +8149,7 @@ export default function AdminPage() {
                               .reduce(
                                 (total, customer) =>
                                   total + (customer.totalEarned || 0),
-                                0
+                                0,
                               )
                               .toLocaleString()}
                           </p>
@@ -8168,9 +8172,9 @@ export default function AdminPage() {
                                     ? customers.reduce(
                                         (total, customer) =>
                                           total + (customer.totalEarned || 0),
-                                        0
+                                        0,
                                       ) / stats.totalTransactions
-                                    : 0
+                                    : 0,
                                 )
                               : 0}
                           </p>
@@ -8184,8 +8188,8 @@ export default function AdminPage() {
                     {categories.filter(
                       (cat) =>
                         !cashbackRules.find(
-                          (rule) => rule.categoryId === cat.id
-                        )
+                          (rule) => rule.categoryId === cat.id,
+                        ),
                     ).length > 0 ? (
                       <button
                         onClick={handleAddCashbackRule}
@@ -8361,7 +8365,7 @@ export default function AdminPage() {
                             try {
                               setSavingCategoryOrder(true);
                               await CategoryService.saveCategoryOrder(
-                                orderList
+                                orderList,
                               );
                               setOrderDirty(false);
                             } catch (e) {
@@ -8425,7 +8429,7 @@ export default function AdminPage() {
 
                         // Save the links and alert levels to products
                         for (const [productId, posItemId] of Object.entries(
-                          links
+                          links,
                         )) {
                           try {
                             const productRef = doc(db, "products", productId);
@@ -8450,7 +8454,7 @@ export default function AdminPage() {
                               const stockAlertRef = doc(
                                 db,
                                 "StockAlert",
-                                productId
+                                productId,
                               );
                               await setDoc(
                                 stockAlertRef,
@@ -8459,13 +8463,13 @@ export default function AdminPage() {
                                   alertKioskLevel: alertLevel,
                                   updatedAt: serverTimestamp(),
                                 },
-                                { merge: true }
+                                { merge: true },
                               );
                             }
                           } catch (err) {
                             console.error(
                               `Failed to update product ${productId}:`,
-                              err
+                              err,
                             );
                             throw err; // Re-throw to show error message
                           }
@@ -8560,7 +8564,7 @@ export default function AdminPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {admin.createdAt
                                   ? new Date(
-                                      admin.createdAt
+                                      admin.createdAt,
                                     ).toLocaleDateString()
                                   : "N/A"}
                               </td>
@@ -8766,7 +8770,7 @@ export default function AdminPage() {
                                 {
                                   products.filter((p) => {
                                     const alert = stockAlerts.find(
-                                      (a) => a.productId === p.id && a.isActive
+                                      (a) => a.productId === p.id && a.isActive,
                                     );
                                     return (
                                       alert &&
@@ -8784,7 +8788,7 @@ export default function AdminPage() {
                                 {
                                   products.filter((p) => {
                                     const alert = stockAlerts.find(
-                                      (a) => a.productId === p.id && a.isActive
+                                      (a) => a.productId === p.id && a.isActive,
                                     );
                                     return (
                                       alert &&
@@ -8804,7 +8808,7 @@ export default function AdminPage() {
                                 {
                                   products.filter((p) => {
                                     const alert = stockAlerts.find(
-                                      (a) => a.productId === p.id && a.isActive
+                                      (a) => a.productId === p.id && a.isActive,
                                     );
                                     return (
                                       alert &&
@@ -8822,7 +8826,7 @@ export default function AdminPage() {
                               <div className="text-2xl font-bold">
                                 {products.reduce(
                                   (total, p) => total + getCurrentStock(p),
-                                  0
+                                  0,
                                 )}
                               </div>
                               <div className="text-sm text-green-100">
@@ -8963,7 +8967,7 @@ export default function AdminPage() {
                                 .filter(
                                   (sub) =>
                                     sub.categoryId ===
-                                    stockOverviewFilters.categoryId
+                                    stockOverviewFilters.categoryId,
                                 )
                                 .map((sub) => (
                                   <option key={sub.id} value={sub.id}>
@@ -9075,7 +9079,7 @@ export default function AdminPage() {
                                     const stockAlert = stockAlerts.find(
                                       (alert) =>
                                         alert.productId === product.id &&
-                                        alert.isActive
+                                        alert.isActive,
                                     );
 
                                     // Search filter
@@ -9241,7 +9245,7 @@ export default function AdminPage() {
                                         const stockAlert = stockAlerts.find(
                                           (alert) =>
                                             alert.productId === product.id &&
-                                            alert.isActive
+                                            alert.isActive,
                                         );
 
                                         // Search filter
@@ -9339,7 +9343,7 @@ export default function AdminPage() {
                                         }
 
                                         return true;
-                                      }
+                                      },
                                     );
 
                                     // Apply sorting
@@ -9350,11 +9354,11 @@ export default function AdminPage() {
                                       switch (stockOverviewFilters.sortBy) {
                                         case "name":
                                           return (a.name || "").localeCompare(
-                                            b.name || ""
+                                            b.name || "",
                                           );
                                         case "name-desc":
                                           return (b.name || "").localeCompare(
-                                            a.name || ""
+                                            a.name || "",
                                           );
                                         case "stock-asc":
                                           return stockA - stockB;
@@ -9367,7 +9371,7 @@ export default function AdminPage() {
                                           if (catCompare !== 0)
                                             return catCompare;
                                           return (a.name || "").localeCompare(
-                                            b.name || ""
+                                            b.name || "",
                                           );
                                         default:
                                           return 0;
@@ -9386,7 +9390,7 @@ export default function AdminPage() {
                                       const stockAlert = stockAlerts.find(
                                         (alert) =>
                                           alert.productId === product.id &&
-                                          alert.isActive
+                                          alert.isActive,
                                       );
 
                                       // Determine stock status based on stock alert levels (if configured)
@@ -9451,10 +9455,11 @@ export default function AdminPage() {
                                                   totalStock === 0
                                                     ? "bg-red-100 text-red-700"
                                                     : stockStatus === "critical"
-                                                    ? "bg-red-100 text-red-700"
-                                                    : stockStatus === "warning"
-                                                    ? "bg-yellow-100 text-yellow-700"
-                                                    : "bg-green-100 text-green-700"
+                                                      ? "bg-red-100 text-red-700"
+                                                      : stockStatus ===
+                                                          "warning"
+                                                        ? "bg-yellow-100 text-yellow-700"
+                                                        : "bg-green-100 text-green-700"
                                                 }`}
                                               >
                                                 {totalStock}
@@ -9470,8 +9475,8 @@ export default function AdminPage() {
                                                   stockStatus === "good"
                                                     ? "bg-green-100 text-green-800 border border-green-200"
                                                     : stockStatus === "warning"
-                                                    ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
-                                                    : "bg-red-100 text-red-800 border border-red-200"
+                                                      ? "bg-yellow-100 text-yellow-800 border border-yellow-200"
+                                                      : "bg-red-100 text-red-800 border border-red-200"
                                                 }`}
                                               >
                                                 <div
@@ -9479,16 +9484,16 @@ export default function AdminPage() {
                                                     stockStatus === "good"
                                                       ? "bg-green-500"
                                                       : stockStatus ===
-                                                        "warning"
-                                                      ? "bg-yellow-500"
-                                                      : "bg-red-500"
+                                                          "warning"
+                                                        ? "bg-yellow-500"
+                                                        : "bg-red-500"
                                                   }`}
                                                 />
                                                 {stockStatus === "good"
                                                   ? "Well Stocked"
                                                   : stockStatus === "warning"
-                                                  ? "Low Stock"
-                                                  : "Critical"}
+                                                    ? "Low Stock"
+                                                    : "Critical"}
                                               </span>
                                             ) : (
                                               <span className="text-sm text-gray-400">
@@ -9515,7 +9520,7 @@ export default function AdminPage() {
                                                       if (
                                                         variant.options &&
                                                         Array.isArray(
-                                                          variant.options
+                                                          variant.options,
                                                         )
                                                       ) {
                                                         return variant.options
@@ -9525,7 +9530,7 @@ export default function AdminPage() {
                                                             const variantStock =
                                                               getCurrentStock(
                                                                 product,
-                                                                variantId
+                                                                variantId,
                                                               );
                                                             return (
                                                               <div
@@ -9625,7 +9630,7 @@ export default function AdminPage() {
                               const stockAlert = stockAlerts.find(
                                 (alert) =>
                                   alert.productId === product.id &&
-                                  alert.isActive
+                                  alert.isActive,
                               );
 
                               if (stockOverviewFilters.searchTerm) {
@@ -9859,7 +9864,7 @@ export default function AdminPage() {
                                           {purchase.createdAt
                                             ? new Date(
                                                 purchase.createdAt.seconds *
-                                                  1000
+                                                  1000,
                                               ).toLocaleDateString()
                                             : "N/A"}
                                         </div>
@@ -9867,7 +9872,7 @@ export default function AdminPage() {
                                           {purchase.createdAt
                                             ? new Date(
                                                 purchase.createdAt.seconds *
-                                                  1000
+                                                  1000,
                                               ).toLocaleTimeString()
                                             : "N/A"}
                                         </div>
@@ -9967,14 +9972,14 @@ export default function AdminPage() {
                                       <div className="font-medium">
                                         {movement.createdAt
                                           ? new Date(
-                                              movement.createdAt.seconds * 1000
+                                              movement.createdAt.seconds * 1000,
                                             ).toLocaleDateString()
                                           : "N/A"}
                                       </div>
                                       <div className="text-gray-500">
                                         {movement.createdAt
                                           ? new Date(
-                                              movement.createdAt.seconds * 1000
+                                              movement.createdAt.seconds * 1000,
                                             ).toLocaleTimeString()
                                           : "N/A"}
                                       </div>
@@ -10063,7 +10068,7 @@ export default function AdminPage() {
                                 .filter((m) => m.status === "purchasing")
                                 .reduce(
                                   (sum, m) => sum + (m.quantity || 0),
-                                  0
+                                  0,
                                 )}{" "}
                               items
                             </div>
@@ -10077,7 +10082,7 @@ export default function AdminPage() {
                                 .filter((m) => m.status === "sales")
                                 .reduce(
                                   (sum, m) => sum + (m.quantity || 0),
-                                  0
+                                  0,
                                 )}{" "}
                               items
                             </div>
@@ -10092,7 +10097,7 @@ export default function AdminPage() {
                                 .reduce(
                                   (sum, m) =>
                                     sum + (m.quantity || 0) * (m.price || 0),
-                                  0
+                                  0,
                                 )
                                 .toFixed(2)}
                             </div>
@@ -10217,7 +10222,7 @@ export default function AdminPage() {
                               <div className="space-y-4">
                                 {console.log(
                                   "Rendering purchasing products:",
-                                  purchasingProducts
+                                  purchasingProducts,
                                 )}
                                 {purchasingProducts.map((product, index) => (
                                   <div
@@ -10249,35 +10254,35 @@ export default function AdminPage() {
                                         onChange={(e) => {
                                           console.log(
                                             "Input onChange - Current product.productSearch:",
-                                            product.productSearch
+                                            product.productSearch,
                                           );
                                           console.log(
                                             "Input onChange - New value:",
-                                            e.target.value
+                                            e.target.value,
                                           );
                                           updatePurchasingProductMultiple(
                                             index,
                                             {
                                               productSearch: e.target.value,
                                               showProductDropdown: true,
-                                            }
+                                            },
                                           );
                                         }}
                                         onFocus={() => {
                                           console.log(
                                             "Input onFocus - Current product.productSearch:",
-                                            product.productSearch
+                                            product.productSearch,
                                           );
                                           updatePurchasingProduct(
                                             index,
                                             "showProductDropdown",
-                                            true
+                                            true,
                                           );
                                         }}
                                         onBlur={() => {
                                           console.log(
                                             "Input onBlur - Current product.productSearch:",
-                                            product.productSearch
+                                            product.productSearch,
                                           );
                                           // Use a longer timeout to ensure clicks register
                                           setTimeout(
@@ -10285,9 +10290,9 @@ export default function AdminPage() {
                                               updatePurchasingProduct(
                                                 index,
                                                 "showProductDropdown",
-                                                false
+                                                false,
                                               ),
-                                            500
+                                            500,
                                           );
                                         }}
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
@@ -10309,8 +10314,8 @@ export default function AdminPage() {
                                                 } - ${p.name}`
                                                   .toLowerCase()
                                                   .includes(
-                                                    product.productSearch.toLowerCase()
-                                                  )
+                                                    product.productSearch.toLowerCase(),
+                                                  ),
                                             )
                                             .slice(0, 50)
                                             .map((p) => {
@@ -10324,7 +10329,7 @@ export default function AdminPage() {
                                                     if (
                                                       variant.options &&
                                                       Array.isArray(
-                                                        variant.options
+                                                        variant.options,
                                                       )
                                                     ) {
                                                       return variant.options.map(
@@ -10332,7 +10337,7 @@ export default function AdminPage() {
                                                           <div
                                                             key={`${p.id}-${variant.id}-${option.id}`}
                                                             onMouseDown={(
-                                                              e
+                                                              e,
                                                             ) => {
                                                               e.preventDefault();
                                                               e.stopPropagation();
@@ -10340,7 +10345,7 @@ export default function AdminPage() {
                                                                 "Purchasing: Selecting product variant:",
                                                                 p.name,
                                                                 variant.variantName,
-                                                                option.name
+                                                                option.name,
                                                               );
                                                               updatePurchasingProductMultiple(
                                                                 index,
@@ -10365,7 +10370,7 @@ export default function AdminPage() {
                                                                     option.name
                                                                   }`,
                                                                   showProductDropdown: false,
-                                                                }
+                                                                },
                                                               );
                                                             }}
                                                             className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -10385,7 +10390,7 @@ export default function AdminPage() {
                                                               : {option.name}
                                                             </div>
                                                           </div>
-                                                        )
+                                                        ),
                                                       );
                                                     }
                                                     return (
@@ -10395,7 +10400,7 @@ export default function AdminPage() {
                                                           console.log(
                                                             "Purchasing: Selecting product variant (no options):",
                                                             p.name,
-                                                            variant.name
+                                                            variant.name,
                                                           );
                                                           updatePurchasingProductMultiple(
                                                             index,
@@ -10419,7 +10424,7 @@ export default function AdminPage() {
                                                                 "Variant"
                                                               }`,
                                                               showProductDropdown: false,
-                                                            }
+                                                            },
                                                           );
                                                         }}
                                                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -10449,7 +10454,7 @@ export default function AdminPage() {
                                                       e.stopPropagation();
                                                       console.log(
                                                         "Purchasing: Selecting product (no variants):",
-                                                        p.name
+                                                        p.name,
                                                       );
                                                       updatePurchasingProductMultiple(
                                                         index,
@@ -10466,7 +10471,7 @@ export default function AdminPage() {
                                                             "No Subcategory"
                                                           } - ${p.name}`,
                                                           showProductDropdown: false,
-                                                        }
+                                                        },
                                                       );
                                                     }}
                                                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -10496,8 +10501,8 @@ export default function AdminPage() {
                                               } - ${p.name}`
                                                 .toLowerCase()
                                                 .includes(
-                                                  product.productSearch.toLowerCase()
-                                                )
+                                                  product.productSearch.toLowerCase(),
+                                                ),
                                             ).length === 0 && (
                                               <div className="px-3 py-2 text-gray-500 text-sm">
                                                 No products found matching
@@ -10522,7 +10527,7 @@ export default function AdminPage() {
                                           updatePurchasingProduct(
                                             index,
                                             "quantity",
-                                            parseInt(e.target.value) || 0
+                                            parseInt(e.target.value) || 0,
                                           )
                                         }
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
@@ -10543,7 +10548,7 @@ export default function AdminPage() {
                                           updatePurchasingProduct(
                                             index,
                                             "buyPrice",
-                                            parseFloat(e.target.value) || 0
+                                            parseFloat(e.target.value) || 0,
                                           )
                                         }
                                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
@@ -10575,11 +10580,11 @@ export default function AdminPage() {
                                               const selectedProduct =
                                                 products.find(
                                                   (p) =>
-                                                    p.id === product.productId
+                                                    p.id === product.productId,
                                                 );
                                               return selectedProduct
                                                 ? getCurrentStock(
-                                                    selectedProduct
+                                                    selectedProduct,
                                                   )
                                                 : 0;
                                             })()
@@ -10733,7 +10738,7 @@ export default function AdminPage() {
                                           <br />
                                           {order.createdAt
                                             ? new Date(
-                                                order.createdAt.seconds * 1000
+                                                order.createdAt.seconds * 1000,
                                               ).toLocaleDateString()
                                             : order.date || "N/A"}
                                         </div>
@@ -10744,7 +10749,7 @@ export default function AdminPage() {
                                           <br />
                                           {order.createdAt
                                             ? new Date(
-                                                order.createdAt.seconds * 1000
+                                                order.createdAt.seconds * 1000,
                                               ).toLocaleTimeString([], {
                                                 hour: "2-digit",
                                                 minute: "2-digit",
@@ -10799,10 +10804,10 @@ export default function AdminPage() {
                             linkingToast.type === "success"
                               ? "bg-gradient-to-r from-green-500 to-emerald-600"
                               : linkingToast.type === "error"
-                              ? "bg-gradient-to-r from-red-500 to-rose-600"
-                              : linkingToast.type === "warning"
-                              ? "bg-gradient-to-r from-yellow-500 to-orange-600"
-                              : "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                ? "bg-gradient-to-r from-red-500 to-rose-600"
+                                : linkingToast.type === "warning"
+                                  ? "bg-gradient-to-r from-yellow-500 to-orange-600"
+                                  : "bg-gradient-to-r from-blue-500 to-indigo-600"
                           }`}
                         >
                           <div className="p-4 flex items-center space-x-3">
@@ -11140,7 +11145,9 @@ export default function AdminPage() {
                                   All (
                                   {
                                     batchTodos.filter((t) =>
-                                      hideZeroStockLoyverse ? t.stock > 0 : true
+                                      hideZeroStockLoyverse
+                                        ? t.stock > 0
+                                        : true,
                                     ).length
                                   }
                                   )
@@ -11182,8 +11189,8 @@ export default function AdminPage() {
                                     todo.status === "linked"
                                       ? "bg-green-50 border-green-300"
                                       : todo.status === "skipped"
-                                      ? "bg-gray-50 border-gray-300 opacity-60"
-                                      : "bg-white border-gray-200 hover:border-blue-300"
+                                        ? "bg-gray-50 border-gray-300 opacity-60"
+                                        : "bg-white border-gray-200 hover:border-blue-300"
                                   }`}
                                 >
                                   <div className="flex items-start justify-between">
@@ -11194,8 +11201,8 @@ export default function AdminPage() {
                                             todo.status === "linked"
                                               ? "bg-green-100 text-green-800"
                                               : todo.status === "skipped"
-                                              ? "bg-gray-100 text-gray-800"
-                                              : "bg-yellow-100 text-yellow-800"
+                                                ? "bg-gray-100 text-gray-800"
+                                                : "bg-yellow-100 text-yellow-800"
                                           }`}
                                         >
                                           {todo.status === "linked" &&
@@ -11310,7 +11317,7 @@ export default function AdminPage() {
                                                     categories.find(
                                                       (c) =>
                                                         c.id ===
-                                                        product.categoryId
+                                                        product.categoryId,
                                                     )?.name || "Uncategorized";
                                                   return (
                                                     product.name
@@ -11327,7 +11334,7 @@ export default function AdminPage() {
                                                     categories.find(
                                                       (c) =>
                                                         c.id ===
-                                                        product.categoryId
+                                                        product.categoryId,
                                                     )?.name || "Uncategorized";
                                                   return (
                                                     <button
@@ -11335,7 +11342,7 @@ export default function AdminPage() {
                                                       onClick={() => {
                                                         linkProductToLoyverse(
                                                           todo.id,
-                                                          product.id
+                                                          product.id,
                                                         );
                                                         setProductSearchTerms({
                                                           ...productSearchTerms,
@@ -11369,7 +11376,7 @@ export default function AdminPage() {
                                                   categories.find(
                                                     (c) =>
                                                       c.id ===
-                                                      product.categoryId
+                                                      product.categoryId,
                                                   )?.name || "Uncategorized";
                                                 return (
                                                   product.name
@@ -11471,7 +11478,7 @@ export default function AdminPage() {
                                 <div className="text-3xl font-bold text-gray-600">
                                   {
                                     batchTodos.filter(
-                                      (t) => t.status === "skipped"
+                                      (t) => t.status === "skipped",
                                     ).length
                                   }
                                 </div>
@@ -11580,7 +11587,7 @@ export default function AdminPage() {
                                 // Delay hiding to allow click events to register
                                 setTimeout(
                                   () => setShowAlertProductDropdown(false),
-                                  150
+                                  150,
                                 );
                               }}
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
@@ -11621,12 +11628,12 @@ export default function AdminPage() {
                                             variant.options.some((option) =>
                                               (option.name || "")
                                                 .toLowerCase()
-                                                .includes(searchTerm)
+                                                .includes(searchTerm),
                                             );
                                           return (
                                             variantNameMatch || optionsMatch
                                           );
-                                        }
+                                        },
                                       );
                                     }
 
@@ -11656,7 +11663,7 @@ export default function AdminPage() {
                                                       "Stock Alert: Selecting product variant:",
                                                       p.name,
                                                       variant.variantName,
-                                                      option.name
+                                                      option.name,
                                                     );
                                                     const productWithVariant = {
                                                       ...p,
@@ -11666,7 +11673,7 @@ export default function AdminPage() {
                                                       selectedOption: option,
                                                     };
                                                     setSelectedProductForAlert(
-                                                      productWithVariant
+                                                      productWithVariant,
                                                     );
                                                     setAlertProductSearch(
                                                       `${
@@ -11677,10 +11684,10 @@ export default function AdminPage() {
                                                         "No Subcategory"
                                                       } - ${p.name} - ${
                                                         variant.variantName
-                                                      } - ${option.name}`
+                                                      } - ${option.name}`,
                                                     );
                                                     setShowAlertProductDropdown(
-                                                      false
+                                                      false,
                                                     );
                                                   }}
                                                   className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -11702,12 +11709,12 @@ export default function AdminPage() {
                                                     {stockCalculationsLoaded
                                                       ? getCurrentStock(
                                                           p,
-                                                          `${variant.id}-${option.id}`
+                                                          `${variant.id}-${option.id}`,
                                                         )
                                                       : "Loading..."}
                                                   </div>
                                                 </div>
-                                              )
+                                              ),
                                             );
                                           }
                                           return (
@@ -11719,7 +11726,7 @@ export default function AdminPage() {
                                                 console.log(
                                                   "Stock Alert: Selecting product variant (no options):",
                                                   p.name,
-                                                  variant.name
+                                                  variant.name,
                                                 );
                                                 const productWithVariant = {
                                                   ...p,
@@ -11730,7 +11737,7 @@ export default function AdminPage() {
                                                   selectedVariant: variant,
                                                 };
                                                 setSelectedProductForAlert(
-                                                  productWithVariant
+                                                  productWithVariant,
                                                 );
                                                 setAlertProductSearch(
                                                   `${
@@ -11741,10 +11748,10 @@ export default function AdminPage() {
                                                     "No Subcategory"
                                                   } - ${p.name} - ${
                                                     variant.name || "Variant"
-                                                  }`
+                                                  }`,
                                                 );
                                                 setShowAlertProductDropdown(
-                                                  false
+                                                  false,
                                                 );
                                               }}
                                               className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -11765,7 +11772,7 @@ export default function AdminPage() {
                                                 {stockCalculationsLoaded
                                                   ? getCurrentStock(
                                                       p,
-                                                      variant.id
+                                                      variant.id,
                                                     )
                                                   : "Loading..."}
                                               </div>
@@ -11782,7 +11789,7 @@ export default function AdminPage() {
                                             e.stopPropagation();
                                             console.log(
                                               "Stock Alert: Selecting product (no variants):",
-                                              p.name
+                                              p.name,
                                             );
                                             setSelectedProductForAlert(p);
                                             setAlertProductSearch(
@@ -11792,7 +11799,7 @@ export default function AdminPage() {
                                               } - ${
                                                 p.subcategoryName ||
                                                 "No Subcategory"
-                                              } - ${p.name}`
+                                              } - ${p.name}`,
                                             );
                                             setShowAlertProductDropdown(false);
                                           }}
@@ -11824,8 +11831,8 @@ export default function AdminPage() {
                                     } - ${p.name}`
                                       .toLowerCase()
                                       .includes(
-                                        alertProductSearch.toLowerCase()
-                                      )
+                                        alertProductSearch.toLowerCase(),
+                                      ),
                                   ).length === 0 && (
                                     <div className="px-3 py-2 text-gray-500 text-sm">
                                       No products found matching &quot;
@@ -11919,7 +11926,7 @@ export default function AdminPage() {
                               {stockCalculationsLoaded
                                 ? getCurrentStock(
                                     selectedProductForAlert,
-                                    selectedProductForAlert?.variantId
+                                    selectedProductForAlert?.variantId,
                                   )
                                 : "Loading..."}{" "}
                               units
@@ -11981,7 +11988,7 @@ export default function AdminPage() {
                                   setTimeout(
                                     () =>
                                       setShowEditAlertProductDropdown(false),
-                                    200
+                                    200,
                                   );
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -12028,7 +12035,7 @@ export default function AdminPage() {
                                                           ...p,
                                                           selectedVariantId: `${variant.id}-${option.id}`,
                                                           selectedVariantName: `${variant.variantName}: ${option.name}`,
-                                                        }
+                                                        },
                                                       );
                                                       setEditAlertProductSearch(
                                                         `${
@@ -12039,10 +12046,10 @@ export default function AdminPage() {
                                                           "No Subcategory"
                                                         } - ${p.name} - ${
                                                           variant.variantName
-                                                        } - ${option.name}`
+                                                        } - ${option.name}`,
                                                       );
                                                       setShowEditAlertProductDropdown(
-                                                        false
+                                                        false,
                                                       );
                                                     }}
                                                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -12060,7 +12067,7 @@ export default function AdminPage() {
                                                       {option.name}
                                                     </div>
                                                   </div>
-                                                )
+                                                ),
                                               );
                                             }
                                             return (
@@ -12075,7 +12082,7 @@ export default function AdminPage() {
                                                       selectedVariantName:
                                                         variant.name ||
                                                         `Variant ${variant.id}`,
-                                                    }
+                                                    },
                                                   );
                                                   setEditAlertProductSearch(
                                                     `${
@@ -12086,10 +12093,10 @@ export default function AdminPage() {
                                                       "No Subcategory"
                                                     } - ${p.name} - ${
                                                       variant.name || "Variant"
-                                                    }`
+                                                    }`,
                                                   );
                                                   setShowEditAlertProductDropdown(
-                                                    false
+                                                    false,
                                                   );
                                                 }}
                                                 className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -12128,10 +12135,10 @@ export default function AdminPage() {
                                                 } - ${
                                                   p.subcategoryName ||
                                                   "No Subcategory"
-                                                } - ${p.name}`
+                                                } - ${p.name}`,
                                               );
                                               setShowEditAlertProductDropdown(
-                                                false
+                                                false,
                                               );
                                             }}
                                             className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm"
@@ -12157,8 +12164,8 @@ export default function AdminPage() {
                                         } - ${p.name}`
                                           .toLowerCase()
                                           .includes(
-                                            editAlertProductSearch.toLowerCase()
-                                          )
+                                            editAlertProductSearch.toLowerCase(),
+                                          ),
                                       ).length === 0 && (
                                         <div className="px-3 py-2 text-sm text-gray-500">
                                           No products found matching &quot;
@@ -12258,7 +12265,7 @@ export default function AdminPage() {
                                 {stockCalculationsLoaded
                                   ? getCurrentStock(
                                       editSelectedProductForAlert,
-                                      editSelectedProductForAlert?.selectedVariantId
+                                      editSelectedProductForAlert?.selectedVariantId,
                                     )
                                   : "Loading..."}{" "}
                                 units
@@ -12317,7 +12324,7 @@ export default function AdminPage() {
                               <tbody className="bg-white divide-y divide-gray-200">
                                 {stockAlerts.map((alert) => {
                                   const product = products.find(
-                                    (p) => p.id === alert.productId
+                                    (p) => p.id === alert.productId,
                                   );
                                   const currentStock = product
                                     ? getCurrentStock(product, alert.variantId)
@@ -12609,8 +12616,8 @@ export default function AdminPage() {
                           {loadingSettings
                             ? "Loading..."
                             : savingSettings
-                            ? "Saving..."
-                            : "Save Settings"}
+                              ? "Saving..."
+                              : "Save Settings"}
                         </button>
                       </div>
                     </div>
@@ -12779,12 +12786,13 @@ export default function AdminPage() {
                                       payment.payment_status === "confirmed"
                                         ? "bg-green-100 text-green-800"
                                         : payment.payment_status === "waiting"
-                                        ? "bg-yellow-100 text-yellow-800"
-                                        : payment.payment_status ===
-                                            "confirming" ||
-                                          payment.payment_status === "sending"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-red-100 text-red-800"
+                                          ? "bg-yellow-100 text-yellow-800"
+                                          : payment.payment_status ===
+                                                "confirming" ||
+                                              payment.payment_status ===
+                                                "sending"
+                                            ? "bg-blue-100 text-blue-800"
+                                            : "bg-red-100 text-red-800"
                                     }`}
                                   >
                                     {payment.payment_status}
@@ -12811,7 +12819,7 @@ export default function AdminPage() {
                                   <button
                                     onClick={() =>
                                       checkCryptoPaymentStatus(
-                                        payment.payment_id
+                                        payment.payment_id,
                                       )
                                     }
                                     disabled={checkingCryptoStatus}
@@ -12891,7 +12899,7 @@ export default function AdminPage() {
                       <p className="mt-1 text-sm text-gray-900">
                         {selectedPurchaseOrder.createdAt
                           ? new Date(
-                              selectedPurchaseOrder.createdAt.seconds * 1000
+                              selectedPurchaseOrder.createdAt.seconds * 1000,
                             ).toLocaleDateString()
                           : selectedPurchaseOrder.date || "N/A"}
                       </p>
@@ -12903,7 +12911,7 @@ export default function AdminPage() {
                       <p className="mt-1 text-sm text-gray-900">
                         {selectedPurchaseOrder.createdAt
                           ? new Date(
-                              selectedPurchaseOrder.createdAt.seconds * 1000
+                              selectedPurchaseOrder.createdAt.seconds * 1000,
                             ).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -13121,7 +13129,7 @@ export default function AdminPage() {
                     <div className="space-y-3">
                       {stockInForm.products.map((product, index) => {
                         const selectedProduct = products.find(
-                          (p) => p.id === product.productId
+                          (p) => p.id === product.productId,
                         );
                         const hasVariants =
                           selectedProduct?.hasVariants &&
@@ -13144,23 +13152,23 @@ export default function AdminPage() {
                                   onChange={(e) => {
                                     console.log(
                                       "Input onChange:",
-                                      e.target.value
+                                      e.target.value,
                                     );
                                     updateStockInProduct(
                                       index,
                                       "productSearch",
-                                      e.target.value
+                                      e.target.value,
                                     );
                                   }}
                                   onFocus={() => {
                                     console.log(
                                       "Input onFocus, current product state:",
-                                      product
+                                      product,
                                     );
                                     updateStockInProduct(
                                       index,
                                       "showProductDropdown",
-                                      true
+                                      true,
                                     );
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -13183,7 +13191,7 @@ export default function AdminPage() {
                                         updateStockInProduct(
                                           index,
                                           "showProductDropdown",
-                                          false
+                                          false,
                                         );
                                       }}
                                     ></div>
@@ -13247,7 +13255,7 @@ export default function AdminPage() {
                                                               } - ${
                                                                 option.name
                                                               }`,
-                                                            }
+                                                            },
                                                           );
 
                                                           // Update all fields at once to avoid race conditions
@@ -13271,7 +13279,7 @@ export default function AdminPage() {
                                                                 option.name
                                                               }`,
                                                               showProductDropdown: false,
-                                                            }
+                                                            },
                                                           );
                                                         }}
                                                         className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -13289,15 +13297,15 @@ export default function AdminPage() {
                                                           {option.name}
                                                           {option.price &&
                                                             ` - ฿${option.price.toFixed(
-                                                              2
+                                                              2,
                                                             )}`}
                                                           {option.memberPrice &&
                                                             ` (Member: ฿${option.memberPrice.toFixed(
-                                                              2
+                                                              2,
                                                             )})`}
                                                         </div>
                                                       </div>
-                                                    )
+                                                    ),
                                                   );
                                                 } else {
                                                   return (
@@ -13325,7 +13333,7 @@ export default function AdminPage() {
                                                               "Variant"
                                                             }`,
                                                             showProductDropdown: false,
-                                                          }
+                                                          },
                                                         );
                                                       }}
                                                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -13343,7 +13351,7 @@ export default function AdminPage() {
                                                           `Variant ${variant.id}`}
                                                         {variant.price &&
                                                           ` - ฿${variant.price.toFixed(
-                                                            2
+                                                            2,
                                                           )}`}
                                                       </div>
                                                     </div>
@@ -13374,7 +13382,7 @@ export default function AdminPage() {
                                                         "No Subcategory"
                                                       } - ${p.name}`,
                                                       showProductDropdown: false,
-                                                    }
+                                                    },
                                                   );
                                                 }}
                                                 className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-100"
@@ -13393,7 +13401,7 @@ export default function AdminPage() {
                                                     ` - ฿${p.price.toFixed(2)}`}
                                                   {p.memberPrice &&
                                                     ` (Member: ฿${p.memberPrice.toFixed(
-                                                      2
+                                                      2,
                                                     )})`}
                                                 </div>
                                               </div>
@@ -13442,7 +13450,7 @@ export default function AdminPage() {
                                   updateStockInProduct(
                                     index,
                                     "quantity",
-                                    parseInt(e.target.value) || 0
+                                    parseInt(e.target.value) || 0,
                                   )
                                 }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -13463,7 +13471,7 @@ export default function AdminPage() {
                                   updateStockInProduct(
                                     index,
                                     "buyPrice",
-                                    parseFloat(e.target.value) || 0
+                                    parseFloat(e.target.value) || 0,
                                   )
                                 }
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -13505,7 +13513,7 @@ export default function AdminPage() {
                         <span>
                           {stockInForm.products.reduce(
                             (sum, p) => sum + (p.quantity || 0),
-                            0
+                            0,
                           )}
                         </span>
                       </div>
@@ -13517,7 +13525,7 @@ export default function AdminPage() {
                             .reduce(
                               (sum, p) =>
                                 sum + (p.quantity || 0) * (p.buyPrice || 0),
-                              0
+                              0,
                             )
                             .toFixed(2)}
                         </span>
@@ -13613,8 +13621,8 @@ export default function AdminPage() {
                                         nationalitySearch ||
                                         customerForm.nationality ||
                                         ""
-                                      ).toLowerCase()
-                                    )
+                                      ).toLowerCase(),
+                                    ),
                                 )
                                 .map((country, index) => (
                                   <div
@@ -13640,8 +13648,8 @@ export default function AdminPage() {
                                       nationalitySearch ||
                                       customerForm.nationality ||
                                       ""
-                                    ).toLowerCase()
-                                  )
+                                    ).toLowerCase(),
+                                  ),
                               ).length === 0 && (
                                 <div className="px-3 py-2 text-gray-500 text-sm">
                                   No countries found
@@ -13826,7 +13834,7 @@ export default function AdminPage() {
                               setCustomerForm({
                                 ...customerForm,
                                 allowedCategories: categories.map(
-                                  (cat) => cat.id
+                                  (cat) => cat.id,
                                 ),
                               });
                             }}
@@ -13857,7 +13865,7 @@ export default function AdminPage() {
                             <input
                               type="checkbox"
                               checked={customerForm.allowedCategories.includes(
-                                category.id
+                                category.id,
                               )}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -13873,7 +13881,7 @@ export default function AdminPage() {
                                     ...customerForm,
                                     allowedCategories:
                                       customerForm.allowedCategories.filter(
-                                        (id) => id !== category.id
+                                        (id) => id !== category.id,
                                       ),
                                   });
                                 }
@@ -14040,8 +14048,8 @@ export default function AdminPage() {
                                         editNationalitySearch ||
                                         customerForm.nationality ||
                                         ""
-                                      ).toLowerCase()
-                                    )
+                                      ).toLowerCase(),
+                                    ),
                                 )
                                 .map((country, index) => (
                                   <div
@@ -14067,8 +14075,8 @@ export default function AdminPage() {
                                       editNationalitySearch ||
                                       customerForm.nationality ||
                                       ""
-                                    ).toLowerCase()
-                                  )
+                                    ).toLowerCase(),
+                                  ),
                               ).length === 0 && (
                                 <div className="px-3 py-2 text-gray-500 text-sm">
                                   No countries found
@@ -14250,7 +14258,7 @@ export default function AdminPage() {
                               setCustomerForm({
                                 ...customerForm,
                                 allowedCategories: categories.map(
-                                  (cat) => cat.id
+                                  (cat) => cat.id,
                                 ),
                               });
                             }}
@@ -14281,7 +14289,7 @@ export default function AdminPage() {
                             <input
                               type="checkbox"
                               checked={customerForm.allowedCategories.includes(
-                                category.id
+                                category.id,
                               )}
                               onChange={(e) => {
                                 if (e.target.checked) {
@@ -14297,7 +14305,7 @@ export default function AdminPage() {
                                     ...customerForm,
                                     allowedCategories:
                                       customerForm.allowedCategories.filter(
-                                        (id) => id !== category.id
+                                        (id) => id !== category.id,
                                       ),
                                   });
                                 }
@@ -14901,8 +14909,8 @@ export default function AdminPage() {
                           {categoryImageFile
                             ? "Change Image"
                             : editingCategory.image
-                            ? "Replace Current Image"
-                            : "Choose Category Image"}
+                              ? "Replace Current Image"
+                              : "Choose Category Image"}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
                           PNG, JPG, GIF up to 10MB
@@ -15010,8 +15018,8 @@ export default function AdminPage() {
                           {categoryBackgroundImageFile
                             ? "Change Background Image"
                             : editingCategory.backgroundImage
-                            ? "Replace Current Background"
-                            : "Choose Background Image"}
+                              ? "Replace Current Background"
+                              : "Choose Background Image"}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
                           PNG, JPG, GIF up to 10MB
@@ -15023,10 +15031,10 @@ export default function AdminPage() {
                     {categoryBackgroundImageFile
                       ? "New background image selected"
                       : removeExistingCategoryBackground
-                      ? "Background scheduled for removal"
-                      : editingCategory.backgroundImage
-                      ? "Current background will be replaced if you select a new one"
-                      : "No background image uploaded"}
+                        ? "Background scheduled for removal"
+                        : editingCategory.backgroundImage
+                          ? "Current background will be replaced if you select a new one"
+                          : "No background image uploaded"}
                   </p>
                 </div>
 
@@ -15197,7 +15205,7 @@ export default function AdminPage() {
                     value={newSubcategory.categoryId}
                     onChange={(e) => {
                       const selectedCategory = categories.find(
-                        (cat) => cat.id === e.target.value
+                        (cat) => cat.id === e.target.value,
                       );
                       setNewSubcategory({
                         ...newSubcategory,
@@ -15338,7 +15346,7 @@ export default function AdminPage() {
                       <div className="relative bg-gray-50 rounded-md border border-gray-300 p-2">
                         <img
                           src={URL.createObjectURL(
-                            subcategoryBackgroundImageFile
+                            subcategoryBackgroundImageFile,
                           )}
                           alt="Background preview"
                           className="w-full max-h-48 object-contain rounded-md"
@@ -15544,7 +15552,7 @@ export default function AdminPage() {
                     value={subcategoryForm.categoryId}
                     onChange={(e) => {
                       const selectedCategory = categories.find(
-                        (cat) => cat.id === e.target.value
+                        (cat) => cat.id === e.target.value,
                       );
                       setSubcategoryForm({
                         ...subcategoryForm,
@@ -15698,8 +15706,8 @@ export default function AdminPage() {
                           {subcategoryImageFile
                             ? "Change Image"
                             : editingSubcategory.image
-                            ? "Replace Current Image"
-                            : "Choose Subcategory Image"}
+                              ? "Replace Current Image"
+                              : "Choose Subcategory Image"}
                         </span>
                         <p className="text-xs text-gray-500 mt-1">
                           PNG, JPG, GIF up to 10MB
@@ -15766,10 +15774,10 @@ export default function AdminPage() {
                       {subcategoryBackgroundImageFile
                         ? "New background image selected"
                         : removeExistingSubcategoryBackground
-                        ? "Background scheduled for removal"
-                        : editingSubcategory.backgroundImage
-                        ? "Current background will be replaced if you select a new one"
-                        : "No background image uploaded"}
+                          ? "Background scheduled for removal"
+                          : editingSubcategory.backgroundImage
+                            ? "Current background will be replaced if you select a new one"
+                            : "No background image uploaded"}
                     </p>
                   </div>
                 </div>
@@ -16047,7 +16055,7 @@ export default function AdminPage() {
                             : `#${e.target.value}`;
                           if (
                             /^#?[0-9A-Fa-f]{0,6}$/.test(
-                              e.target.value.replace("#", "")
+                              e.target.value.replace("#", ""),
                             )
                           ) {
                             setNewProduct({ ...newProduct, textColor: val });
@@ -16403,7 +16411,7 @@ export default function AdminPage() {
                                 fileType: file?.type,
                                 isValidFile: file instanceof File,
                                 timestamp: new Date().toISOString(),
-                              }
+                              },
                             );
                             setProductImageFile(file);
                           }}
@@ -16471,7 +16479,7 @@ export default function AdminPage() {
                         value={newProduct.categoryId}
                         onChange={(e) => {
                           const selectedCategory = categories.find(
-                            (cat) => cat.id === e.target.value
+                            (cat) => cat.id === e.target.value,
                           );
                           setNewProduct({
                             ...newProduct,
@@ -16504,7 +16512,7 @@ export default function AdminPage() {
                         value={newProduct.subcategoryId}
                         onChange={(e) => {
                           const selectedSubcategory = subcategories.find(
-                            (sub) => sub.id === e.target.value
+                            (sub) => sub.id === e.target.value,
                           );
                           setNewProduct({
                             ...newProduct,
@@ -16521,7 +16529,7 @@ export default function AdminPage() {
                         {newProduct.categoryId &&
                           subcategories
                             .filter(
-                              (sub) => sub.categoryId === newProduct.categoryId
+                              (sub) => sub.categoryId === newProduct.categoryId,
                             )
                             .map((subcategory) => (
                               <option
@@ -16699,7 +16707,7 @@ export default function AdminPage() {
                                       onClick={() => {
                                         setEditingVariantGroup(groupIndex);
                                         setEditingGroupName(
-                                          variantGroup.variantName
+                                          variantGroup.variantName,
                                         );
                                       }}
                                       className="text-blue-600 hover:text-blue-800 text-sm"
@@ -16712,8 +16720,8 @@ export default function AdminPage() {
                                     onClick={() => {
                                       setVariants(
                                         variants.filter(
-                                          (_, i) => i !== groupIndex
-                                        )
+                                          (_, i) => i !== groupIndex,
+                                        ),
                                       );
                                       // Reset edit state if this group was being edited
                                       if (editingVariantGroup === groupIndex) {
@@ -16761,7 +16769,7 @@ export default function AdminPage() {
                                             updatedVariants[
                                               groupIndex
                                             ].options.filter(
-                                              (_, i) => i !== optionIndex
+                                              (_, i) => i !== optionIndex,
                                             );
                                           setVariants(updatedVariants);
                                         }}
@@ -16770,7 +16778,7 @@ export default function AdminPage() {
                                         Remove
                                       </button>
                                     </div>
-                                  )
+                                  ),
                                 )}
 
                                 {/* Add Option to Existing Group */}
@@ -16874,12 +16882,12 @@ export default function AdminPage() {
                                                     .substr(2, 9)}`,
                                                   name: newOptionForGroup.name,
                                                   price: parseFloat(
-                                                    newOptionForGroup.price
+                                                    newOptionForGroup.price,
                                                   ),
                                                   memberPrice:
                                                     newOptionForGroup.memberPrice
                                                       ? parseFloat(
-                                                          newOptionForGroup.memberPrice
+                                                          newOptionForGroup.memberPrice,
                                                         )
                                                       : null,
                                                   unit:
@@ -16904,7 +16912,7 @@ export default function AdminPage() {
                                                 setAddingOptionToGroup(null);
                                               } else {
                                                 alert(
-                                                  "Please enter option name and price"
+                                                  "Please enter option name and price",
                                                 );
                                               }
                                             }}
@@ -17044,7 +17052,7 @@ export default function AdminPage() {
                                     <div className="relative">
                                       <Image
                                         src={URL.createObjectURL(
-                                          optionImageFile
+                                          optionImageFile,
                                         )}
                                         alt="Option preview"
                                         width={64}
@@ -17099,12 +17107,12 @@ export default function AdminPage() {
                                     const optionPrice =
                                       parseFloat(
                                         document.getElementById(
-                                          "option-price-input"
-                                        ).value
+                                          "option-price-input",
+                                        ).value,
                                       ) || 0;
                                     const memberPriceRaw =
                                       document.getElementById(
-                                        "option-member-price-input"
+                                        "option-member-price-input",
                                       ).value;
                                     const optionMemberPrice =
                                       memberPriceRaw.trim() === ""
@@ -17121,7 +17129,7 @@ export default function AdminPage() {
                                         optionImageData = {
                                           file: optionImageFile,
                                           url: URL.createObjectURL(
-                                            optionImageFile
+                                            optionImageFile,
                                           ),
                                           name: optionImageFile.name,
                                         };
@@ -17130,7 +17138,7 @@ export default function AdminPage() {
                                       // Add to temporary options list display
                                       const optionsList =
                                         document.getElementById(
-                                          "variant-options-list"
+                                          "variant-options-list",
                                         );
                                       const optionDiv =
                                         document.createElement("div");
@@ -17149,8 +17157,8 @@ export default function AdminPage() {
                                         <div class="flex items-center">
                                           ${imagePreview}
                                           <span class="text-sm">${optionName} - ฿${optionPrice}${memberSegment}${
-                                        optionUnit ? ` (${optionUnit})` : ""
-                                      }</span>
+                                            optionUnit ? ` (${optionUnit})` : ""
+                                          }</span>
                                         </div>
                                         <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800 text-xs">Remove</button>
                                       `;
@@ -17164,16 +17172,16 @@ export default function AdminPage() {
 
                                       // Clear inputs
                                       document.getElementById(
-                                        "option-name-input"
+                                        "option-name-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "option-price-input"
+                                        "option-price-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "option-unit-input"
+                                        "option-unit-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "option-member-price-input"
+                                        "option-member-price-input",
                                       ).value = "";
                                       setOptionImageFile(null);
                                     } else {
@@ -17198,7 +17206,7 @@ export default function AdminPage() {
                                 .getElementById("variant-group-name")
                                 .value.trim();
                               const optionsList = document.getElementById(
-                                "variant-options-list"
+                                "variant-options-list",
                               );
                               const optionElements = optionsList.children;
 
@@ -17209,7 +17217,7 @@ export default function AdminPage() {
 
                               if (optionElements.length === 0) {
                                 alert(
-                                  "Please add at least one option to this variant group"
+                                  "Please add at least one option to this variant group",
                                 );
                                 return;
                               }
@@ -17220,7 +17228,7 @@ export default function AdminPage() {
                                 const optionElement = optionElements[i];
                                 const optionText =
                                   optionElement.querySelector(
-                                    "span"
+                                    "span",
                                   ).textContent;
                                 const parts = optionText.split(" - ฿");
                                 const name = parts[0];
@@ -17278,10 +17286,10 @@ export default function AdminPage() {
 
                               // Clear form
                               document.getElementById(
-                                "variant-group-name"
+                                "variant-group-name",
                               ).value = "";
                               document.getElementById(
-                                "variant-options-list"
+                                "variant-options-list",
                               ).innerHTML = "";
                               setOptionImageFile(null);
                             }}
@@ -17429,7 +17437,7 @@ export default function AdminPage() {
                             : `#${e.target.value}`;
                           if (
                             /^#?[0-9A-Fa-f]{0,6}$/.test(
-                              e.target.value.replace("#", "")
+                              e.target.value.replace("#", ""),
                             )
                           ) {
                             setProductForm({ ...productForm, textColor: val });
@@ -17834,7 +17842,7 @@ export default function AdminPage() {
                         <option value="">Select Subcategory</option>
                         {subcategories
                           .filter(
-                            (sub) => sub.categoryId === productForm.categoryId
+                            (sub) => sub.categoryId === productForm.categoryId,
                           )
                           .map((subcategory) => (
                             <option key={subcategory.id} value={subcategory.id}>
@@ -17977,7 +17985,7 @@ export default function AdminPage() {
                                 {
                                   hasLocalFile: !!productImageFile,
                                   hasExistingImage: !!productForm.mainImage,
-                                }
+                                },
                               );
                               setProductImageFile(null);
                               if (!productImageFile && productForm.mainImage) {
@@ -17988,7 +17996,7 @@ export default function AdminPage() {
                                   mainImage: null,
                                 });
                                 console.log(
-                                  "🗑️ Marked existing images for removal"
+                                  "🗑️ Marked existing images for removal",
                                 );
                               }
                             }}
@@ -18014,7 +18022,7 @@ export default function AdminPage() {
                                 fileType: file?.type,
                                 isValidFile: file instanceof File,
                                 timestamp: new Date().toISOString(),
-                              }
+                              },
                             );
                             setProductImageFile(file);
                           }}
@@ -18135,7 +18143,7 @@ export default function AdminPage() {
                                           onClick={() => {
                                             setEditingVariantGroup(groupIndex);
                                             setEditingGroupName(
-                                              variantGroup.variantName
+                                              variantGroup.variantName,
                                             );
                                           }}
                                           className="text-blue-600 hover:text-blue-800 text-sm"
@@ -18148,7 +18156,7 @@ export default function AdminPage() {
                                         onClick={() => {
                                           const updatedVariants =
                                             productForm.variants.filter(
-                                              (_, i) => i !== groupIndex
+                                              (_, i) => i !== groupIndex,
                                             );
                                           setProductForm({
                                             ...productForm,
@@ -18218,7 +18226,7 @@ export default function AdminPage() {
                                                       (v) => ({
                                                         ...v,
                                                         name: e.target.value,
-                                                      })
+                                                      }),
                                                     )
                                                   }
                                                   required
@@ -18238,7 +18246,7 @@ export default function AdminPage() {
                                                         (v) => ({
                                                           ...v,
                                                           price: e.target.value,
-                                                        })
+                                                        }),
                                                       )
                                                     }
                                                     required
@@ -18263,7 +18271,7 @@ export default function AdminPage() {
                                                           ...v,
                                                           memberPrice:
                                                             e.target.value,
-                                                        })
+                                                        }),
                                                       )
                                                     }
                                                     placeholder=""
@@ -18285,7 +18293,7 @@ export default function AdminPage() {
                                                         (v) => ({
                                                           ...v,
                                                           unit: e.target.value,
-                                                        })
+                                                        }),
                                                       )
                                                     }
                                                     placeholder="unit"
@@ -18315,7 +18323,7 @@ export default function AdminPage() {
                                                               (v) => ({
                                                                 ...v,
                                                                 imageUrl: "",
-                                                              })
+                                                              }),
                                                             )
                                                           }
                                                           className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs hover:bg-red-600"
@@ -18340,22 +18348,22 @@ export default function AdminPage() {
                                                                   file,
                                                                   editingProduct.id,
                                                                   variantGroup.id,
-                                                                  editingVariantOption.id
+                                                                  editingVariantOption.id,
                                                                 );
                                                               setEditingVariantValues(
                                                                 (v) => ({
                                                                   ...v,
                                                                   imageUrl:
                                                                     imageUrl,
-                                                                })
+                                                                }),
                                                               );
                                                             } catch (error) {
                                                               console.error(
                                                                 "Error uploading image:",
-                                                                error
+                                                                error,
                                                               );
                                                               alert(
-                                                                "Failed to upload image. Please try again."
+                                                                "Failed to upload image. Please try again.",
                                                               );
                                                             }
                                                           }
@@ -18395,7 +18403,7 @@ export default function AdminPage() {
                                                       name: editingVariantValues.name.trim(),
                                                       price:
                                                         parseFloat(
-                                                          editingVariantValues.price
+                                                          editingVariantValues.price,
                                                         ) || 0,
                                                       unit: editingVariantValues.unit.trim(),
                                                       imageUrl:
@@ -18411,7 +18419,7 @@ export default function AdminPage() {
                                                     ) {
                                                       optionData.memberPrice =
                                                         parseFloat(
-                                                          editingVariantValues.memberPrice
+                                                          editingVariantValues.memberPrice,
                                                         ) || 0;
                                                     }
 
@@ -18423,12 +18431,12 @@ export default function AdminPage() {
                                                       variants: updated,
                                                     };
                                                     setProductForm(
-                                                      updatedProductForm
+                                                      updatedProductForm,
                                                     );
                                                     // Sync with variants state
                                                     setVariants(updated);
                                                     setEditingVariantOption(
-                                                      null
+                                                      null,
                                                     );
 
                                                     // Auto-save to Firestore
@@ -18447,7 +18455,7 @@ export default function AdminPage() {
                                                                     { ...opt };
                                                                   // Remove undefined values
                                                                   Object.keys(
-                                                                    cleanOpt
+                                                                    cleanOpt,
                                                                   ).forEach(
                                                                     (key) => {
                                                                       if (
@@ -18460,12 +18468,12 @@ export default function AdminPage() {
                                                                           key
                                                                         ];
                                                                       }
-                                                                    }
+                                                                    },
                                                                   );
                                                                   return cleanOpt;
-                                                                }
+                                                                },
                                                               ),
-                                                          })
+                                                          }),
                                                         );
 
                                                       const productData = {
@@ -18512,7 +18520,7 @@ export default function AdminPage() {
                                                       const cleanProductData =
                                                         {};
                                                       Object.keys(
-                                                        productData
+                                                        productData,
                                                       ).forEach((key) => {
                                                         if (
                                                           productData[key] !==
@@ -18526,16 +18534,16 @@ export default function AdminPage() {
 
                                                       await ProductService.updateProduct(
                                                         editingProduct.id,
-                                                        cleanProductData
+                                                        cleanProductData,
                                                       );
                                                       await loadDashboardData();
                                                     } catch (error) {
                                                       console.error(
                                                         "Error saving variant option:",
-                                                        error
+                                                        error,
                                                       );
                                                       alert(
-                                                        "Error saving changes. Please try again."
+                                                        "Error saving changes. Please try again.",
                                                       );
                                                     } finally {
                                                       setIsProductSaving(false);
@@ -18550,7 +18558,7 @@ export default function AdminPage() {
                                                   className="text-gray-500 hover:text-gray-700 text-xs"
                                                   onClick={() =>
                                                     setEditingVariantOption(
-                                                      null
+                                                      null,
                                                     )
                                                   }
                                                 >
@@ -18600,7 +18608,7 @@ export default function AdminPage() {
                                                       groupIndex
                                                     ].options.filter(
                                                       (_, i) =>
-                                                        i !== optionIndex
+                                                        i !== optionIndex,
                                                     );
                                                     setProductForm({
                                                       ...productForm,
@@ -18608,7 +18616,7 @@ export default function AdminPage() {
                                                     });
                                                     // Sync with variants state
                                                     setVariants(
-                                                      updatedVariants
+                                                      updatedVariants,
                                                     );
                                                   }}
                                                   className="text-red-600 hover:text-red-800 text-xs"
@@ -18619,7 +18627,7 @@ export default function AdminPage() {
                                             )}
                                           </div>
                                         </div>
-                                      )
+                                      ),
                                     )}
 
                                     {/* Add Option to Existing Group */}
@@ -18757,22 +18765,22 @@ export default function AdminPage() {
                                                                   .variants[
                                                                   groupIndex
                                                                 ].id,
-                                                                `opt-${Date.now()}`
+                                                                `opt-${Date.now()}`,
                                                               );
                                                             setNewOptionForGroup(
                                                               {
                                                                 ...newOptionForGroup,
                                                                 imageUrl:
                                                                   imageUrl,
-                                                              }
+                                                              },
                                                             );
                                                           } catch (error) {
                                                             console.error(
                                                               "Error uploading image:",
-                                                              error
+                                                              error,
                                                             );
                                                             alert(
-                                                              "Failed to upload image. Please try again."
+                                                              "Failed to upload image. Please try again.",
                                                             );
                                                           }
                                                         }
@@ -18814,12 +18822,12 @@ export default function AdminPage() {
                                                         .substr(2, 9)}`,
                                                       name: newOptionForGroup.name,
                                                       price: parseFloat(
-                                                        newOptionForGroup.price
+                                                        newOptionForGroup.price,
                                                       ),
                                                       memberPrice:
                                                         newOptionForGroup.memberPrice
                                                           ? parseFloat(
-                                                              newOptionForGroup.memberPrice
+                                                              newOptionForGroup.memberPrice,
                                                             )
                                                           : null,
                                                       unit:
@@ -18837,7 +18845,7 @@ export default function AdminPage() {
                                                       variants: updatedVariants,
                                                     });
                                                     setVariants(
-                                                      updatedVariants
+                                                      updatedVariants,
                                                     );
                                                     // Reset form
                                                     setNewOptionForGroup({
@@ -18848,11 +18856,11 @@ export default function AdminPage() {
                                                       imageUrl: "",
                                                     });
                                                     setAddingOptionToGroup(
-                                                      null
+                                                      null,
                                                     );
                                                   } else {
                                                     alert(
-                                                      "Please enter option name and price"
+                                                      "Please enter option name and price",
                                                     );
                                                   }
                                                 }}
@@ -18894,7 +18902,7 @@ export default function AdminPage() {
                                     )}
                                   </div>
                                 </div>
-                              )
+                              ),
                             )}
                           </div>
                         )}
@@ -18996,7 +19004,7 @@ export default function AdminPage() {
                                     <div className="relative">
                                       <img
                                         src={URL.createObjectURL(
-                                          editOptionImageFile
+                                          editOptionImageFile,
                                         )}
                                         alt="Option preview"
                                         className="w-16 h-16 object-cover rounded border"
@@ -19020,7 +19028,7 @@ export default function AdminPage() {
                                       accept="image/*"
                                       onChange={(e) =>
                                         setEditOptionImageFile(
-                                          e.target.files[0]
+                                          e.target.files[0],
                                         )
                                       }
                                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -19053,12 +19061,12 @@ export default function AdminPage() {
                                     const optionPrice =
                                       parseFloat(
                                         document.getElementById(
-                                          "edit-option-price-input"
-                                        ).value
+                                          "edit-option-price-input",
+                                        ).value,
                                       ) || 0;
                                     const memberPriceRaw =
                                       document.getElementById(
-                                        "edit-option-member-price-input"
+                                        "edit-option-member-price-input",
                                       ).value;
                                     const optionMemberPrice =
                                       memberPriceRaw.trim() === ""
@@ -19075,7 +19083,7 @@ export default function AdminPage() {
                                         optionImageData = {
                                           file: editOptionImageFile,
                                           url: URL.createObjectURL(
-                                            editOptionImageFile
+                                            editOptionImageFile,
                                           ),
                                           name: editOptionImageFile.name,
                                         };
@@ -19084,7 +19092,7 @@ export default function AdminPage() {
                                       // Add to temporary options list display
                                       const optionsList =
                                         document.getElementById(
-                                          "edit-variant-options-list"
+                                          "edit-variant-options-list",
                                         );
                                       const optionDiv =
                                         document.createElement("div");
@@ -19103,8 +19111,8 @@ export default function AdminPage() {
                                         <div class="flex items-center">
                                           ${imagePreview}
                                           <span class="text-sm">${optionName} - ฿${optionPrice}${memberSegment}${
-                                        optionUnit ? ` (${optionUnit})` : ""
-                                      }</span>
+                                            optionUnit ? ` (${optionUnit})` : ""
+                                          }</span>
                                         </div>
                                         <button type="button" onclick="this.parentElement.remove()" class="text-red-600 hover:text-red-800 text-xs">Remove</button>
                                       `;
@@ -19118,16 +19126,16 @@ export default function AdminPage() {
 
                                       // Clear inputs
                                       document.getElementById(
-                                        "edit-option-name-input"
+                                        "edit-option-name-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "edit-option-price-input"
+                                        "edit-option-price-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "edit-option-unit-input"
+                                        "edit-option-unit-input",
                                       ).value = "";
                                       document.getElementById(
-                                        "edit-option-member-price-input"
+                                        "edit-option-member-price-input",
                                       ).value = "";
                                       setEditOptionImageFile(null);
                                     } else {
@@ -19152,7 +19160,7 @@ export default function AdminPage() {
                                 .getElementById("edit-variant-group-name")
                                 .value.trim();
                               const optionsList = document.getElementById(
-                                "edit-variant-options-list"
+                                "edit-variant-options-list",
                               );
                               const optionElements = optionsList.children;
 
@@ -19163,7 +19171,7 @@ export default function AdminPage() {
 
                               if (optionElements.length === 0) {
                                 alert(
-                                  "Please add at least one option to this variant group"
+                                  "Please add at least one option to this variant group",
                                 );
                                 return;
                               }
@@ -19174,7 +19182,7 @@ export default function AdminPage() {
                                 const optionElement = optionElements[i];
                                 const optionText =
                                   optionElement.querySelector(
-                                    "span"
+                                    "span",
                                   ).textContent;
                                 const parts = optionText.split(" - ฿");
                                 const name = parts[0];
@@ -19243,10 +19251,10 @@ export default function AdminPage() {
 
                               // Clear form
                               document.getElementById(
-                                "edit-variant-group-name"
+                                "edit-variant-group-name",
                               ).value = "";
                               document.getElementById(
-                                "edit-variant-options-list"
+                                "edit-variant-options-list",
                               ).innerHTML = "";
                               setEditOptionImageFile(null);
                             }}
@@ -19333,7 +19341,7 @@ export default function AdminPage() {
                       value={cashbackForm.categoryId}
                       onChange={(e) => {
                         const selectedCategory = categories.find(
-                          (cat) => cat.id === e.target.value
+                          (cat) => cat.id === e.target.value,
                         );
                         setCashbackForm({
                           ...cashbackForm,
@@ -19357,7 +19365,7 @@ export default function AdminPage() {
                           }
                           // For new rules, only show categories not already used
                           return !cashbackRules.find(
-                            (rule) => rule.categoryId === category.id
+                            (rule) => rule.categoryId === category.id,
                           );
                         })
                         .map((category) => (
@@ -19370,8 +19378,8 @@ export default function AdminPage() {
                       categories.filter(
                         (cat) =>
                           !cashbackRules.find(
-                            (rule) => rule.categoryId === cat.id
-                          )
+                            (rule) => rule.categoryId === cat.id,
+                          ),
                       ).length === 0 && (
                         <p className="mt-1 text-sm text-red-600">
                           All categories already have cashback rules.
@@ -19440,8 +19448,8 @@ export default function AdminPage() {
                           ? "Updating..."
                           : "Adding..."
                         : editingCashback
-                        ? "Update Rule"
-                        : "Add Rule"}
+                          ? "Update Rule"
+                          : "Add Rule"}
                     </button>
                   </div>
                 </form>
@@ -19486,14 +19494,14 @@ export default function AdminPage() {
                       <p>
                         <span className="font-medium">Category:</span>{" "}
                         {categories.find(
-                          (c) => c.id === selectedProduct.categoryId
+                          (c) => c.id === selectedProduct.categoryId,
                         )?.name || "N/A"}
                       </p>
                       {selectedProduct.subcategoryId && (
                         <p>
                           <span className="font-medium">Subcategory:</span>{" "}
                           {subcategories.find(
-                            (s) => s.id === selectedProduct.subcategoryId
+                            (s) => s.id === selectedProduct.subcategoryId,
                           )?.name || "N/A"}
                         </p>
                       )}
@@ -19589,7 +19597,7 @@ export default function AdminPage() {
                         (Array.isArray(selectedCustomerForPoints.points)
                           ? selectedCustomerForPoints.points.reduce(
                               (total, point) => total + (point.amount || 0),
-                              0
+                              0,
                             )
                           : 0) ||
                         0}
@@ -19604,7 +19612,7 @@ export default function AdminPage() {
                         (Array.isArray(selectedCustomerForPoints.points)
                           ? selectedCustomerForPoints.points.reduce(
                               (total, point) => total + (point.amount || 0),
-                              0
+                              0,
                             )
                           : 0) ||
                         0}
@@ -19627,7 +19635,7 @@ export default function AdminPage() {
                             {
                               minimumFractionDigits: 2,
                               maximumFractionDigits: 2,
-                            }
+                            },
                           );
                         }
                         // Otherwise, calculate from points array
@@ -19657,7 +19665,7 @@ export default function AdminPage() {
                               // Last resort: calculate from points (1 point = 1 baht spent)
                               return sum + (point.amount || 0);
                             },
-                            0
+                            0,
                           );
                           return total.toLocaleString("en-US", {
                             minimumFractionDigits: 2,
@@ -19735,7 +19743,7 @@ export default function AdminPage() {
                                     ? (() => {
                                         const date = point.createdAt.seconds
                                           ? new Date(
-                                              point.createdAt.seconds * 1000
+                                              point.createdAt.seconds * 1000,
                                             )
                                           : new Date(point.createdAt);
                                         return date.toLocaleDateString(
@@ -19746,7 +19754,7 @@ export default function AdminPage() {
                                             day: "numeric",
                                             hour: "2-digit",
                                             minute: "2-digit",
-                                          }
+                                          },
                                         );
                                       })()
                                     : "N/A"}
@@ -19770,7 +19778,7 @@ export default function AdminPage() {
                                         {
                                           minimumFractionDigits: 2,
                                           maximumFractionDigits: 2,
-                                        }
+                                        },
                                       );
                                     }
                                     // If totalSpent is 0, try to find the shopping amount from other fields
@@ -19784,7 +19792,7 @@ export default function AdminPage() {
                                         {
                                           minimumFractionDigits: 2,
                                           maximumFractionDigits: 2,
-                                        }
+                                        },
                                       );
                                     }
                                     if (
@@ -19796,7 +19804,7 @@ export default function AdminPage() {
                                         {
                                           minimumFractionDigits: 2,
                                           maximumFractionDigits: 2,
-                                        }
+                                        },
                                       );
                                     }
                                     // Last resort: calculate from points (assuming 1 point = 1 baht spent)
@@ -19845,7 +19853,7 @@ export default function AdminPage() {
                                               {item.pointsEarned} pts
                                             </div>
                                           </div>
-                                        )
+                                        ),
                                       )}
                                     </div>
                                   ) : point.reason ? (
@@ -19887,7 +19895,7 @@ export default function AdminPage() {
                                     onClick={() =>
                                       handleDeletePointTransaction(
                                         selectedCustomerForPoints,
-                                        index
+                                        index,
                                       )
                                     }
                                     disabled={
@@ -19912,7 +19920,7 @@ export default function AdminPage() {
                                   </button>
                                 </td>
                               </tr>
-                            )
+                            ),
                           )
                         ) : (
                           <tr>
@@ -19997,7 +20005,7 @@ export default function AdminPage() {
                               // Firestore timestamp
                               date = new Date(
                                 selectedTransactionDetails.createdAt.seconds *
-                                  1000
+                                  1000,
                               );
                             } else if (
                               selectedTransactionDetails.createdAt instanceof
@@ -20009,12 +20017,12 @@ export default function AdminPage() {
                               "string"
                             ) {
                               date = new Date(
-                                selectedTransactionDetails.createdAt
+                                selectedTransactionDetails.createdAt,
                               );
                             } else if (selectedTransactionDetails.timestamp) {
                               // Fallback to timestamp
                               date = new Date(
-                                selectedTransactionDetails.timestamp
+                                selectedTransactionDetails.timestamp,
                               );
                             } else {
                               return "N/A";
@@ -20173,7 +20181,7 @@ export default function AdminPage() {
                                                 ? value
                                                 : JSON.stringify(value))}
                                           </span>
-                                        )
+                                        ),
                                       )}
                                     {(!item.variants ||
                                       Object.keys(item.variants).length ===
@@ -20204,7 +20212,7 @@ export default function AdminPage() {
                                   })}
                                 </td>
                               </tr>
-                            )
+                            ),
                           )}
                         </tbody>
                       </table>
@@ -20406,7 +20414,7 @@ export default function AdminPage() {
                         <span>
                           {selectedTransaction.createdAt
                             ? new Date(
-                                selectedTransaction.createdAt
+                                selectedTransaction.createdAt,
                               ).toLocaleString("en-US", {
                                 weekday: "long",
                                 year: "numeric",
@@ -20727,7 +20735,7 @@ export default function AdminPage() {
                         (Array.isArray(selectedCustomerForPoints?.points)
                           ? selectedCustomerForPoints.points.reduce(
                               (total, point) => total + (point.amount || 0),
-                              0
+                              0,
                             )
                           : 0)}
                     </p>
@@ -20762,8 +20770,8 @@ export default function AdminPage() {
                   {isProcessingPointAdjustment
                     ? "Processing..."
                     : pointAdjustmentType === "add"
-                    ? "Add Points"
-                    : "Reduce Points"}
+                      ? "Add Points"
+                      : "Reduce Points"}
                 </button>
               </div>
             </div>
@@ -20824,7 +20832,7 @@ export default function AdminPage() {
                           // Delay hiding to allow click events to register
                           setTimeout(
                             () => setShowAlertProductDropdown(false),
-                            150
+                            150,
                           );
                         }}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
@@ -20841,7 +20849,7 @@ export default function AdminPage() {
                                   p.subcategoryName || "No Subcategory"
                                 } - ${p.name}`
                                   .toLowerCase()
-                                  .includes(alertProductSearch.toLowerCase())
+                                  .includes(alertProductSearch.toLowerCase()),
                             )
                             .slice(0, 50)
                             .map((p) => {
@@ -20866,7 +20874,7 @@ export default function AdminPage() {
                                               "Stock Alert: Selecting product variant:",
                                               p.name,
                                               variant.variantName,
-                                              option.name
+                                              option.name,
                                             );
                                             const productWithVariant = {
                                               ...p,
@@ -20876,7 +20884,7 @@ export default function AdminPage() {
                                               selectedOption: option,
                                             };
                                             setSelectedProductForAlert(
-                                              productWithVariant
+                                              productWithVariant,
                                             );
                                             setAlertProductSearch(
                                               `${
@@ -20887,7 +20895,7 @@ export default function AdminPage() {
                                                 "No Subcategory"
                                               } - ${p.name} - ${
                                                 variant.variantName
-                                              } - ${option.name}`
+                                              } - ${option.name}`,
                                             );
                                             setShowAlertProductDropdown(false);
                                           }}
@@ -20907,7 +20915,7 @@ export default function AdminPage() {
                                             Current Stock:{" "}
                                             {getCurrentStock(
                                               p,
-                                              `${variant.id}-${option.id}`
+                                              `${variant.id}-${option.id}`,
                                             )}
                                           </div>
                                         </div>
@@ -20922,7 +20930,7 @@ export default function AdminPage() {
                                           console.log(
                                             "Stock Alert: Selecting product variant (no options):",
                                             p.name,
-                                            variant.name
+                                            variant.name,
                                           );
                                           const productWithVariant = {
                                             ...p,
@@ -20933,7 +20941,7 @@ export default function AdminPage() {
                                             selectedVariant: variant,
                                           };
                                           setSelectedProductForAlert(
-                                            productWithVariant
+                                            productWithVariant,
                                           );
                                           setAlertProductSearch(
                                             `${
@@ -20943,7 +20951,7 @@ export default function AdminPage() {
                                               "No Subcategory"
                                             } - ${p.name} - ${
                                               variant.name || "Variant"
-                                            }`
+                                            }`,
                                           );
                                           setShowAlertProductDropdown(false);
                                         }}
@@ -20975,7 +20983,7 @@ export default function AdminPage() {
                                       e.stopPropagation();
                                       console.log(
                                         "Stock Alert: Selecting product (no variants):",
-                                        p.name
+                                        p.name,
                                       );
                                       setSelectedProductForAlert(p);
                                       setAlertProductSearch(
@@ -20983,7 +20991,7 @@ export default function AdminPage() {
                                           p.categoryName || "Uncategorized"
                                         } - ${
                                           p.subcategoryName || "No Subcategory"
-                                        } - ${p.name}`
+                                        } - ${p.name}`,
                                       );
                                       setShowAlertProductDropdown(false);
                                     }}
@@ -21009,7 +21017,7 @@ export default function AdminPage() {
                                 p.subcategoryName || "No Subcategory"
                               } - ${p.name}`
                                 .toLowerCase()
-                                .includes(alertProductSearch.toLowerCase())
+                                .includes(alertProductSearch.toLowerCase()),
                             ).length === 0 && (
                               <div className="px-3 py-2 text-gray-500 text-sm">
                                 No products found matching &quot;
@@ -21079,7 +21087,7 @@ export default function AdminPage() {
                         <strong>Current Stock:</strong>{" "}
                         {getCurrentStock(
                           selectedProductForAlert,
-                          selectedProductForAlert?.variantId
+                          selectedProductForAlert?.variantId,
                         )}{" "}
                         units
                         {selectedProductForAlert.variantName && (
@@ -21130,7 +21138,7 @@ export default function AdminPage() {
                         <tbody className="bg-white divide-y divide-gray-200">
                           {stockAlerts.map((alert) => {
                             const product = products.find(
-                              (p) => p.id === alert.productId
+                              (p) => p.id === alert.productId,
                             );
                             const currentStock = product
                               ? getCurrentStock(product, alert.variantId)
@@ -21281,11 +21289,11 @@ export default function AdminPage() {
                   selectedCryptoPayment.payment_status === "confirmed"
                     ? "bg-green-50 border-green-200"
                     : selectedCryptoPayment.payment_status === "waiting"
-                    ? "bg-yellow-50 border-yellow-200"
-                    : selectedCryptoPayment.payment_status === "confirming" ||
-                      selectedCryptoPayment.payment_status === "sending"
-                    ? "bg-blue-50 border-blue-200"
-                    : "bg-red-50 border-red-200"
+                      ? "bg-yellow-50 border-yellow-200"
+                      : selectedCryptoPayment.payment_status === "confirming" ||
+                          selectedCryptoPayment.payment_status === "sending"
+                        ? "bg-blue-50 border-blue-200"
+                        : "bg-red-50 border-red-200"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -21296,12 +21304,13 @@ export default function AdminPage() {
                         selectedCryptoPayment.payment_status === "confirmed"
                           ? "bg-green-500"
                           : selectedCryptoPayment.payment_status === "waiting"
-                          ? "bg-yellow-500"
-                          : selectedCryptoPayment.payment_status ===
-                              "confirming" ||
-                            selectedCryptoPayment.payment_status === "sending"
-                          ? "bg-blue-500 animate-pulse"
-                          : "bg-red-500"
+                            ? "bg-yellow-500"
+                            : selectedCryptoPayment.payment_status ===
+                                  "confirming" ||
+                                selectedCryptoPayment.payment_status ===
+                                  "sending"
+                              ? "bg-blue-500 animate-pulse"
+                              : "bg-red-500"
                       }`}
                     ></div>
                     <span
@@ -21310,12 +21319,13 @@ export default function AdminPage() {
                         selectedCryptoPayment.payment_status === "confirmed"
                           ? "text-green-800"
                           : selectedCryptoPayment.payment_status === "waiting"
-                          ? "text-yellow-800"
-                          : selectedCryptoPayment.payment_status ===
-                              "confirming" ||
-                            selectedCryptoPayment.payment_status === "sending"
-                          ? "text-blue-800"
-                          : "text-red-800"
+                            ? "text-yellow-800"
+                            : selectedCryptoPayment.payment_status ===
+                                  "confirming" ||
+                                selectedCryptoPayment.payment_status ===
+                                  "sending"
+                              ? "text-blue-800"
+                              : "text-red-800"
                       }`}
                     >
                       {selectedCryptoPayment.payment_status}
