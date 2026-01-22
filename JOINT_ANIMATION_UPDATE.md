@@ -17,7 +17,7 @@ Located in: `public/CustomJoint/`
 - `paper_wrap.png` - Paper wrap visualization
 - `preroll_wrap.png` - Preroll/Rosin wrap visualization
 
-#### Filter Images (200x150px → 200x64px in joint, maintains original width for proper proportion with 750px wrap)
+#### Filter Images (200x150px → 86x64px in joint, maintains 4:3 aspect ratio, scaled 80% for better centering)
 
 - `tip_paper_filter.png` - Paper filter tip
 - `slim_glass_filter.png` - Slim glass filter (10mm)

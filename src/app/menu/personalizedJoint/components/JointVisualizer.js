@@ -113,7 +113,49 @@ export default function JointVisualizer({ config }) {
 
     // Final fallback
     return "/CustomJoint/hemp_wrap.png";
-  }; // Get filter image based on filter selection - ALWAYS return an image (default to candykush_filter)
+  };
+
+  // Get spiral coating overlay image for rosin-spiral wrap OR rosin-kief-combo coating
+  const getSpiralCoatingImage = () => {
+    // Show spiral coating for rosin-spiral wrap
+    if (config.external?.wrap?.id === "rosin-spiral") {
+      return "/CustomJoint/spiral_coating.png";
+    }
+    // Show spiral coating on top of kief for rosin-kief-combo
+    if (config.external?.coating?.id === "rosin-kief-combo") {
+      return "/CustomJoint/spiral_coating.png";
+    }
+    return null;
+  };
+
+  // Get oil coating overlay image based on paper type
+  const getOilCoatingImage = () => {
+    if (config.external?.coating?.id === "oil-coating" && config.paper) {
+      const paperId = config.paper.id || config.paper.type || "";
+      
+      // Determine which oil coating to use based on paper type
+      if (paperId.includes("hemp") || paperId === "blunt-hemp-wrap" || paperId === "hemp-wrap" || paperId === "hemp-cone") {
+        return "/CustomJoint/hemp_oil_coating.png";
+      }
+      // For paper-based wraps (standard rolling paper, golden paper, glass cone, etc.)
+      if (paperId.includes("paper") || paperId.includes("golden") || paperId.includes("glass") || paperId === "glasscode") {
+        return "/CustomJoint/paper_oil_coating.png";
+      }
+      // Default to paper oil coating for preroll and others
+      return "/CustomJoint/paper_oil_coating.png";
+    }
+    return null;
+  };
+
+  // Get rosin full dip coating overlay image
+  const getRosinFullDipCoatingImage = () => {
+    if (config.external?.coating?.id === "rosin-full-dip") {
+      return "/CustomJoint/rosin_full_dip_coating.png";
+    }
+    return null;
+  };
+
+  // Get filter image based on filter selection - ALWAYS return an image (default to candykush_filter)
   const getFilterImage = () => {
     if (!config.filter) return "/CustomJoint/candykush_filter.png"; // Default filter
 
@@ -136,6 +178,9 @@ export default function JointVisualizer({ config }) {
   };
   const coatingImage = getCoatingImage();
   const filterImage = getFilterImage(); // Now always returns an image
+  const spiralCoatingImage = getSpiralCoatingImage(); // Get spiral coating overlay if rosin-spiral is selected
+  const oilCoatingImage = getOilCoatingImage(); // Get oil coating overlay based on paper type
+  const rosinFullDipCoatingImage = getRosinFullDipCoatingImage(); // Get rosin full dip coating overlay
 
   // Get paper image from provided assets only (do NOT use mockups)
   const getPaperImage = () => {
@@ -200,6 +245,57 @@ export default function JointVisualizer({ config }) {
                           className="relative z-10"
                           priority
                         />
+
+                        {/* Spiral Coating Overlay - positioned on top of wrap */}
+                        {spiralCoatingImage && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Image
+                              src={spiralCoatingImage}
+                              alt="spiral coating"
+                              width={320}
+                              height={64}
+                              style={{
+                                objectFit: "contain",
+                              }}
+                              className="relative z-20"
+                              priority
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Oil Coating Overlay - positioned on top of wrap */}
+                        {oilCoatingImage && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Image
+                              src={oilCoatingImage}
+                              alt="oil coating"
+                              width={320}
+                              height={64}
+                              style={{
+                                objectFit: "contain",
+                              }}
+                              className="relative z-20"
+                              priority
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Rosin Full Dip Coating Overlay - positioned on top of wrap */}
+                        {rosinFullDipCoatingImage && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Image
+                              src={rosinFullDipCoatingImage}
+                              alt="rosin full dip coating"
+                              width={320}
+                              height={64}
+                              style={{
+                                objectFit: "contain",
+                              }}
+                              className="relative z-20"
+                              priority
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Smoke effect positioned in front of the wrap */}
